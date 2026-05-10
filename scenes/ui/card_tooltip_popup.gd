@@ -21,8 +21,8 @@ func show_tooltip(card: Card) -> void:
 	var new_card := CARD_MENU_UI_SCENE.instantiate() as CardMenuUI
 	tooltip_card.add_child(new_card)
 	new_card.card = card
-	new_card.tooltip_requested.connect(hide_tooltip.unbind(1))
-	card_description.text = card.get_default_tooltip()
+	new_card.card_pick_pressed.connect(hide_tooltip.unbind(1))
+	card_description.text = card.get_visual_description_bbcode()
 	show()
 
 

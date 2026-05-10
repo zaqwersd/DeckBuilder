@@ -9,8 +9,11 @@ func enter() -> void:
 	var ui_layer := get_tree().get_first_node_in_group("ui_layer")
 	if ui_layer:
 		card_ui.reparent(ui_layer)
-	
-	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.DRAG_STYLEBOX)
+		card_ui.move_to_front()
+	card_ui.z_index = 128
+	card_ui.z_as_relative = false
+
+	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.card_visuals.main_panel_style_drag)
 	Events.card_drag_started.emit(card_ui)
 	
 	minimum_drag_time_elapsed = false

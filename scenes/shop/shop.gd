@@ -13,7 +13,6 @@ const SHOP_RELIC = preload("res://scenes/shop/shop_relic.tscn")
 @onready var relics: HBoxContainer = %Relics
 @onready var shop_keeper_animation: AnimationPlayer = %ShopkeeperAnimation
 @onready var blink_timer: Timer = %BlinkTimer
-@onready var card_tooltip_popup: CardTooltipPopup = %CardTooltipPopup
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
 
 
@@ -29,11 +28,6 @@ func _ready() -> void:
 
 	_blink_timer_setup()
 	blink_timer.timeout.connect(_on_blink_timer_timeout)
-
-
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and card_tooltip_popup.visible:
-		card_tooltip_popup.hide_tooltip()
 
 
 func populate_shop() -> void:
@@ -56,7 +50,7 @@ func _generate_shop_cards() -> void:
 		var new_shop_card := SHOP_CARD.instantiate() as ShopCard
 		cards.add_child(new_shop_card)
 		new_shop_card.card = card
-		new_shop_card.current_card_ui.tooltip_requested.connect(card_tooltip_popup.show_tooltip)
+		new_shop_card.call_deferred("set_modifier_context", modifier_handler)
 		new_shop_card.gold_cost = _get_updated_shop_cost(new_shop_card.gold_cost)
 		new_shop_card.update(run_stats)
 

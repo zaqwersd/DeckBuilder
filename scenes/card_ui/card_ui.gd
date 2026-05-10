@@ -60,10 +60,10 @@ func is_hovered() -> bool:
 	return rect.has_point(get_local_mouse_position())
 
 
-func request_tooltip() -> void:
-	var enemy_modifiers := get_active_enemy_modifiers()
-	var updated_tooltip := card.get_updated_tooltip(player_modifiers, enemy_modifiers)
-	Events.card_tooltip_requested.emit(card.icon, updated_tooltip)
+func refresh_combat_description() -> void:
+	if not card or not is_instance_valid(card_visuals):
+		return
+	card_visuals.apply_modifier_context(player_modifiers, get_active_enemy_modifiers())
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -105,10 +105,12 @@ func _set_char_stats(value: CharacterStats) -> void:
 func _on_drop_point_detector_area_entered(area: Area2D) -> void:
 	if not targets.has(area):
 		targets.append(area)
+		refresh_combat_description()
 
 
 func _on_drop_point_detector_area_exited(area: Area2D) -> void:
 	targets.erase(area)
+	refresh_combat_description()
 
 
 func _on_card_drag_or_aiming_started(used_card: CardUI) -> void:
@@ -116,6 +118,7 @@ func _on_card_drag_or_aiming_started(used_card: CardUI) -> void:
 		return
 	
 	disabled = true
+	z_index = 0
 
 
 func _on_card_drag_or_aim_ended(_card: CardUI) -> void:
@@ -124,4 +127,6 @@ func _on_card_drag_or_aim_ended(_card: CardUI) -> void:
 
 
 func _on_char_stats_changed() -> void:
-	playable = char_stats.can_play_card(card)
+	if card:
+		playable = char_stats.can_play_card(card)
+		refresh_combat_description()

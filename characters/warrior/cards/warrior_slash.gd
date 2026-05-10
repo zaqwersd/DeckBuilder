@@ -8,11 +8,11 @@ func get_default_tooltip() -> String:
 
 
 func get_updated_tooltip(player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler) -> String:
-	var modified_dmg := player_modifiers.get_modified_value(base_damage, Modifier.Type.DMG_DEALT)
-
+	var modified_dmg := base_damage
+	if player_modifiers:
+		modified_dmg = player_modifiers.get_modified_value(base_damage, Modifier.Type.DMG_DEALT)
 	if enemy_modifiers:
 		modified_dmg = enemy_modifiers.get_modified_value(modified_dmg, Modifier.Type.DMG_TAKEN)
-		
 	return tooltip_text % modified_dmg
 
 

@@ -9,6 +9,7 @@ script = ExtResource("2_brwxd")
 id = "warrior_axe_attack"
 target = 1
 cost = 1
+card_name = "打击"
 icon = ExtResource("1_mnudp")
 tooltip_text = "[center]造成 [color=\"ff0000\"]%s[/color] 点伤害。[/center]"
 sound = ExtResource("3_fudr5")

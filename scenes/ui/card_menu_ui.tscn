@@ -5,8 +5,8 @@
 [ext_resource type="PackedScene" uid="uid://b362c35jf6fmy" path="res://scenes/ui/card_visuals.tscn" id="3_vpo1j"]
 
 [node name="CardMenuUI" type="CenterContainer"]
-offset_right = 112.5
-offset_bottom = 135
+offset_right = 268.0
+offset_bottom = 348.0
 size_flags_horizontal = 3
 script = ExtResource("1_0f0jo")
 card = ExtResource("2_1ngm1")

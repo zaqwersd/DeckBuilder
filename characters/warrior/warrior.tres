@@ -13,7 +13,6 @@ description = "喜欢把东西切成片的战士。"
 portrait = ExtResource("1_8jkdb")
 starting_deck = ExtResource("3_d68oj")
 draftable_cards = ExtResource("2_jojs0")
-cards_per_turn = 5
 max_mana = 3
 starting_relic = ExtResource("5_wfusn")
 max_health = 35

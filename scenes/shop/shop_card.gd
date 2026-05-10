@@ -43,6 +43,11 @@ func set_card(new_card: Card) -> void:
 	current_card_ui = new_card_menu_ui
 
 
+func set_modifier_context(handler: ModifierHandler) -> void:
+	if current_card_ui:
+		current_card_ui.set_modifier_preview(handler, null)
+
+
 func _on_buy_button_pressed() -> void:
 	Events.shop_card_bought.emit(card, gold_cost)
 	card_container.queue_free()

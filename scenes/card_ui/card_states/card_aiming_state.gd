@@ -8,6 +8,9 @@ func _snapback_y_threshold() -> float:
 
 func enter() -> void:
 	card_ui.targets.clear()
+	# 瞄准抬起时仍可能与手牌重叠，提高层级以免点到下层牌
+	card_ui.z_index = 40
+	card_ui.z_as_relative = true
 	var offset := Vector2(card_ui.parent.size.x / 2, -card_ui.size.y / 2)
 	offset.x -= card_ui.size.x / 2
 	card_ui.animate_to_position(card_ui.parent.global_position + offset, 0.2)

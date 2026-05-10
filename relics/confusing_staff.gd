@@ -19,3 +19,4 @@ func _on_player_hand_drawn() -> void:
 	for card_ui: CardUI in player_handler.hand.get_children():
 		card_ui.card.cost = RNG.instance.randi_range(0, 3)
 		card_ui.card = card_ui.card
+		card_ui.refresh_combat_description()

@@ -9,6 +9,7 @@ script = ExtResource("2_avork")
 id = "warrior_block"
 type = 1
 cost = 1
+card_name = "防御"
 icon = ExtResource("1_gn3qd")
 tooltip_text = "[center]获得[color=\"0044ff\"]%s[/color]点格挡。[/center]"
 sound = ExtResource("3_g3rmi")

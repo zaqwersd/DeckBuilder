@@ -10,8 +10,7 @@ func enter() -> void:
 	
 	if single_targeted and not first_target_is_enemy:
 		return
-		
-	Events.tooltip_hide_requested.emit()
+
 	card_ui.play()
 
 

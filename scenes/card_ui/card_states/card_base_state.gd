@@ -1,5 +1,8 @@
 extends CardState
 
+## 高于手牌内其它卡（默认 0），保证重叠时鼠标命中与绘制顺序一致
+const HAND_HOVER_Z := 10
+
 var mouse_over_card := false
 
 
@@ -10,10 +13,10 @@ func enter() -> void:
 	if card_ui.tween and card_ui.tween.is_running():
 		card_ui.tween.kill()
 
-	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.BASE_STYLEBOX)
+	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.card_visuals.main_panel_style_base)
+	card_ui.z_index = 0
+	card_ui.z_as_relative = true
 	card_ui.reparent_requested.emit(card_ui)
-	card_ui.pivot_offset = Vector2.ZERO
-	Events.tooltip_hide_requested.emit()
 
 
 func on_gui_input(event: InputEvent) -> void:
@@ -31,8 +34,9 @@ func on_mouse_entered() -> void:
 	if not card_ui.playable or card_ui.disabled:
 		return
 
-	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.HOVER_STYLEBOX)
-	card_ui.request_tooltip()
+	card_ui.z_index = HAND_HOVER_Z
+	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.card_visuals.main_panel_style_hover)
+	card_ui.refresh_combat_description()
 
 
 func on_mouse_exited() -> void:
@@ -41,5 +45,5 @@ func on_mouse_exited() -> void:
 	if not card_ui.playable or card_ui.disabled:
 		return
 
-	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.BASE_STYLEBOX)
-	Events.tooltip_hide_requested.emit()
+	card_ui.z_index = 0
+	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.card_visuals.main_panel_style_base)

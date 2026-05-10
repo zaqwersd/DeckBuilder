@@ -10,6 +10,7 @@ id = "warrior_angry_anvil"
 type = 1
 rarity = 1
 cost = 1
+card_name = "坚毅"
 icon = ExtResource("1_3oe33")
 tooltip_text = "[center]获得 [color=\"0044ff\"]%s[/color] 点格挡。消耗随机 1 张手牌。[/center]"
 sound = ExtResource("3_oo1yl")

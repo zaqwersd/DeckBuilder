@@ -35,7 +35,7 @@ func _ready() -> void:
 	_track.set_corner_radius_all(0)
 
 	_fill_red = StyleBoxFlat.new()
-	_fill_red.bg_color = Color(0.631, 0.161, 0.2, 1.0)
+	_fill_red.bg_color = Color(0.945, 0.161, 0.2, 1.0)
 	_fill_red.set_corner_radius_all(0)
 
 	_fill_silver = StyleBoxFlat.new()
