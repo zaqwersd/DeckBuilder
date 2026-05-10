@@ -1,7 +1,7 @@
 class_name Map
 extends Node2D
 
-const SCROLL_SPEED := 15
+const SCROLL_SPEED := 67.5
 const MAP_ROOM = preload("res://scenes/map/map_room.tscn")
 const MAP_LINE = preload("res://scenes/map/map_line.tscn")
 
@@ -19,6 +19,9 @@ var camera_edge_y: float
 
 func _ready() -> void:
 	camera_edge_y = MapGenerator.Y_DIST * (MapGenerator.FLOORS - 1)
+	# Match camera center to viewport (was hardcoded 128,72 for 256×144; wrong for 1152×648).
+	var vs := get_viewport_rect().size
+	camera_2d.offset = vs * 0.5
 
 
 func _unhandled_input(event: InputEvent) -> void:

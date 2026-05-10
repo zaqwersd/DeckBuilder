@@ -7,16 +7,16 @@
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -20.0
-offset_right = 20.0
-offset_bottom = 14.0
+offset_left = -90
+offset_right = 90
+offset_bottom = 63
 grow_horizontal = 2
 theme_override_constants/separation = 0
 alignment = 1
 script = ExtResource("1_aarbb")
 
 [node name="Icon" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(14, 14)
+custom_minimum_size = Vector2(63, 63)
 layout_mode = 2
 texture = ExtResource("1_giyx2")
 expand_mode = 1

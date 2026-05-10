@@ -7,12 +7,13 @@
 [ext_resource type="PackedScene" uid="uid://nqvpogmvfn3t" path="res://scenes/relic_handler/relic_ui.tscn" id="4_vgweh"]
 
 [node name="RelicHandler" type="HBoxContainer"]
-offset_right = 120.0
-offset_bottom = 16.0
+offset_right = 540
+offset_bottom = 72
 script = ExtResource("1_7nrs2")
 
 [node name="LeftButton" type="TextureButton" parent="."]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 disabled = true
 texture_normal = ExtResource("1_ptctx")
@@ -24,7 +25,7 @@ flip_h = true
 
 [node name="RelicsControl" type="Control" parent="." node_paths=PackedStringArray("left_button", "right_button")]
 clip_contents = true
-custom_minimum_size = Vector2(90, 0)
+custom_minimum_size = Vector2(405, 0)
 layout_mode = 2
 script = ExtResource("3_1h0c2")
 left_button = NodePath("../LeftButton")
@@ -32,11 +33,11 @@ right_button = NodePath("../RightButton")
 
 [node name="Relics" type="HBoxContainer" parent="RelicsControl"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(90, 16)
+custom_minimum_size = Vector2(405, 72)
 layout_mode = 0
-offset_right = 430.0
-offset_bottom = 16.0
-theme_override_constants/separation = 2
+offset_right = 1935
+offset_bottom = 72
+theme_override_constants/separation = 9
 
 [node name="RelicUI" parent="RelicsControl/Relics" instance=ExtResource("4_vgweh")]
 layout_mode = 2
@@ -73,6 +74,7 @@ layout_mode = 2
 
 [node name="RightButton" type="TextureButton" parent="."]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 disabled = true
 texture_normal = ExtResource("1_ptctx")

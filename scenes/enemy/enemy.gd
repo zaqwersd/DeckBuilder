@@ -70,7 +70,8 @@ func update_enemy() -> void:
 		await ready
 	
 	sprite_2d.texture = stats.art
-	arrow.position = Vector2.RIGHT * (sprite_2d.get_rect().size.x / 2 + ARROW_OFFSET)
+	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
+	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
 	setup_ai()
 	update_stats()
 
@@ -98,7 +99,7 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	var modified_damage := modifier_handler.get_modified_value(damage, which_modifier)
 	
 	var tween := create_tween()
-	tween.tween_callback(Shaker.shake.bind(self, 16, 0.15))
+	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
 	tween.tween_callback(stats.take_damage.bind(modified_damage))
 	tween.tween_interval(0.17)
 

@@ -1,6 +1,9 @@
 extends CardState
 
-const MOUSE_Y_SNAPBACK_THRESHOLD := 138
+
+func _snapback_y_threshold() -> float:
+	# Original tutorial used 138px at 144p viewport (~95.8% from top). Scale with viewport height.
+	return card_ui.get_viewport_rect().size.y * (138.0 / 144.0)
 
 
 func enter() -> void:
@@ -18,7 +21,7 @@ func exit() -> void:
 
 func on_input(event: InputEvent) -> void:	
 	var mouse_motion := event is InputEventMouseMotion
-	var mouse_at_bottom := card_ui.get_global_mouse_position().y > MOUSE_Y_SNAPBACK_THRESHOLD
+	var mouse_at_bottom := card_ui.get_global_mouse_position().y > _snapback_y_threshold()
 	
 	if (mouse_motion and mouse_at_bottom) or event.is_action_pressed("right_mouse"):
 		card_ui.targets.clear()

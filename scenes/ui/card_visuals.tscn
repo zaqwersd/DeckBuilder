@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://du7r7v1iaahuo" path="res://art/rarity.png" id="4_w0uhs"]
 
 [node name="CardVisuals" type="Control"]
-custom_minimum_size = Vector2(25, 30)
+custom_minimum_size = Vector2(112.5, 135)
 layout_mode = 3
 anchors_preset = 0
 theme = ExtResource("1_hiimn")
@@ -27,8 +27,8 @@ theme_override_styles/panel = ExtResource("2_nvr8g")
 
 [node name="Cost" type="Label" parent="."]
 layout_mode = 0
-offset_right = 10.0
-offset_bottom = 10.0
+offset_right = 45
+offset_bottom = 45
 text = "2"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -40,10 +40,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -5.0
-offset_top = -5.0
-offset_right = 5.0
-offset_bottom = 5.0
+offset_left = -22.5
+offset_top = -22.5
+offset_right = 22.5
+offset_bottom = 22.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -56,10 +56,10 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -8.0
-offset_top = 2.0
-offset_right = -2.0
-offset_bottom = 8.0
+offset_left = -36
+offset_top = 9
+offset_right = -9
+offset_bottom = 36
 grow_horizontal = 0
 texture = ExtResource("4_w0uhs")
 expand_mode = 1

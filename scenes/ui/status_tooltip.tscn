@@ -4,20 +4,20 @@
 [ext_resource type="Texture2D" uid="uid://2egbj0w2asc2" path="res://art/expose.png" id="1_fgsdg"]
 
 [node name="StatusTooltip" type="HBoxContainer"]
-custom_minimum_size = Vector2(150, 0)
-offset_right = 150.0
-offset_bottom = 15.0
+custom_minimum_size = Vector2(675, 0)
+offset_right = 675
+offset_bottom = 67.5
 script = ExtResource("1_1m4i6")
 
 [node name="Icon" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(10, 10)
+custom_minimum_size = Vector2(45, 45)
 layout_mode = 2
 texture = ExtResource("1_fgsdg")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Label" type="Label" parent="."]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(495, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Takes 50% more damage from attacks, for %s turns."

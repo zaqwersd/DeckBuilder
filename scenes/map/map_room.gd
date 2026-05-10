@@ -4,6 +4,9 @@ extends Area2D
 signal clicked(room: Room)
 signal selected(room: Room)
 
+## Extra scale on top of per-type multipliers (icons were authored for low-res map).
+const MAP_ICON_SCALE := 3.0
+
 const ICONS := {
 	Room.Type.NOT_ASSIGNED: [null, Vector2.ONE],
 	Room.Type.MONSTER: [preload("res://art/tile_0103.png"), Vector2.ONE],
@@ -36,7 +39,7 @@ func set_room(new_data: Room) -> void:
 	position = room.position
 	line_2d.rotation_degrees = randi_range(0, 360)
 	sprite_2d.texture = ICONS[room.type][0]
-	sprite_2d.scale = ICONS[room.type][1]
+	sprite_2d.scale = ICONS[room.type][1] * MAP_ICON_SCALE
 
 
 func show_selected() -> void:

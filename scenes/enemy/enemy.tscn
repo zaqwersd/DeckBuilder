@@ -16,30 +16,32 @@ collision_layer = 4
 script = ExtResource("1_ogp3w")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(3, 3)
 texture = ExtResource("1_exhc0")
 
 [node name="Arrow" type="Sprite2D" parent="."]
 visible = false
-position = Vector2(16, 0)
+position = Vector2(72, 0)
 rotation = -1.5708
 texture = ExtResource("2_x2iwj")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+scale = Vector2(3, 3)
 shape = SubResource("RectangleShape2D_3gsft")
 
 [node name="StatsUI" parent="." instance=ExtResource("3_qiomm")]
-offset_top = 7.0
-offset_bottom = 23.0
+offset_top = 31.5
+offset_bottom = 103.5
 
 [node name="IntentUI" parent="." groups=["intent"] instance=ExtResource("5_xytk4")]
-offset_top = -24.0
-offset_bottom = -10.0
+offset_top = -108
+offset_bottom = -45
 
 [node name="StatusHandler" parent="." node_paths=PackedStringArray("status_owner") instance=ExtResource("6_3dhyq")]
-offset_left = -27.0
-offset_top = 25.0
-offset_right = -27.0
-offset_bottom = 25.0
+offset_left = -121.5
+offset_top = 112.5
+offset_right = -121.5
+offset_bottom = 112.5
 status_owner = NodePath("..")
 
 [node name="ModifierHandler" parent="." instance=ExtResource("7_xbm7w")]

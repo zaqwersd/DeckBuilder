@@ -8,12 +8,12 @@ colors = PackedColorArray(0.2, 0.117647, 0.0509804, 1, 0.054902, 0, 0.0588235, 1
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_1kxac"]
 gradient = SubResource("Gradient_7af3e")
-width = 50
+width = 225
 
 [sub_resource type="LabelSettings" id="LabelSettings_aveil"]
-line_spacing = 6.0
-font_size = 12
-shadow_size = 4
+line_spacing = 27
+font_size = 54
+shadow_size = 18
 shadow_color = Color(0.54902, 0.443137, 0.376471, 0.333333)
 
 [node name="WinScreen" type="Control"]
@@ -36,17 +36,17 @@ texture = SubResource("GradientTexture1D_1kxac")
 
 [node name="CharacterPortrait" type="TextureRect" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 60)
+custom_minimum_size = Vector2(270, 270)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -87.0
-offset_top = -30.0
-offset_right = -27.0
-offset_bottom = 30.0
+offset_left = -391.5
+offset_top = -135
+offset_right = -121.5
+offset_bottom = 135
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("3_13ibh")
@@ -60,13 +60,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = 3.0
-offset_top = -32.0
-offset_right = 97.0
-offset_bottom = 32.0
+offset_left = 13.5
+offset_top = -144
+offset_right = 436.5
+offset_bottom = 144
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 90
 
 [node name="Message" type="Label" parent="VboxContainer"]
 unique_name_in_owner = true
@@ -78,7 +78,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="MainMenuButton" type="Button" parent="VboxContainer"]
-custom_minimum_size = Vector2(60, 14)
+custom_minimum_size = Vector2(270, 63)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "Main Menu"

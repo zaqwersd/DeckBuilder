@@ -14,7 +14,7 @@
 [ext_resource type="Resource" uid="uid://r6aixmaucd4b" path="res://relics/wooden_sword.tres" id="7_oqlxp"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_8a2h2"]
-font_size = 12
+font_size = 54
 
 [sub_resource type="Animation" id="Animation_uiaoo"]
 length = 0.001
@@ -184,10 +184,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -29.0
-offset_top = -26.0
-offset_right = 29.0
-offset_bottom = -14.0
+offset_left = -130.5
+offset_top = -117
+offset_right = 130.5
+offset_bottom = -63
 grow_horizontal = 2
 grow_vertical = 2
 text = "Treasure"
@@ -201,13 +201,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -20.0
-offset_top = -5.0
-offset_right = 20.0
-offset_bottom = 35.0
+offset_left = -90
+offset_top = -22.5
+offset_right = 90
+offset_bottom = 157.5
 grow_horizontal = 2
 grow_vertical = 2
-pivot_offset = Vector2(20, 20)
+pivot_offset = Vector2(90, 90)
 mouse_filter = 0
 texture = ExtResource("3_4v1q1")
 stretch_mode = 5
@@ -220,7 +220,7 @@ libraries = {
 autoplay = "highlight"
 
 [node name="GPUParticles2D" type="GPUParticles2D" parent="TreasureChest"]
-position = Vector2(20, 28)
+position = Vector2(90, 126)
 emitting = false
 amount = 25
 process_material = SubResource("ParticleProcessMaterial_7ywtv")

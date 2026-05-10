@@ -9,9 +9,9 @@
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -45.0
-offset_right = 45.0
-offset_bottom = 16.0
+offset_left = -202.5
+offset_right = 202.5
+offset_bottom = 90
 grow_horizontal = 2
 theme = ExtResource("1_6mdvy")
 alignment = 1
@@ -22,6 +22,7 @@ layout_mode = 2
 theme_override_constants/separation = 0
 
 [node name="BlockImage" type="TextureRect" parent="Block"]
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 texture = ExtResource("2_3xkif")
 stretch_mode = 5

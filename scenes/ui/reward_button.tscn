@@ -4,9 +4,9 @@
 [ext_resource type="Texture2D" uid="uid://dhmtctwb5ymhc" path="res://art/gold.png" id="1_q1h24"]
 
 [node name="RewardButton" type="Button"]
-custom_minimum_size = Vector2(0, 14)
-offset_right = 75.0
-offset_bottom = 14.0
+custom_minimum_size = Vector2(0, 63)
+offset_right = 337.5
+offset_bottom = 63
 script = ExtResource("1_0k6p2")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -16,18 +16,18 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 4
-theme_override_constants/margin_top = 2
-theme_override_constants/margin_right = 4
-theme_override_constants/margin_bottom = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 9
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 9
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 9
 
 [node name="CustomIcon" type="TextureRect" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(10, 10)
+custom_minimum_size = Vector2(45, 45)
 layout_mode = 2
 texture = ExtResource("1_q1h24")
 expand_mode = 1
