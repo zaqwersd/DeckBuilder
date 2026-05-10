@@ -27,6 +27,7 @@ func _ready() -> void:
 		relic_ui.free()
 
 	relics.child_order_changed.connect(_on_relics_child_order_changed)
+	update()
 
 
 func update() -> void:
@@ -38,13 +39,14 @@ func update() -> void:
 	
 	left_button.disabled = current_page <= 1
 	right_button.disabled = current_page >= max_page
+	left_button.visible = not left_button.disabled
+	right_button.visible = not right_button.disabled
 
 
 func _tween_to(x_position: float) -> void:
 	if tween:
 		tween.kill()
 	
-	print(x_position)
 	tween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(relics, "position:x", x_position, TWEEN_SCROLL_DURATION)
 
