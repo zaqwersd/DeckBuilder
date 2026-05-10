@@ -109,6 +109,7 @@ func _change_view(scene: PackedScene) -> Node:
 
 
 func _show_map() -> void:
+	Events.relic_tooltip_hover_hide.emit()
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
 
@@ -141,7 +142,8 @@ func _setup_top_bar():
 	gold_ui.run_stats = stats
 	
 	relic_handler.add_relic(character.starting_relic)
-	Events.relic_tooltip_requested.connect(relic_tooltip.show_tooltip)
+	Events.relic_tooltip_hover_show.connect(relic_tooltip.show_tooltip)
+	Events.relic_tooltip_hover_hide.connect(relic_tooltip.hide)
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck

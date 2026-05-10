@@ -1,15 +1,12 @@
-[gd_resource type="Resource" load_steps=3 format=3 uid="uid://cy5rtyb7a4hpp"]
+[gd_resource type="Resource" script_class="CouponsRelic" format=3 uid="uid://cy5rtyb7a4hpp"]
 
 [ext_resource type="Texture2D" uid="uid://cjclq485fhfjv" path="res://art/coupons.png" id="1_xmg3w"]
-[ext_resource type="Script" path="res://relics/coupons.gd" id="2_0p0pg"]
+[ext_resource type="Script" uid="uid://dbw4wpfqa7yps" path="res://relics/coupons.gd" id="2_0p0pg"]
 
 [resource]
 script = ExtResource("2_0p0pg")
 relic_name = "优惠券"
 id = "coupons"
 type = 4
-character_type = 0
-starter_relic = false
 icon = ExtResource("1_xmg3w")
-tooltip = "[color=\"ffdf00\"]优惠券[/color]
-商店内所有商品半价。"
+tooltip = "商店内所有商品半价。"

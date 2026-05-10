@@ -100,7 +100,7 @@ position = Vector2(220.5, 450)
 scale = Vector2(9, 9)
 texture = ExtResource("2_tcnoe")
 
-[node name="Warrior" type="Sprite2D" parent="." unique_id=1915123713]
+[node name="Blade" type="Sprite2D" parent="." unique_id=1915123713]
 position = Vector2(166.5, 544.5)
 scale = Vector2(9, 9)
 texture = ExtResource("3_vcouc")

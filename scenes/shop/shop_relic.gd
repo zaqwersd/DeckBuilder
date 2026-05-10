@@ -2,28 +2,33 @@ class_name ShopRelic
 extends VBoxContainer
 
 const RELIC_UI = preload("res://scenes/relic_handler/relic_ui.tscn")
+## 与 shop_relic.tscn 根节点一致：售出后占位
+const SLOT_SIZE := Vector2(180, 135)
 
 @export var relic: Relic : set = set_relic
 
 @onready var relic_container: CenterContainer = %RelicContainer
 @onready var price: HBoxContainer = %Price
 @onready var price_label: Label = %PriceLabel
-@onready var buy_button: Button = %BuyButton
 @onready var gold_cost := RNG.instance.randi_range(100, 300)
+
+var _run_stats: RunStats
+var _sold := false
 
 
 func update(run_stats: RunStats) -> void:
-	if not relic_container or not price or not buy_button:
+	if _sold:
+		return
+	_run_stats = run_stats
+	if not relic_container or not price or not price_label:
 		return
 
 	price_label.text = str(gold_cost)
 	
 	if run_stats.gold >= gold_cost:
 		price_label.remove_theme_color_override("font_color")
-		buy_button.disabled = false
 	else:
 		price_label.add_theme_color_override("font_color", Color.RED)
-		buy_button.disabled = true
 
 
 func set_relic(new_relic: Relic) -> void:
@@ -38,10 +43,25 @@ func set_relic(new_relic: Relic) -> void:
 	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
 	relic_container.add_child(new_relic_ui)
 	new_relic_ui.relic = relic
+	if not new_relic_ui.relic_pressed.is_connected(_on_relic_pressed):
+		new_relic_ui.relic_pressed.connect(_on_relic_pressed)
 
 
-func _on_buy_button_pressed() -> void:
+func _on_relic_pressed(_r: Relic) -> void:
+	if _sold or not _run_stats or _run_stats.gold < gold_cost:
+		return
 	Events.shop_relic_bought.emit(relic, gold_cost)
-	relic_container.queue_free()
-	price.queue_free()
-	buy_button.queue_free()
+	mark_as_sold()
+
+
+func mark_as_sold() -> void:
+	_sold = true
+	var keep := size
+	var w := maxf(keep.x, SLOT_SIZE.x) if keep.x > 1.0 else SLOT_SIZE.x
+	var h := maxf(keep.y, SLOT_SIZE.y) if keep.y > 1.0 else SLOT_SIZE.y
+	for c: Node in get_children():
+		c.queue_free()
+	var hold := Control.new()
+	hold.custom_minimum_size = Vector2(w, h)
+	hold.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(hold)

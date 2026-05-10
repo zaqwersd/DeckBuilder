@@ -1,14 +1,12 @@
-[gd_scene load_steps=21 format=3 uid="uid://c2k6lpae18q8v"]
+[gd_scene load_steps=19 format=3 uid="uid://c2k6lpae18q8v"]
 
 [ext_resource type="Script" path="res://scenes/shop/shop.gd" id="1_oqoy8"]
 [ext_resource type="Texture2D" uid="uid://bj3im6egs4wxx" path="res://art/tile_0086.png" id="2_41omk"]
 [ext_resource type="Resource" uid="uid://cy5rtyb7a4hpp" path="res://relics/coupons.tres" id="2_ccxow"]
 [ext_resource type="Resource" uid="uid://b11jhsqqh7kfe" path="res://relics/explosive_barrel.tres" id="3_7lk2o"]
 [ext_resource type="Texture2D" uid="uid://cvtonr5sinxbx" path="res://art/shopkeeper_blink.png" id="3_uthr0"]
-[ext_resource type="PackedScene" uid="uid://d24w6bygugbhd" path="res://scenes/shop/shop_card.tscn" id="4_2u2et"]
 [ext_resource type="Resource" uid="uid://dn6frpxqh1o7" path="res://relics/mana_potion.tres" id="4_4u268"]
 [ext_resource type="Resource" uid="uid://c8c1y85x2h5l" path="res://relics/reinforced_armor.tres" id="5_8ym3b"]
-[ext_resource type="PackedScene" uid="uid://dlt6561ywjx8m" path="res://scenes/shop/shop_relic.tscn" id="5_m1t66"]
 [ext_resource type="Resource" uid="uid://bkmq76jcysxaf" path="res://relics/blinding_potion.tres" id="6_t35ch"]
 [ext_resource type="Resource" uid="uid://b7xh51rkdccfy" path="res://relics/confusing_staff.tres" id="7_wrryf"]
 [ext_resource type="Resource" uid="uid://r6aixmaucd4b" path="res://relics/wooden_sword.tres" id="8_rq1it"]
@@ -161,33 +159,11 @@ offset_bottom = 301.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Cards" type="HBoxContainer" parent="UILayer/ShopContent"]
+[node name="ShopColumns" type="HBoxContainer" parent="UILayer/ShopContent"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 68
-
-[node name="ShopCard" parent="UILayer/ShopContent/Cards" instance=ExtResource("4_2u2et")]
-layout_mode = 2
-
-[node name="ShopCard2" parent="UILayer/ShopContent/Cards" instance=ExtResource("4_2u2et")]
-layout_mode = 2
-
-[node name="ShopCard3" parent="UILayer/ShopContent/Cards" instance=ExtResource("4_2u2et")]
-layout_mode = 2
-
-[node name="Relics" type="HBoxContainer" parent="UILayer/ShopContent"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 68
-
-[node name="ShopRelic" parent="UILayer/ShopContent/Relics" instance=ExtResource("5_m1t66")]
-layout_mode = 2
-
-[node name="ShopRelic2" parent="UILayer/ShopContent/Relics" instance=ExtResource("5_m1t66")]
-layout_mode = 2
-
-[node name="ShopRelic3" parent="UILayer/ShopContent/Relics" instance=ExtResource("5_m1t66")]
-layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
 
 [node name="ModifierHandler" parent="." instance=ExtResource("11_863hj")]
 

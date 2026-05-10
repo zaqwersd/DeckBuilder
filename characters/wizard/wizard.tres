@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cqu424271vmxm" path="res://custom_resources/character_stats.gd" id="1_6upmd"]
 [ext_resource type="Texture2D" uid="uid://dpfqok8tuy4r7" path="res://art/tile_0084.png" id="1_ghe8y"]
-[ext_resource type="Resource" uid="uid://dyyfi3rcfxyug" path="res://characters/warrior/warrior_starting_deck.tres" id="3_d6so0"]
+[ext_resource type="Resource" uid="uid://dyyfi3rcfxyug" path="res://characters/blade/blade_starting_deck.tres" id="3_d6so0"]
 
 [resource]
 script = ExtResource("1_6upmd")

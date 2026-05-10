@@ -1,12 +1,12 @@
 [gd_resource type="Resource" format=3 uid="uid://bcmktyqt2d7cm"]
 
 [ext_resource type="Texture2D" uid="uid://dytq0eumwvky6" path="res://art/tile_0074.png" id="1_3oe33"]
-[ext_resource type="Script" uid="uid://xdheakd10mqi" path="res://characters/warrior/cards/warrior_angry_anvil.gd" id="2_npntm"]
+[ext_resource type="Script" uid="uid://xdheakd10mqi" path="res://characters/blade/cards/blade_angry_anvil.gd" id="2_npntm"]
 [ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_oo1yl"]
 
 [resource]
 script = ExtResource("2_npntm")
-id = "warrior_angry_anvil"
+id = "blade_angry_anvil"
 type = 1
 rarity = 1
 cost = 1

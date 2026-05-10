@@ -5,11 +5,10 @@
 
 [resource]
 script = ExtResource("2_yauxr")
-relic_name = "治疗药水"
+relic_name = "无尽治疗药水"
 id = "healing_potion"
 type = 3
 character_type = 2
 starter_relic = true
 icon = ExtResource("1_xg7m0")
-tooltip = "[color=\"ffdf00\"]无尽治疗药水[/color]
-每场战斗结束时，回复 6 点生命。"
+tooltip = "每场战斗结束时，回复 6 点生命。"

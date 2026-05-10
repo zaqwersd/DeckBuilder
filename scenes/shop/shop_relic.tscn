@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://dhmtctwb5ymhc" path="res://art/gold.png" id="4_0iw0f"]
 
 [node name="ShopRelic" type="VBoxContainer"]
-custom_minimum_size = Vector2(180, 189)
+custom_minimum_size = Vector2(180, 135)
 offset_right = 180
 offset_bottom = 189
 theme_override_constants/separation = 9
@@ -37,11 +37,3 @@ layout_mode = 2
 texture = ExtResource("4_0iw0f")
 expand_mode = 1
 stretch_mode = 5
-
-[node name="BuyButton" type="Button" parent="."]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 54)
-layout_mode = 2
-text = "购买"
-
-[connection signal="pressed" from="BuyButton" to="." method="_on_buy_button_pressed"]

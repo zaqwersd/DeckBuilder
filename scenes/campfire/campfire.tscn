@@ -1,7 +1,7 @@
 [gd_scene load_steps=15 format=3 uid="uid://dfrdaou640irp"]
 
 [ext_resource type="Script" path="res://scenes/campfire/campfire.gd" id="1_i8fph"]
-[ext_resource type="Resource" uid="uid://sbkc4o401k4l" path="res://characters/warrior/warrior.tres" id="2_0gfpy"]
+[ext_resource type="Resource" uid="uid://sbkc4o401k4l" path="res://characters/blade/blade.tres" id="2_0gfpy"]
 [ext_resource type="Texture2D" uid="uid://djbldcvfo4swr" path="res://art/line.png" id="2_ykw02"]
 
 [sub_resource type="Gradient" id="Gradient_lx464"]

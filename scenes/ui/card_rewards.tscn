@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" path="res://scenes/ui/card_rewards.gd" id="1_okwb6"]
 [ext_resource type="PackedScene" uid="uid://trmdo65td4t7" path="res://scenes/ui/card_menu_ui.tscn" id="1_spfg3"]
-[ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/warrior/cards/warrior_slash.tres" id="2_o7v21"]
-[ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/warrior/cards/warrior_big_slam.tres" id="3_k78il"]
-[ext_resource type="Resource" uid="uid://c8g8a5tx1sr2p" path="res://characters/warrior/cards/warrior_true_strength.tres" id="4_iwxg7"]
+[ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/blade/cards/blade_slash.tres" id="2_o7v21"]
+[ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/blade/cards/blade_big_slam.tres" id="3_k78il"]
+[ext_resource type="Resource" uid="uid://c8g8a5tx1sr2p" path="res://characters/blade/cards/blade_true_strength.tres" id="4_iwxg7"]
 
 [node name="CardRewards" type="ColorRect"]
 anchors_preset = 15

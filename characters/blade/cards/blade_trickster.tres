@@ -2,11 +2,11 @@
 
 [ext_resource type="Texture2D" uid="uid://bi6pfjs32f820" path="res://art/tile_0101.png" id="1_huvsc"]
 [ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="2_bd85j"]
-[ext_resource type="Script" uid="uid://b8mccvjthyyyx" path="res://characters/warrior/cards/warrior_trickster.gd" id="3_1idfq"]
+[ext_resource type="Script" uid="uid://b8mccvjthyyyx" path="res://characters/blade/cards/blade_trickster.gd" id="3_1idfq"]
 
 [resource]
 script = ExtResource("3_1idfq")
-id = "warrior_trickster"
+id = "闪躲"
 type = 1
 rarity = 1
 icon = ExtResource("1_huvsc")

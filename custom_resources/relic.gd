@@ -2,7 +2,7 @@ class_name Relic
 extends Resource
 
 enum Type {START_OF_TURN, START_OF_COMBAT, END_OF_TURN, END_OF_COMBAT, EVENT_BASED}
-enum CharacterType {ALL, ASSASSIN, WARRIOR, WIZARD}
+enum CharacterType {ALL, ASSASSIN, BLADE, WIZARD}
 
 @export var relic_name: String
 @export var id: String
@@ -38,8 +38,10 @@ func can_appear_as_reward(character: CharacterStats) -> bool:
 
 	if character_type == CharacterType.ALL:
 		return true
-		
+
 	var relic_char_name: String = CharacterType.keys()[character_type].to_lower()
-	var char_name := character.character_name.to_lower()
-	
-	return relic_char_name == char_name
+	var char_key := character.relic_match_id.strip_edges().to_lower()
+	if char_key.is_empty():
+		char_key = character.character_name.to_lower()
+
+	return relic_char_name == char_key

@@ -81,8 +81,8 @@ Here's a description of the Card, it works similar to "Finesse" in Slay the Spir
 Here's a step-by-step guide on what you need to do.
 
 1. It's a good idea to create a new Effect, we can use for Cards and Relics which can draw cards. Create the CardDrawEffect class based on the Effect template. (card_draw_effect.gd)
-2. Create a new Card Resource (warrior_trickster.tres)
-3. Create a new Script, based on the Card template. (warrior_trickster.gd)
+2. Create a new Card Resource (blade_trickster.tres)
+3. Create a new Script, based on the Card template. (blade_trickster.gd)
 4. Assign it to the new Card Resource
 5. Test it.
 6. Add it to the pool of draftable cards so it can appear in Shops and BattleRewards!
@@ -97,8 +97,8 @@ Here's a description of the Card, it works similar to "Rampage" in Slay the Spir
 
 Here's a step-by-step guide on what you need to do.
 
-1. Create a new Card Resource (warrior_sharp_knife.tres)
-2. Create a new Script, based on the Card template. (warrior_sharp_knife.gd)
+1. Create a new Card Resource (blade_sharp_knife.tres)
+2. Create a new Script, based on the Card template. (blade_sharp_knife.gd)
 3. Assign it to the new Card Resource
 4. Test it.
 5. Add it to the pool of draftable cards so it can appear in Shops and BattleRewards!
@@ -114,8 +114,8 @@ Here's a description of the Card, it works similar to "True Grit" in Slay the Sp
 Here's a step-by-step guide on what you need to do.
 
 1. It's a good idea to create a new Effect, we can use for Cards and Relics which can exhaust random cards. Create the ExhaustRandomEffect class based on the Effect template. (exhaust_random_effect.gd)
-2. Create a new Card Resource (warrior_angry_anvil.tres)
-3. Create a new Script, based on the Card template. (warrior_angry_anvil.gd)
+2. Create a new Card Resource (blade_angry_anvil.tres)
+3. Create a new Script, based on the Card template. (blade_angry_anvil.gd)
 4. Assign it to the new Card Resource
 5. Test it.
 6. Add it to the pool of draftable cards so it can appear in Shops and BattleRewards!

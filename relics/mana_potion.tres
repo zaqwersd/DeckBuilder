@@ -9,5 +9,4 @@ relic_name = "法力药水"
 id = "mana_potion"
 type = 1
 icon = ExtResource("1_di0fn")
-tooltip = "[color=\"ffdf00\"]可充能法力药水[/color]
-每场战斗开始时，额外获得 1 点法力。"
+tooltip = "每场战斗开始时，额外获得 1 点能量。"

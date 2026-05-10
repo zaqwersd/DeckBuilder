@@ -2,7 +2,7 @@
 
 [ext_resource type="Theme" uid="uid://c8cqncsqlplyu" path="res://main_theme.tres" id="1_hiimn"]
 [ext_resource type="Script" uid="uid://ck5lir4nnxfv3" path="res://scenes/ui/card_visuals.gd" id="2_uk7ay"]
-[ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/warrior/cards/warrior_slash.tres" id="3_t04tx"]
+[ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/blade/cards/blade_slash.tres" id="3_t04tx"]
 [ext_resource type="Texture2D" uid="uid://dojlh80rte165" path="res://art/tile_0107.png" id="5_jxbv6"]
 
 [node name="CardVisuals" type="Control" unique_id=842450397]
@@ -34,17 +34,17 @@ unique_name_in_owner = true
 layout_mode = 0
 offset_left = 24.0
 offset_top = 53.0
-offset_right = 197.0
-offset_bottom = 174.0
+offset_right = 194.0
+offset_bottom = 173.0
 mouse_filter = 2
 
 [node name="CardImage" type="TextureRect" parent="FramePanel" unique_id=1041984952]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 17.0
-offset_top = 15.0
-offset_right = 146.0
-offset_bottom = 107.0
+offset_left = 3.0
+offset_top = 2.0
+offset_right = 166.0
+offset_bottom = 117.0
 mouse_filter = 2
 texture = ExtResource("5_jxbv6")
 expand_mode = 1

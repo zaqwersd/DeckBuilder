@@ -1,12 +1,12 @@
 [gd_resource type="Resource" format=3 uid="uid://c8g8a5tx1sr2p"]
 
 [ext_resource type="Texture2D" uid="uid://cn2c1psh561cc" path="res://art/tile_0127.png" id="1_ipoys"]
-[ext_resource type="Script" uid="uid://c2t6cr4qa36ga" path="res://characters/warrior/cards/warrior_true_strength.gd" id="2_pdjl6"]
+[ext_resource type="Script" uid="uid://c2t6cr4qa36ga" path="res://characters/blade/cards/blade_true_strength.gd" id="2_pdjl6"]
 [ext_resource type="AudioStream" uid="uid://cnqve7dtqjghp" path="res://art/true_strength.ogg" id="3_2ru8h"]
 
 [resource]
 script = ExtResource("2_pdjl6")
-id = "warrior_true_strength"
+id = "blade_true_strength"
 type = 2
 rarity = 2
 cost = 3

@@ -1,12 +1,12 @@
 [gd_resource type="Resource" format=3 uid="uid://n3va254ct6b3"]
 
 [ext_resource type="Texture2D" uid="uid://cqcal03735mv8" path="res://art/tile_0118.png" id="1_uhc8e"]
-[ext_resource type="Script" uid="uid://pl0j2p2fhamc" path="res://characters/warrior/cards/warrior_slash.gd" id="2_hvnm7"]
+[ext_resource type="Script" uid="uid://pl0j2p2fhamc" path="res://characters/blade/cards/blade_slash.gd" id="2_hvnm7"]
 [ext_resource type="AudioStream" uid="uid://dixklg6g4jnsq" path="res://art/slash.ogg" id="3_4dvu8"]
 
 [resource]
 script = ExtResource("2_hvnm7")
-id = "warrior_slash"
+id = "顺劈斩"
 target = 2
 cost = 2
 card_name = "横扫"

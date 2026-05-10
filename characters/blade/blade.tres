@@ -1,19 +1,22 @@
 [gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://sbkc4o401k4l"]
 
+[ext_resource type="Texture2D" uid="uid://dnxrlwlvue6v5" path="res://art/Blade.png" id="1_4dwfv"]
 [ext_resource type="Texture2D" uid="uid://cpydvk8mq66o5" path="res://art/tile_0087.png" id="1_8jkdb"]
 [ext_resource type="Script" uid="uid://cqu424271vmxm" path="res://custom_resources/character_stats.gd" id="1_d8ou5"]
-[ext_resource type="Resource" uid="uid://cno2mmhf4bjci" path="res://characters/warrior/warrior_draftable_cards.tres" id="2_jojs0"]
-[ext_resource type="Resource" uid="uid://dyyfi3rcfxyug" path="res://characters/warrior/warrior_starting_deck.tres" id="3_d68oj"]
+[ext_resource type="Resource" uid="uid://cno2mmhf4bjci" path="res://characters/blade/blade_draftable_cards.tres" id="2_jojs0"]
+[ext_resource type="Resource" uid="uid://dyyfi3rcfxyug" path="res://characters/blade/blade_starting_deck.tres" id="3_d68oj"]
 [ext_resource type="Resource" uid="uid://dgsppvwlatlhw" path="res://relics/healing_potion.tres" id="5_wfusn"]
 
 [resource]
 script = ExtResource("1_d8ou5")
-character_name = "战士"
-description = "喜欢把东西切成片的战士。"
+character_name = "剑客"
+description = "流浪的无名少女。
+为找寻剑术奥义和失散的人而来。"
 portrait = ExtResource("1_8jkdb")
+relic_match_id = "blade"
 starting_deck = ExtResource("3_d68oj")
 draftable_cards = ExtResource("2_jojs0")
 max_mana = 3
 starting_relic = ExtResource("5_wfusn")
-max_health = 35
-art = ExtResource("1_8jkdb")
+max_health = 75
+art = ExtResource("1_4dwfv")

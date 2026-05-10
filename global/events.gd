@@ -42,8 +42,9 @@ signal battle_reward_exited
 # Treasure Room-related events
 signal treasure_room_exited(found_relic: Relic)
 
-# Relic-related events
-signal relic_tooltip_requested(relic: Relic)
+# Relic-related事件：悬停显示说明；near_to 用于把提示框摆在遗物旁（RelicUI 等 Control）
+signal relic_tooltip_hover_show(relic: Relic, near_to: Control)
+signal relic_tooltip_hover_hide
 
 # Random Event room-related events
 signal event_room_exited

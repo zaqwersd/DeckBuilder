@@ -5,9 +5,12 @@ extends Stats
 @export var character_name: String
 @export_multiline var description: String
 @export var portrait: Texture
+## 与 Relic.CharacterType 键名（小写）对应，用于 can_appear_as_reward；留空则回退为 character_name
+@export var relic_match_id: String = ""
 
 @export_group("Gameplay Data")
 @export var starting_deck: CardPile
+## 商店与战后「选一张新卡」的候选池（刀锋在 `blade.tres` 里指向 `blade_draftable_cards.tres`）。
 @export var draftable_cards: CardPile
 @export var cards_per_turn: int = 5
 @export var max_mana: int

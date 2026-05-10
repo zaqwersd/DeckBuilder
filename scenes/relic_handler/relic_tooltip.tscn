@@ -1,68 +1,49 @@
-[gd_scene load_steps=3 format=3 uid="uid://bwtke8nmynqt2"]
+[gd_scene format=3 uid="uid://bwtke8nmynqt2"]
 
-[ext_resource type="Script" path="res://scenes/relic_handler/relic_tooltip.gd" id="1_qps86"]
-[ext_resource type="Texture2D" uid="uid://bxa8pkakcodgw" path="res://art/tile_0082.png" id="2_133u3"]
+[ext_resource type="Script" uid="uid://dujfvn5rjpaem" path="res://scenes/relic_handler/relic_tooltip.gd" id="1_qps86"]
 
-[node name="RelicTooltip" type="Control"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.12, 0.12, 0.12, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.38, 0.38, 0.38, 1)
+
+[node name="RelicTooltip" type="Control" unique_id=510639109]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 script = ExtResource("1_qps86")
 
-[node name="Background" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0.690196)
-
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -337.5
-offset_top = -117
-offset_right = 337.5
-offset_bottom = 117
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="RelicIcon" type="TextureRect" parent="VBoxContainer"]
+[node name="PanelRoot" type="PanelContainer" parent="." unique_id=99522789]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(72, 72)
-layout_mode = 2
-texture = ExtResource("2_133u3")
-stretch_mode = 5
+layout_mode = 0
+offset_right = 120.0
+offset_bottom = 80.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="RelicTooltip" type="RichTextLabel" parent="VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(675, 0)
+[node name="Margin" type="MarginContainer" parent="PanelRoot" unique_id=219306858]
 layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
+
+[node name="RelicTooltip" type="RichTextLabel" parent="PanelRoot/Margin" unique_id=53741110]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
 mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 16
 bbcode_enabled = true
-text = "遗物说明占位文本。"
 fit_content = true
-
-[node name="BackButton" type="Button" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -202.5
-offset_top = 22.5
-offset_right = -22.5
-offset_bottom = 85.5
-grow_horizontal = 0
-text = "返回"
-
-[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+scroll_active = false

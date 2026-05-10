@@ -1,14 +1,12 @@
-[gd_resource type="Resource" load_steps=3 format=3 uid="uid://b7xh51rkdccfy"]
+[gd_resource type="Resource" format=3 uid="uid://b7xh51rkdccfy"]
 
 [ext_resource type="Texture2D" uid="uid://pgj8vfpj6tc5" path="res://art/tile_0130.png" id="1_kkvs0"]
-[ext_resource type="Script" path="res://relics/confusing_staff.gd" id="2_pgwg4"]
+[ext_resource type="Script" uid="uid://btysri2atc41l" path="res://relics/confusing_staff.gd" id="2_pgwg4"]
 
 [resource]
 script = ExtResource("2_pgwg4")
 relic_name = "混乱法杖"
 id = "confusing_staff"
 type = 4
-character_type = 0
-starter_relic = false
 icon = ExtResource("1_kkvs0")
 tooltip = "随机将你所有牌的费用变为 0 到 3 之间。"
