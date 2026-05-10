@@ -172,7 +172,7 @@ grow_vertical = 2
 
 [node name="Title" type="Label" parent="UILayer/UI"]
 layout_mode = 2
-text = "Campfire"
+text = "营火"
 label_settings = SubResource("LabelSettings_k52g7")
 horizontal_alignment = 1
 
@@ -184,11 +184,11 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 63)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Rest"
+text = "休息"
 
 [node name="Description" type="Label" parent="UILayer/UI"]
 layout_mode = 2
-text = "+30% HP"
+text = "+30% 生命上限"
 horizontal_alignment = 1
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

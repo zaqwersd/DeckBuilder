@@ -49,8 +49,8 @@ custom_minimum_size = Vector2(675, 0)
 layout_mode = 2
 mouse_filter = 2
 bbcode_enabled = true
-text = "Card Description Card Description Card Description 
-Card Description Card Description"
+text = "卡牌说明占位 卡牌说明占位 卡牌说明占位
+卡牌说明占位 卡牌说明占位"
 fit_content = true
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

@@ -4,9 +4,9 @@ extends Control
 const CARD_REWARDS = preload("res://scenes/ui/card_rewards.tscn")
 const REWARD_BUTTON = preload("res://scenes/ui/reward_button.tscn")
 const GOLD_ICON := preload("res://art/gold.png")
-const GOLD_TEXT := "%s gold"
+const GOLD_TEXT := "%s 金币"
 const CARD_ICON := preload("res://art/rarity.png")
-const CARD_TEXT := "Add New Card"
+const CARD_TEXT := "添加新卡牌"
 
 @export var run_stats: RunStats
 @export var character_stats: CharacterStats

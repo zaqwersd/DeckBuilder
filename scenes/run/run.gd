@@ -80,7 +80,7 @@ func _save_run(was_on_map: bool) -> void:
 
 func _load_run() -> void:
 	save_data = SaveGame.load_data()
-	assert(save_data, "Couldn't load last save")
+	assert(save_data, "无法加载上次的存档")
 	
 	RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 	stats = save_data.run_stats
@@ -145,7 +145,7 @@ func _setup_top_bar():
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck
-	deck_button.pressed.connect(deck_view.show_current_view.bind("Deck"))
+	deck_button.pressed.connect(deck_view.show_current_view.bind("牌库"))
 
 
 func _show_regular_battle_rewards() -> void:

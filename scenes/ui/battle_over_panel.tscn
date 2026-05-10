@@ -35,7 +35,7 @@ grow_vertical = 2
 [node name="Label" type="Label" parent="VBoxContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Victorious!"
+text = "胜利！"
 label_settings = SubResource("LabelSettings_bijyl")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -45,11 +45,11 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(225, 72)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Awesome!"
+text = "太棒了！"
 
 [node name="MainMenuButton" type="Button" parent="VBoxContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(225, 72)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Main Menu"
+text = "主菜单"

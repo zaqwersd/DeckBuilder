@@ -190,7 +190,7 @@ offset_right = 130.5
 offset_bottom = -63
 grow_horizontal = 2
 grow_vertical = 2
-text = "Treasure"
+text = "宝藏"
 label_settings = SubResource("LabelSettings_8a2h2")
 horizontal_alignment = 1
 

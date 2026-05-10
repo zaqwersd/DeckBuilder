@@ -9,7 +9,7 @@ extends Stats
 @export_group("Gameplay Data")
 @export var starting_deck: CardPile
 @export var draftable_cards: CardPile
-@export var cards_per_turn: int
+@export var cards_per_turn: int = 5
 @export var max_mana: int
 @export var starting_relic: Relic
 

@@ -49,7 +49,7 @@ custom_minimum_size = Vector2(675, 0)
 layout_mode = 2
 mouse_filter = 2
 bbcode_enabled = true
-text = "Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip Relic Tooltip"
+text = "遗物说明占位文本。"
 fit_content = true
 
 [node name="BackButton" type="Button" parent="."]
@@ -63,6 +63,6 @@ offset_top = 22.5
 offset_right = -22.5
 offset_bottom = 85.5
 grow_horizontal = 0
-text = "Back"
+text = "返回"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

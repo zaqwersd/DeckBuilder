@@ -15,8 +15,8 @@ extends CanvasLayer
 func _ready() -> void:
 	Events.player_hand_drawn.connect(_on_player_hand_drawn)
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
-	draw_pile_button.pressed.connect(draw_pile_view.show_current_view.bind("Draw Pile", true))
-	discard_pile_button.pressed.connect(discard_pile_view.show_current_view.bind("Discard Pile"))
+	draw_pile_button.pressed.connect(draw_pile_view.show_current_view.bind("抽牌堆", true))
+	discard_pile_button.pressed.connect(discard_pile_view.show_current_view.bind("弃牌堆"))
 
 
 func initialize_card_pile_ui() -> void:

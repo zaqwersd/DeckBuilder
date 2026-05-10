@@ -18,7 +18,7 @@ const SAVE_PATH := "user://savegame.tres"
 
 func save_data() -> void:
 	var err := ResourceSaver.save(self, SAVE_PATH)
-	assert(err == OK, "Couldn't save the game!")
+	assert(err == OK, "无法保存游戏！")
 
 
 static func load_data() -> SaveGame:

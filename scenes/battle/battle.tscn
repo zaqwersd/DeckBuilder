@@ -114,7 +114,7 @@ grow_horizontal = 0
 grow_vertical = 0
 theme = ExtResource("13_523u4")
 disabled = true
-text = "End Turn"
+text = "结束回合"
 
 [node name="DrawPileButton" parent="BattleUI" node_paths=PackedStringArray("counter") instance=ExtResource("17_djv03")]
 unique_name_in_owner = true

@@ -32,32 +32,32 @@ alignment = 1
 [node name="MapButton" type="Button" parent="DebugButtons" unique_id=1574044792]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Map"
+text = "地图"
 
 [node name="BattleButton" type="Button" parent="DebugButtons" unique_id=234156150]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Battle"
+text = "战斗"
 
 [node name="ShopButton" type="Button" parent="DebugButtons" unique_id=1053509788]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Shop"
+text = "商店"
 
 [node name="TreasureButton" type="Button" parent="DebugButtons" unique_id=860170718]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Treasure"
+text = "宝藏"
 
 [node name="RewardsButton" type="Button" parent="DebugButtons" unique_id=95290635]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Rewards"
+text = "奖励"
 
 [node name="CampfireButton" type="Button" parent="DebugButtons" unique_id=421939266]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Campfire"
+text = "营火"
 
 [node name="TopBar" type="CanvasLayer" parent="." unique_id=2115948253]
 layer = 3
@@ -160,7 +160,7 @@ theme_override_constants/separation = 68
 
 [node name="Label" type="Label" parent="PauseMenu/VBoxContainer" unique_id=998578698]
 layout_mode = 2
-text = "Paused"
+text = "已暂停"
 label_settings = SubResource("LabelSettings_68deg")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -173,10 +173,10 @@ theme_override_constants/separation = 45
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 63)
 layout_mode = 2
-text = "Back"
+text = "返回"
 
 [node name="SaveAndQuitButton" type="Button" parent="PauseMenu/VBoxContainer/HBoxContainer" unique_id=957785521]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(225, 0)
 layout_mode = 2
-text = "Main Menu"
+text = "主菜单"

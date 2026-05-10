@@ -1,6 +1,6 @@
-[gd_scene load_steps=12 format=3 uid="uid://4tj0qise1som"]
+[gd_scene format=3 uid="uid://4tj0qise1som"]
 
-[ext_resource type="Script" path="res://scenes/ui/main_menu.gd" id="1_bck1p"]
+[ext_resource type="Script" uid="uid://dxshrpk7a4p53" path="res://scenes/ui/main_menu.gd" id="1_bck1p"]
 [ext_resource type="Texture2D" uid="uid://dpfqok8tuy4r7" path="res://art/tile_0084.png" id="1_uaqd2"]
 [ext_resource type="Resource" uid="uid://bd874b0h1q8n1" path="res://scenes/run/run_startup.tres" id="2_4poyw"]
 [ext_resource type="Texture2D" uid="uid://cwf6dyi56tgo" path="res://art/tile_0088.png" id="2_tcnoe"]
@@ -17,12 +17,12 @@ gradient = SubResource("Gradient_7af3e")
 width = 225
 
 [sub_resource type="LabelSettings" id="LabelSettings_rnxpd"]
+line_spacing = 45.0
 font_size = 72
-line_spacing = 45
 shadow_size = 18
 shadow_color = Color(0.54902, 0.443137, 0.376471, 0.333333)
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=1552626915]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,7 +32,7 @@ grow_vertical = 2
 script = ExtResource("1_bck1p")
 run_startup = ExtResource("2_4poyw")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=1368934971]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -41,7 +41,7 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture1D_1kxac")
 
-[node name="Title" type="Label" parent="."]
+[node name="Title" type="Label" parent="." unique_id=656957760]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -49,76 +49,75 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -472.5
-offset_top = -256.5
+offset_top = -351.5
 offset_right = 472.5
-offset_bottom = -58.5
+offset_bottom = 36.5
 grow_horizontal = 2
 grow_vertical = 2
-text = "My Awesome
-Roguelike Deckbuilder"
+text = "一个比较好的游戏。"
 label_settings = SubResource("LabelSettings_rnxpd")
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1915088524]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -135
-offset_top = -9
-offset_right = 135
-offset_bottom = 252
+offset_left = -135.0
+offset_top = -9.0
+offset_right = 135.0
+offset_bottom = 252.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 36
 
-[node name="Continue" type="Button" parent="VBoxContainer"]
+[node name="Continue" type="Button" parent="VBoxContainer" unique_id=505179087]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 63)
 layout_mode = 2
-text = "Continue"
+text = "继续"
 
-[node name="NewRun" type="Button" parent="VBoxContainer"]
+[node name="NewRun" type="Button" parent="VBoxContainer" unique_id=814047811]
 custom_minimum_size = Vector2(0, 63)
 layout_mode = 2
-text = "New Run"
+text = "新游戏"
 
-[node name="Exit" type="Button" parent="VBoxContainer"]
+[node name="Exit" type="Button" parent="VBoxContainer" unique_id=1458756125]
 custom_minimum_size = Vector2(0, 63)
 layout_mode = 2
-text = "Exit"
+text = "退出"
 
-[node name="Wizard" type="Sprite2D" parent="."]
+[node name="Wizard" type="Sprite2D" parent="." unique_id=1867048535]
 position = Vector2(90, 472.5)
 scale = Vector2(9, 9)
 texture = ExtResource("1_uaqd2")
 
-[node name="Assassin" type="Sprite2D" parent="."]
+[node name="Assassin" type="Sprite2D" parent="." unique_id=1815382978]
 position = Vector2(220.5, 450)
 scale = Vector2(9, 9)
 texture = ExtResource("2_tcnoe")
 
-[node name="Warrior" type="Sprite2D" parent="."]
+[node name="Warrior" type="Sprite2D" parent="." unique_id=1915123713]
 position = Vector2(166.5, 544.5)
 scale = Vector2(9, 9)
 texture = ExtResource("3_vcouc")
 
-[node name="Bat" type="Sprite2D" parent="."]
+[node name="Bat" type="Sprite2D" parent="." unique_id=585558382]
 position = Vector2(918, 472.5)
 scale = Vector2(9, 9)
 texture = ExtResource("4_snr5i")
 flip_h = true
 
-[node name="Crab" type="Sprite2D" parent="."]
+[node name="Crab" type="Sprite2D" parent="." unique_id=2129507554]
 position = Vector2(990, 562.5)
 scale = Vector2(9, 9)
 texture = ExtResource("5_pintp")
 flip_h = true
 
-[node name="Ghost" type="Sprite2D" parent="."]
+[node name="Ghost" type="Sprite2D" parent="." unique_id=1834922171]
 position = Vector2(1048.5, 454.5)
 scale = Vector2(9, 9)
 texture = ExtResource("6_6iwyb")

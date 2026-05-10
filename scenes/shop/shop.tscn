@@ -130,7 +130,7 @@ offset_right = 301.5
 offset_bottom = -166.5
 grow_horizontal = 2
 grow_vertical = 2
-text = "Shop"
+text = "商店"
 label_settings = SubResource("LabelSettings_cywyj")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -147,7 +147,7 @@ offset_right = -261
 offset_bottom = -90
 grow_horizontal = 2
 grow_vertical = 2
-text = "Leave"
+text = "离开"
 
 [node name="ShopContent" type="VBoxContainer" parent="UILayer"]
 anchors_preset = 8

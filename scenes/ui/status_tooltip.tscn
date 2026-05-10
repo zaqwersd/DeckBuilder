@@ -20,6 +20,6 @@ stretch_mode = 5
 custom_minimum_size = Vector2(495, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Takes 50% more damage from attacks, for %s turns."
+text = "受到的攻击伤害提高 50%%，持续 %s 回合。"
 vertical_alignment = 1
 autowrap_mode = 2

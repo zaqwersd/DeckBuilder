@@ -46,7 +46,7 @@ func _on_enemy_turn_ended() -> void:
 
 
 func _on_player_died() -> void:
-	Events.battle_over_screen_requested.emit("Game Over!", BattleOverPanel.Type.LOSE)
+	Events.battle_over_screen_requested.emit("游戏结束！", BattleOverPanel.Type.LOSE)
 	SaveGame.delete_data()
 
 
@@ -56,4 +56,4 @@ func _on_relics_activated(type: Relic.Type) -> void:
 			player_handler.start_battle(char_stats)
 			battle_ui.initialize_card_pile_ui()
 		Relic.Type.END_OF_COMBAT:
-			Events.battle_over_screen_requested.emit("Victorious!", BattleOverPanel.Type.WIN)
+			Events.battle_over_screen_requested.emit("胜利！", BattleOverPanel.Type.WIN)

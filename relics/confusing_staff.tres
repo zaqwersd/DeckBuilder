@@ -5,10 +5,10 @@
 
 [resource]
 script = ExtResource("2_pgwg4")
-relic_name = "Confusing Staff"
+relic_name = "混乱法杖"
 id = "confusing_staff"
 type = 4
 character_type = 0
 starter_relic = false
 icon = ExtResource("1_kkvs0")
-tooltip = "Randomize the cost of your cards between 0 and 3."
+tooltip = "随机将你所有牌的费用变为 0 到 3 之间。"

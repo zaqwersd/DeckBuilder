@@ -5,10 +5,10 @@
 
 [resource]
 script = ExtResource("2_n51e4")
-relic_name = "Blinding Potion"
+relic_name = "致盲药水"
 id = "blinding_potion"
 type = 1
 character_type = 0
 starter_relic = false
 icon = ExtResource("1_gw7ui")
-tooltip = "Gain 1 extra energy at the start of each turn. You no longer see enemy intents. "
+tooltip = "每回合开始时额外获得 1 点能量。你不再能看清敌人的意图。"

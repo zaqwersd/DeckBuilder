@@ -59,7 +59,7 @@ grow_vertical = 2
 
 [node name="Label" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-text = "Rewards"
+text = "战斗奖励"
 label_settings = SubResource("LabelSettings_oksol")
 horizontal_alignment = 1
 
@@ -82,17 +82,17 @@ layout_mode = 2
 [node name="GoldReward" parent="VBoxContainer/RewardContainer/MarginContainer/Rewards" instance=ExtResource("3_1u6of")]
 layout_mode = 2
 reward_icon = ExtResource("4_pr1pa")
-reward_text = "127 gold"
+reward_text = "127 金币"
 
 [node name="CardReward" parent="VBoxContainer/RewardContainer/MarginContainer/Rewards" instance=ExtResource("3_1u6of")]
 layout_mode = 2
 reward_icon = ExtResource("5_lc0i4")
-reward_text = "Add New Card"
+reward_text = "添加新卡牌"
 
 [node name="BackButton" type="Button" parent="VBoxContainer"]
 custom_minimum_size = Vector2(225, 63)
 layout_mode = 2
 size_flags_horizontal = 4
-text = "Continue"
+text = "继续"
 
 [connection signal="pressed" from="VBoxContainer/BackButton" to="." method="_on_back_button_pressed"]

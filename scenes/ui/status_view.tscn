@@ -58,7 +58,7 @@ offset_top = 27
 offset_right = -27
 offset_bottom = 94.5
 grow_horizontal = 0
-text = "Back"
+text = "返回"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="BackButton" to="." method="_on_back_button_pressed"]

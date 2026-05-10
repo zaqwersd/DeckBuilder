@@ -16,12 +16,17 @@ var floors_climbed: int
 var last_room: Room
 var camera_edge_y: float
 
+## 相机水平锁定在地图中心（避免与 Visuals 平移重复计算后跑偏）
+var _camera_anchor_x: float = 0.0
+## 纵向滚动范围（地图局部坐标，与房间包围盒一致）
+var _camera_scroll_y_min: float = 0.0
+var _camera_scroll_y_max: float = 0.0
+
 
 func _ready() -> void:
 	camera_edge_y = MapGenerator.Y_DIST * (MapGenerator.FLOORS - 1)
-	# Match camera center to viewport (was hardcoded 128,72 for 256×144; wrong for 1152×648).
-	var vs := get_viewport_rect().size
-	camera_2d.offset = vs * 0.5
+	# offset 用半视口会让鼠标拾取错位；水平居中改由 position.x 对准地图。
+	camera_2d.offset = Vector2.ZERO
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -33,7 +38,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("scroll_down"):
 		camera_2d.position.y += SCROLL_SPEED
 
-	camera_2d.position.y = clamp(camera_2d.position.y, -camera_edge_y, 0)
+	camera_2d.position.y = clampf(camera_2d.position.y, _camera_scroll_y_min, _camera_scroll_y_max)
+	camera_2d.position.x = _camera_anchor_x
 
 
 func generate_new_map() -> void:
@@ -67,6 +73,28 @@ func create_map() -> void:
 	var map_width_pixels := MapGenerator.X_DIST * (MapGenerator.MAP_WIDTH - 1)
 	visuals.position.x = (get_viewport_rect().size.x - map_width_pixels) / 2
 	visuals.position.y = get_viewport_rect().size.y / 2
+	_fit_camera_to_map()
+
+
+func _fit_camera_to_map() -> void:
+	var min_x := INF
+	var max_x := -INF
+	var min_y := INF
+	var max_y := -INF
+	for map_room: MapRoom in rooms.get_children():
+		var p: Vector2 = visuals.position + map_room.position
+		min_x = minf(min_x, p.x)
+		max_x = maxf(max_x, p.x)
+		min_y = minf(min_y, p.y)
+		max_y = maxf(max_y, p.y)
+	if is_inf(min_x):
+		return
+	var margin_y := SCROLL_SPEED * 3.0
+	_camera_anchor_x = (min_x + max_x) * 0.5
+	_camera_scroll_y_min = min_y - margin_y
+	_camera_scroll_y_max = max_y + margin_y
+	var start_y := clampf((min_y + max_y) * 0.5, _camera_scroll_y_min, _camera_scroll_y_max)
+	camera_2d.position = Vector2(_camera_anchor_x, start_y)
 
 
 func unlock_floor(which_floor: int = floors_climbed) -> void:

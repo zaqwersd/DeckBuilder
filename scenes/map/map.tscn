@@ -24,7 +24,7 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 
 [node name="Camera2D" type="Camera2D" parent="."]
-offset = Vector2(576, 324)
+offset = Vector2(0, 0)
 
 [node name="MapGenerator" type="Node" parent="."]
 script = ExtResource("2_0qmb6")
@@ -40,4 +40,5 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 texture = SubResource("GradientTexture1D_i4y2l")

@@ -6,11 +6,11 @@
 [resource]
 script = ExtResource("2_snyc5")
 damage = 2
-relic_name = "Explosive Barrel"
+relic_name = "炸药桶"
 id = "explosive_barrel"
 type = 0
 character_type = 0
 starter_relic = false
 icon = ExtResource("1_813wr")
-tooltip = "[color=\"ffdf00\"]Explosive Barrel[/color]
-At the start of your turn, deal 2 damage to all enemies."
+tooltip = "[color=\"ffdf00\"]炸药桶[/color]
+在你回合开始时，对所有敌人造成 2 点伤害。"

@@ -40,21 +40,21 @@ grow_vertical = 2
 
 [node name="Label" type="Label" parent="VBoxContainer"]
 layout_mode = 2
-text = "helpful boi"
+text = "热心小伙伴"
 horizontal_alignment = 1
 
 [node name="DuplicateLastCardButton" parent="VBoxContainer" instance=ExtResource("1_850a0")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(450, 90)
 layout_mode = 2
-text = "duplicate last card
-in your deck"
+text = "复制牌库中
+最后一张牌"
 
 [node name="PlusMaxHPButton" parent="VBoxContainer" instance=ExtResource("1_850a0")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 67.5)
 layout_mode = 2
-text = "+5 max HP"
+text = "+5 生命上限"
 
 [node name="TextureRect" type="TextureRect" parent="."]
 layout_mode = 1

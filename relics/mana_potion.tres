@@ -1,15 +1,13 @@
-[gd_resource type="Resource" load_steps=3 format=3 uid="uid://dn6frpxqh1o7"]
+[gd_resource type="Resource" format=3 uid="uid://dn6frpxqh1o7"]
 
 [ext_resource type="Texture2D" uid="uid://c2xhttrclo1r7" path="res://art/tile_0116.png" id="1_di0fn"]
-[ext_resource type="Script" path="res://relics/mana_potion.gd" id="2_nmepq"]
+[ext_resource type="Script" uid="uid://bidabky4nsxvu" path="res://relics/mana_potion.gd" id="2_nmepq"]
 
 [resource]
 script = ExtResource("2_nmepq")
-relic_name = "Mana Potion"
+relic_name = "法力药水"
 id = "mana_potion"
 type = 1
-character_type = 0
-starter_relic = false
 icon = ExtResource("1_di0fn")
-tooltip = "[color=\"ffdf00\"]Rechargable Mana Potion[/color]
-At the start of combat, gain 1 mana."
+tooltip = "[color=\"ffdf00\"]可充能法力药水[/color]
+每场战斗开始时，额外获得 1 点法力。"

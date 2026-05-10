@@ -14,7 +14,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="Deck Builder Tutorial"
+config/name="牌组构筑教程"
 config/tags=PackedStringArray("gamelab")
 run/main_scene="uid://4tj0qise1som"
 config/features=PackedStringArray("4.6", "Mobile")
@@ -34,8 +34,6 @@ gdscript/warnings/unused_signal=0
 
 [display]
 
-window/size/viewport_width=1152
-window/size/viewport_height=648
 window/size/window_width_override=1920
 window/size/window_height_override=1080
 window/stretch/mode="viewport"

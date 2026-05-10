@@ -61,7 +61,7 @@ grow_horizontal = 2
 [node name="Title" type="Label" parent="CharacterText"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Warrior"
+text = "战士"
 label_settings = SubResource("LabelSettings_rnxpd")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -69,8 +69,8 @@ vertical_alignment = 1
 [node name="Description" type="Label" parent="CharacterText"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Likes to slice things up.
-Second line of text."
+text = "喜欢把东西切成片。
+第二行说明文字。"
 label_settings = SubResource("LabelSettings_aveil")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -104,7 +104,7 @@ offset_right = -45
 offset_bottom = -45
 grow_horizontal = 0
 grow_vertical = 0
-text = "Start"
+text = "开始"
 
 [node name="CharacterButtons" type="HBoxContainer" parent="."]
 layout_mode = 1
