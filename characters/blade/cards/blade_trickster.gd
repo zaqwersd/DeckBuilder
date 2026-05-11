@@ -1,6 +1,6 @@
 extends Card
 
-var base_block := 2
+var base_block := 4
 
 
 func get_default_tooltip() -> String:

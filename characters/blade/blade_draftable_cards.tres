@@ -3,13 +3,12 @@
 [ext_resource type="Script" uid="uid://bg8nmus47b34h" path="res://custom_resources/card.gd" id="1_byq7g"]
 [ext_resource type="Script" uid="uid://cx7pv6t0wf8e" path="res://custom_resources/card_pile.gd" id="1_x06dg"]
 [ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/blade/cards/blade_slash.tres" id="2_ur0lo"]
-[ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/blade/cards/blade_big_slam.tres" id="3_nwsc5"]
 [ext_resource type="Resource" uid="uid://cjmd5p8y455xc" path="res://characters/blade/cards/blade_trickster.tres" id="4_7uxu8"]
 [ext_resource type="Resource" uid="uid://c8g8a5tx1sr2p" path="res://characters/blade/cards/blade_true_strength.tres" id="4_jteol"]
-[ext_resource type="Resource" uid="uid://cedsow628sq3y" path="res://characters/blade/cards/blade_sharp_knife.tres" id="5_7s0ni"]
+[ext_resource type="Resource" uid="uid://cedsow628sq3y" path="res://characters/blade/cards/blade_shatter.tres" id="5_sfk5u"]
 [ext_resource type="Resource" uid="uid://bcmktyqt2d7cm" path="res://characters/blade/cards/blade_angry_anvil.tres" id="6_mdr4n"]
 [ext_resource type="Resource" uid="uid://bu5t6pggn2enx" path="res://characters/blade/cards/blade_iaijutsu.tres" id="7_iaiju"]
 
 [resource]
 script = ExtResource("1_x06dg")
-cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("3_nwsc5"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_7s0ni"), ExtResource("6_mdr4n"), ExtResource("7_iaiju")])
+cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("7_iaiju")])

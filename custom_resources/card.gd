@@ -78,11 +78,19 @@ func get_default_tooltip() -> String:
 
 func get_visual_description_bbcode() -> String:
 	var d := description.strip_edges()
+	var body: String
 	if d.is_empty():
-		return get_default_tooltip()
-	if d.contains("[center]"):
-		return d
-	return "[center]%s[/center]" % d
+		body = get_default_tooltip()
+	elif d.contains("[center]"):
+		body = d
+	else:
+		body = "[center]%s[/center]" % d
+	return _bbcode_visible_line_breaks(body)
+
+
+func _bbcode_visible_line_breaks(text: String) -> String:
+	# RichTextLabel + BBCode 下，[center] 等块里字面换行常被当成空格；统一成 [br] 才稳定换行。
+	return text.replace("\n", "[br]")
 
 
 func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler) -> String:
@@ -95,6 +103,5 @@ func get_updated_visual_description_bbcode(
 	_enemy_modifiers: ModifierHandler
 ) -> String:
 	var body := get_updated_tooltip(_player_modifiers, _enemy_modifiers)
-	if body.contains("[center]"):
-		return body
-	return "[center]%s[/center]" % body
+	var out := body if body.contains("[center]") else "[center]%s[/center]" % body
+	return _bbcode_visible_line_breaks(out)

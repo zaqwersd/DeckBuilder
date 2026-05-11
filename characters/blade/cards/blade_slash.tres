@@ -6,7 +6,7 @@
 
 [resource]
 script = ExtResource("2_hvnm7")
-id = "顺劈斩"
+id = "blade_slash"
 target = 2
 cost = 2
 card_name = "横扫"

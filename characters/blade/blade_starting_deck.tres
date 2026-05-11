@@ -5,8 +5,7 @@
 [ext_resource type="Resource" uid="uid://btxc1odh1jmst" path="res://characters/blade/cards/blade_axe_attack.tres" id="1_vcw61"]
 [ext_resource type="Resource" uid="uid://d4c8yfl4f4sat" path="res://characters/blade/cards/blade_block.tres" id="2_1cndr"]
 [ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/blade/cards/blade_big_slam.tres" id="4_u4di5"]
-[ext_resource type="Resource" uid="uid://bu5t6pggn2enx" path="res://characters/blade/cards/blade_iaijutsu.tres" id="5_mt3oe"]
 
 [resource]
 script = ExtResource("1_ncslu")
-cards = Array[ExtResource("1_tnkis")]([ExtResource("1_vcw61"), ExtResource("1_vcw61"), ExtResource("1_vcw61"), ExtResource("2_1cndr"), ExtResource("2_1cndr"), ExtResource("2_1cndr"), ExtResource("4_u4di5"), ExtResource("5_mt3oe")])
+cards = Array[ExtResource("1_tnkis")]([ExtResource("1_vcw61"), ExtResource("1_vcw61"), ExtResource("1_vcw61"), ExtResource("2_1cndr"), ExtResource("2_1cndr"), ExtResource("2_1cndr"), ExtResource("4_u4di5")])

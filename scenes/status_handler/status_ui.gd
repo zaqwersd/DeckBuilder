@@ -1,6 +1,8 @@
 class_name StatusUI
 extends Control
 
+const NEGATIVE_VALUE_COLOR := Color(1.0, 0.0, 0.0)
+
 @export var status: Status : set = set_status
 
 @onready var icon: TextureRect = $Icon
@@ -41,3 +43,12 @@ func _on_status_changed() -> void:
 
 	duration.text = str(status.duration)
 	stacks.text = str(status.stacks)
+	_apply_negative_value_color(duration, status.duration)
+	_apply_negative_value_color(stacks, status.stacks)
+
+
+func _apply_negative_value_color(label: Label, value: int) -> void:
+	if value < 0:
+		label.add_theme_color_override("font_color", NEGATIVE_VALUE_COLOR)
+	else:
+		label.remove_theme_color_override("font_color")

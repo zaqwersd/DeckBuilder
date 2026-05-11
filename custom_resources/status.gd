@@ -32,6 +32,13 @@ func get_tooltip() -> String:
 	return tooltip
 
 
+## 状态说明里嵌入的整数（层数、回合等）；为负时用红色 BBCode，供 RichTextLabel 使用。
+static func format_tooltip_integer(n: int) -> String:
+	if n < 0:
+		return "[color=#ff0000]%d[/color]" % n
+	return str(n)
+
+
 func set_duration(new_duration: int) -> void:
 	duration = new_duration
 	status_changed.emit()

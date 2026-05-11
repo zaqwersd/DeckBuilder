@@ -16,10 +16,12 @@ texture = ExtResource("1_fgsdg")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="."]
+[node name="Label" type="RichTextLabel" parent="."]
 custom_minimum_size = Vector2(495, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+mouse_filter = 2
+bbcode_enabled = true
+fit_content = true
 text = "受到的攻击伤害提高 50%%，持续 %s 回合。"
-vertical_alignment = 1
-autowrap_mode = 2
+scroll_active = false

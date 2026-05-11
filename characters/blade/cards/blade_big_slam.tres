@@ -6,11 +6,11 @@
 
 [resource]
 script = ExtResource("2_hh2ps")
-id = "锤击"
-rarity = 1
+id = "blade_big_slam"
 target = 1
 cost = 2
 exhausts = true
+card_name = "锤击"
 icon = ExtResource("1_11nym")
-tooltip_text = "[center]造成 [color=\"ff0000\"]%s[/color] 点伤害，施加 2 层 [color=\"ffdf00\"]易伤[/color]。[/center]"
+tooltip_text = "[center]造成 [color=\"ff0000\"]%s[/color] 点伤害。[br]施加 2 层 [color=\"ffdf00\"]易伤[/color]。[/center]"
 sound = ExtResource("3_0l7j0")

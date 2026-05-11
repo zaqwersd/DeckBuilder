@@ -3,7 +3,7 @@ extends Status
 
 
 func get_tooltip() -> String:
-	return tooltip % stacks
+	return tooltip % Status.format_tooltip_integer(stacks)
 
 
 func initialize_status(target: Node) -> void:

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" format=3 uid="uid://cedsow628sq3y"]
+
+[ext_resource type="Texture2D" uid="uid://b6ohh00uawyya" path="res://art/shatter.png" id="1_shatter"]
+[ext_resource type="Script" uid="uid://dj4cauibhec7m" path="res://characters/blade/cards/blade_shatter.gd" id="2_rjcfh"]
+[ext_resource type="AudioStream" uid="uid://dixklg6g4jnsq" path="res://art/slash.ogg" id="3_uxg0o"]
+
+[resource]
+script = ExtResource("2_rjcfh")
+id = "blade_shatter"
+rarity = 2
+target = 2
+cost = 2
+card_name = "崩碎"
+icon = ExtResource("1_shatter")
+tooltip_text = "[center]对所有敌人造成 [color=\"ff0000\"]%s[/color] 点伤害。失去 2 点力量。[/center]"
+sound = ExtResource("3_uxg0o")
