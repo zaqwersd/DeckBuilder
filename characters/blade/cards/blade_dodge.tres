@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3 uid="uid://cjmd5p8y455xc"]
+
+[ext_resource type="Texture2D" uid="uid://c2p6rp205c07u" path="res://art/dodge.png" id="1_vmecn"]
+[ext_resource type="Script" uid="uid://b8mccvjthyyyx" path="res://characters/blade/cards/blade_dodge.gd" id="2_prob4"]
+[ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="3_woe0s"]
+
+[resource]
+script = ExtResource("2_prob4")
+id = "blade_dodge"
+type = 1
+cost = 1
+card_name = "闪躲"
+icon = ExtResource("1_vmecn")
+tooltip_text = "[center]获得 [color=\"0044ff\"]%s[/color] 点格挡。[br]抽 1 张牌。"
+sound = ExtResource("3_woe0s")

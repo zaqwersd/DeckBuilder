@@ -13,9 +13,10 @@ func execute(targets: Array[Node]) -> void:
 	if not player_handler:
 		return
 	
-	var hand_randomized := player_handler.hand.get_children().duplicate()
-	RNG.array_shuffle(hand_randomized)
-	var cards := hand_randomized.slice(0, amount)
+	var slots := player_handler.hand.get_children().duplicate()
+	RNG.array_shuffle(slots)
+	var chosen_slots := slots.slice(0, amount)
 	
-	for card in cards:
-		card.queue_free()
+	for slot in chosen_slots:
+		if is_instance_valid(slot):
+			slot.queue_free()

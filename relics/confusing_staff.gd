@@ -16,7 +16,10 @@ func _on_player_hand_drawn() -> void:
 	relic_ui.flash()
 	var player_handler := relic_ui.get_tree().get_first_node_in_group("player_handler") as PlayerHandler
 	
-	for card_ui: CardUI in player_handler.hand.get_children():
+	for slot in player_handler.hand.get_children():
+		var card_ui := player_handler.hand.get_card_ui_in_slot(slot)
+		if not card_ui:
+			continue
 		card_ui.card.cost = RNG.instance.randi_range(0, 3)
 		card_ui.card = card_ui.card
 		card_ui.refresh_combat_description()

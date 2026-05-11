@@ -1,12 +1,13 @@
-[gd_scene load_steps=5 format=3 uid="uid://dary1vew8ju42"]
+[gd_scene format=3 uid="uid://dary1vew8ju42"]
 
-[ext_resource type="Script" path="res://scenes/ui/card_rewards.gd" id="1_okwb6"]
+[ext_resource type="Script" uid="uid://drguylavrikvn" path="res://scenes/ui/card_rewards.gd" id="1_okwb6"]
 [ext_resource type="PackedScene" uid="uid://trmdo65td4t7" path="res://scenes/ui/card_menu_ui.tscn" id="1_spfg3"]
+[ext_resource type="Script" uid="uid://bg8nmus47b34h" path="res://custom_resources/card.gd" id="2_drxgv"]
 [ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/blade/cards/blade_slash.tres" id="2_o7v21"]
 [ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/blade/cards/blade_big_slam.tres" id="3_k78il"]
 [ext_resource type="Resource" uid="uid://c8g8a5tx1sr2p" path="res://characters/blade/cards/blade_true_strength.tres" id="4_iwxg7"]
 
-[node name="CardRewards" type="ColorRect"]
+[node name="CardRewards" type="ColorRect" unique_id=1145581924]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -14,46 +15,38 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.666667)
 script = ExtResource("1_okwb6")
-rewards = Array[Resource("res://custom_resources/card.gd")]([ExtResource("2_o7v21"), ExtResource("3_k78il"), ExtResource("4_iwxg7")])
+rewards = Array[ExtResource("2_drxgv")]([ExtResource("2_o7v21"), ExtResource("3_k78il"), ExtResource("4_iwxg7")])
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=303299105]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -186.75
-offset_top = -90
-offset_right = 186.75
-offset_bottom = 90
+offset_left = -360.0
+offset_top = -146.0
+offset_right = 360.0
+offset_bottom = 272.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 45
 
-[node name="Cards" type="HBoxContainer" parent="VBoxContainer"]
+[node name="Cards" type="HBoxContainer" parent="VBoxContainer" unique_id=1722697331]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 45
 
-[node name="CardMenuUI" parent="VBoxContainer/Cards" instance=ExtResource("1_spfg3")]
+[node name="CardMenuUI" parent="VBoxContainer/Cards" unique_id=1965217093 instance=ExtResource("1_spfg3")]
 layout_mode = 2
 
-[node name="CardMenuUI2" parent="VBoxContainer/Cards" instance=ExtResource("1_spfg3")]
+[node name="CardMenuUI2" parent="VBoxContainer/Cards" unique_id=1564197362 instance=ExtResource("1_spfg3")]
 layout_mode = 2
 
-[node name="CardMenuUI3" parent="VBoxContainer/Cards" instance=ExtResource("1_spfg3")]
+[node name="CardMenuUI3" parent="VBoxContainer/Cards" unique_id=1378635481 instance=ExtResource("1_spfg3")]
 layout_mode = 2
 
-[node name="TakeButton" type="Button" parent="VBoxContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(225, 63)
-layout_mode = 2
-size_flags_horizontal = 4
-disabled = true
-text = "选取"
-
-[node name="SkipCardReward" type="Button" parent="VBoxContainer"]
+[node name="SkipCardReward" type="Button" parent="VBoxContainer" unique_id=1085774326]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(225, 63)
 layout_mode = 2

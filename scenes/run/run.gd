@@ -17,9 +17,11 @@ const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 @onready var gold_ui: GoldUI = %GoldUI
 @onready var relic_handler: RelicHandler = %RelicHandler
 @onready var relic_tooltip: RelicTooltip = %RelicTooltip
+@onready var status_hover_tooltip: StatusHoverTooltip = %StatusHoverTooltip
 @onready var deck_button: CardPileOpener = %DeckButton
 @onready var deck_view: CardPileView = %DeckView
 @onready var pause_menu: PauseMenu = $PauseMenu
+@onready var run_card_fx: RunCardFx = $RunCardFxLayer/RunCardFx
 
 @onready var battle_button: Button = %BattleButton
 @onready var campfire_button: Button = %CampfireButton
@@ -97,6 +99,8 @@ func _load_run() -> void:
 
 
 func _change_view(scene: PackedScene) -> Node:
+	Events.relic_tooltip_hover_hide.emit()
+	Events.status_tooltip_hover_hide.emit()
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
 	
@@ -110,6 +114,7 @@ func _change_view(scene: PackedScene) -> Node:
 
 func _show_map() -> void:
 	Events.relic_tooltip_hover_hide.emit()
+	Events.status_tooltip_hover_hide.emit()
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
 
@@ -144,10 +149,24 @@ func _setup_top_bar():
 	relic_handler.add_relic(character.starting_relic)
 	Events.relic_tooltip_hover_show.connect(relic_tooltip.show_tooltip)
 	Events.relic_tooltip_hover_hide.connect(relic_tooltip.hide)
+	Events.status_tooltip_hover_show.connect(status_hover_tooltip.show_tooltip)
+	Events.status_tooltip_hover_hide.connect(status_hover_tooltip.hide)
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck
 	deck_button.pressed.connect(deck_view.show_current_view.bind("牌库"))
+	if run_card_fx:
+		run_card_fx.setup(deck_button)
+
+
+func play_deck_gain_card_visual(card: Card, from_global: Vector2) -> void:
+	if run_card_fx:
+		await run_card_fx.animate_card_to_deck(card, from_global)
+
+
+func play_deck_gain_card_visual_with_pick(picked: CardMenuUI, from_global: Vector2) -> void:
+	if run_card_fx:
+		await run_card_fx.animate_picked_menu_to_deck(picked, from_global)
 
 
 func _show_regular_battle_rewards() -> void:

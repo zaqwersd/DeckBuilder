@@ -3,6 +3,7 @@
 class_name MyAwesomeStatus
 extends Status
 
+## 在检查器「Status Visuals」里填写 name（中文名）、icon、tooltip。
 var member_var := 0
 
 

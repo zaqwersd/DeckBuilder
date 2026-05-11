@@ -7,5 +7,7 @@
 [resource]
 script = ExtResource("1_7mfl6")
 ai = ExtResource("1_x0e6g")
+health_bar_width = 165
+status_bar_offset = Vector2(0, 30)
 max_health = 34
 art = ExtResource("1_cepjj")

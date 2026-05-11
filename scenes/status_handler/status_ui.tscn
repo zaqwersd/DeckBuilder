@@ -6,32 +6,37 @@
 [node name="StatusUI" type="Control"]
 layout_mode = 3
 anchors_preset = 0
-mouse_filter = 2
+mouse_filter = 0
 script = ExtResource("1_qqi3t")
 
 [node name="Icon" type="TextureRect" parent="."]
-custom_minimum_size = Vector2(45, 45)
+custom_minimum_size = Vector2(33, 33)
 layout_mode = 0
+mouse_filter = 2
 texture = ExtResource("1_6oevu")
 expand_mode = 1
 stretch_mode = 5
 
 [node name="Duration" type="Label" parent="."]
 layout_mode = 0
-offset_left = 22.5
-offset_top = 22.5
-offset_right = 67.5
-offset_bottom = 49.5
+mouse_filter = 2
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 51.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 21
 text = "99"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Stacks" type="Label" parent="."]
 layout_mode = 0
-offset_left = 22.5
-offset_top = 22.5
-offset_right = 67.5
-offset_bottom = 49.5
+mouse_filter = 2
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 51.0
+offset_bottom = 36.0
+theme_override_font_sizes/font_size = 21
 text = "99"
 horizontal_alignment = 1
 vertical_alignment = 1

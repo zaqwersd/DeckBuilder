@@ -12,5 +12,6 @@ description = "多年智慧积淀，
 portrait = ExtResource("1_ghe8y")
 starting_deck = ExtResource("3_d6so0")
 max_mana = 4
+health_bar_width = 152
 max_health = 27
 art = ExtResource("1_ghe8y")

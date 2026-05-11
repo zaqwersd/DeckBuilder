@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bg8nmus47b34h" path="res://custom_resources/card.gd" id="1_byq7g"]
 [ext_resource type="Script" uid="uid://cx7pv6t0wf8e" path="res://custom_resources/card_pile.gd" id="1_x06dg"]
 [ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/blade/cards/blade_slash.tres" id="2_ur0lo"]
-[ext_resource type="Resource" uid="uid://cjmd5p8y455xc" path="res://characters/blade/cards/blade_trickster.tres" id="4_7uxu8"]
+[ext_resource type="Resource" uid="uid://cjmd5p8y455xc" path="res://characters/blade/cards/blade_dodge.tres" id="4_7uxu8"]
 [ext_resource type="Resource" uid="uid://c8g8a5tx1sr2p" path="res://characters/blade/cards/blade_true_strength.tres" id="4_jteol"]
 [ext_resource type="Resource" uid="uid://cedsow628sq3y" path="res://characters/blade/cards/blade_shatter.tres" id="5_sfk5u"]
 [ext_resource type="Resource" uid="uid://bcmktyqt2d7cm" path="res://characters/blade/cards/blade_angry_anvil.tres" id="6_mdr4n"]

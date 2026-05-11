@@ -1,6 +1,6 @@
 extends Card
 
-var base_damage := 4
+var base_damage := 7
 
 
 func get_default_tooltip() -> String:
@@ -13,7 +13,7 @@ func get_updated_tooltip(player_modifiers: ModifierHandler, enemy_modifiers: Mod
 		modified_dmg = player_modifiers.get_modified_value(base_damage, Modifier.Type.DMG_DEALT)
 	if enemy_modifiers:
 		modified_dmg = enemy_modifiers.get_modified_value(modified_dmg, Modifier.Type.DMG_TAKEN)
-	return tooltip_text % modified_dmg
+	return tooltip_text % bbcode_for_modified_number(modified_dmg, base_damage)
 
 
 func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:

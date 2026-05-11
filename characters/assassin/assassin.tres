@@ -11,5 +11,6 @@ description = "鬼鬼祟祟的小个子。"
 portrait = ExtResource("1_qvpwy")
 starting_deck = ExtResource("3_4shk0")
 max_mana = 3
+health_bar_width = 146
 max_health = 24
 art = ExtResource("1_qvpwy")

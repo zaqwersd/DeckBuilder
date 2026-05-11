@@ -10,7 +10,9 @@
 [ext_resource type="PackedScene" uid="uid://d2jq2r5hb1ajk" path="res://scenes/ui/card_pile_view.tscn" id="6_4w0b2"]
 [ext_resource type="PackedScene" uid="uid://bltkcscivnh8p" path="res://scenes/relic_handler/relic_handler.tscn" id="6_f8fbw"]
 [ext_resource type="PackedScene" uid="uid://bwtke8nmynqt2" path="res://scenes/relic_handler/relic_tooltip.tscn" id="10_xh4qt"]
+[ext_resource type="PackedScene" path="res://scenes/ui/status_hover_tooltip.tscn" id="13_shtip"]
 [ext_resource type="Script" uid="uid://c1st7wl8w8aqq" path="res://scenes/run/pause_menu.gd" id="11_a4w7h"]
+[ext_resource type="Script" uid="uid://ctpbvifbefjhv" path="res://scenes/ui/run_card_fx.gd" id="12_runfx"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_68deg"]
 
@@ -129,6 +131,23 @@ visible = false
 [node name="RelicTooltip" parent="TopBar" unique_id=493273341 instance=ExtResource("10_xh4qt")]
 unique_name_in_owner = true
 visible = false
+
+[node name="StatusHoverTooltip" parent="TopBar" instance=ExtResource("13_shtip")]
+unique_name_in_owner = true
+visible = false
+
+[node name="RunCardFxLayer" type="CanvasLayer" parent="." unique_id=331122445]
+layer = 8
+
+[node name="RunCardFx" type="Control" parent="RunCardFxLayer" unique_id=331122446]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("12_runfx")
 
 [node name="PauseMenu" type="CanvasLayer" parent="." unique_id=2144448672]
 process_mode = 3

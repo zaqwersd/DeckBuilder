@@ -9,15 +9,8 @@ const BAR_HOST_HEIGHT := 10.0
 const BLOCK_BADGE_SIZE := Vector2(25, 25)
 
 ## 在默认贴齐血条左缘、垂直居中的基础上再平移（像素）。请在场景树选中
-## 「StatsUI → Health」（HealthBar 根节点）后在检查器里改，不要改 BlockBadge 的 position（会被脚本覆盖）。
+## 「StatusBar → HealthRow」（HealthBar 根节点）后在检查器里改，不要改 BlockBadge 的 position（会被脚本覆盖）。
 @export var block_badge_offset: Vector2 = Vector2.ZERO
-
-## 血条可伸缩宽度区间（随最大生命在两者之间插值）
-const BAR_WIDTH_MIN := 120
-const BAR_WIDTH_MAX := 232
-## 用于宽度插值的「典型」最大生命区间（可按项目数值再调）
-const MAX_HP_FOR_MIN_WIDTH := 10.0
-const MAX_HP_FOR_MAX_WIDTH := 70.0
 
 @onready var bar_host: Control = %BarHost
 @onready var block_badge: Control = %BlockBadge
@@ -53,7 +46,7 @@ func _ready() -> void:
 
 
 func update_stats(stats: Stats) -> void:
-	var bw := _bar_width_for_max_hp(stats.max_health)
+	var bw := clampi(stats.health_bar_width, 40, 400)
 	bar_host.custom_minimum_size = Vector2(float(bw), BAR_HOST_HEIGHT)
 	_reposition_block_badge()
 
@@ -70,15 +63,6 @@ func update_stats(stats: Stats) -> void:
 	else:
 		health_label.text = str(stats.health)
 	max_health_label.text = ""
-
-
-func _bar_width_for_max_hp(max_hp: int) -> int:
-	var t := clampf(
-		(float(max_hp) - MAX_HP_FOR_MIN_WIDTH) / maxf(0.001, MAX_HP_FOR_MAX_WIDTH - MAX_HP_FOR_MIN_WIDTH),
-		0.0,
-		1.0
-	)
-	return int(round(lerpf(float(BAR_WIDTH_MIN), float(BAR_WIDTH_MAX), t)))
 
 
 func _reposition_block_badge() -> void:

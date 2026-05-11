@@ -9,7 +9,7 @@ func get_default_tooltip() -> String:
 
 
 func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler) -> String:
-	return tooltip_text % base_block
+	return tooltip_text % bbcode_for_modified_number(base_block, base_block)
 
 
 func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:

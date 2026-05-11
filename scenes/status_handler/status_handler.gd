@@ -1,5 +1,5 @@
 class_name StatusHandler
-extends GridContainer
+extends HBoxContainer
 
 signal statuses_applied(type: Status.Type)
 
@@ -7,6 +7,8 @@ const STATUS_APPLY_INTERVAL := 0.25
 const STATUS_UI = preload("res://scenes/status_handler/status_ui.tscn")
 
 @export var status_owner: Node2D
+## 由 StatusBar 设置：玩家 true（说明在右），敌人 false（说明在左）
+var tooltips_open_to_right: bool = true
 
 
 func apply_statuses_by_type(type: Status.Type) -> void:
@@ -36,6 +38,8 @@ func add_status(status: Status) -> void:
 	if not _has_status(status.id):
 		var new_status_ui := STATUS_UI.instantiate() as StatusUI
 		add_child(new_status_ui)
+		new_status_ui.mouse_entered.connect(_on_status_ui_mouse_entered.bind(new_status_ui))
+		new_status_ui.mouse_exited.connect(_on_status_ui_mouse_exited)
 		new_status_ui.status = status
 		new_status_ui.status.status_applied.connect(_on_status_applied)
 		new_status_ui.status.initialize_status(status_owner)
@@ -84,6 +88,18 @@ func _on_status_applied(status: Status) -> void:
 		status.duration -= 1
 
 
-func _on_gui_input(event: InputEvent) -> void:
-	if event.is_action_pressed("left_mouse"):
-		Events.status_tooltip_requested.emit(_get_all_statuses())
+func _on_status_ui_mouse_entered(ui: StatusUI) -> void:
+	if ui.status:
+		Events.status_tooltip_hover_show.emit(ui.status, ui, tooltips_open_to_right)
+
+
+func _on_status_ui_mouse_exited() -> void:
+	call_deferred("_maybe_hide_status_tooltip")
+
+
+func _maybe_hide_status_tooltip() -> void:
+	var mp := get_global_mouse_position()
+	for c in get_children():
+		if c is StatusUI and (c as StatusUI).get_global_rect().has_point(mp):
+			return
+	Events.status_tooltip_hover_hide.emit()

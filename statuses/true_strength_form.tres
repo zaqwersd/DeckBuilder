@@ -7,4 +7,5 @@
 script = ExtResource("2_qak04")
 id = "true_strength_form"
 icon = ExtResource("1_hj76v")
+name = "真力量形态"
 tooltip = "真力量形态：在其回合开始时获得 2 层肌肉。"

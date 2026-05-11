@@ -18,5 +18,6 @@ starting_deck = ExtResource("3_d68oj")
 draftable_cards = ExtResource("2_jojs0")
 max_mana = 3
 starting_relic = ExtResource("5_wfusn")
+health_bar_width = 232
 max_health = 75
 art = ExtResource("1_4dwfv")

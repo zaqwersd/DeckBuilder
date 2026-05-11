@@ -21,6 +21,7 @@
 [ext_resource type="Texture2D" uid="uid://c7c8cgkuro8b3" path="res://art/discard.png" id="18_g47ei"]
 [ext_resource type="PackedScene" uid="uid://d2jq2r5hb1ajk" path="res://scenes/ui/card_pile_view.tscn" id="21_rnul2"]
 [ext_resource type="PackedScene" uid="uid://c3fu2yk5vm3qb" path="res://scenes/ui/status_view.tscn" id="22_kfjwu"]
+[ext_resource type="Script" uid="uid://dq3kxl7k50com" path="res://scenes/ui/battle_card_fx.gd" id="23_bcardfx"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_xyg5u"]
 size = Vector2(1152, 450)
@@ -68,15 +69,17 @@ stats = ExtResource("4_fwb8a")
 
 [node name="CardTargetSelector" parent="." unique_id=784304260 instance=ExtResource("3_vyv1n")]
 
-[node name="PlayerHandler" type="Node" parent="." unique_id=1440209863 node_paths=PackedStringArray("player", "hand") groups=["player_handler"]]
+[node name="PlayerHandler" type="Node" parent="." unique_id=1440209863 node_paths=PackedStringArray("player", "hand", "battle_card_fx") groups=["player_handler"]]
 script = ExtResource("8_3di7i")
 player = NodePath("../Player")
 hand = NodePath("../BattleUI/Hand")
+battle_card_fx = NodePath("../BattleUI/CardFxLayer")
 
 [node name="BattleUI" type="CanvasLayer" parent="." unique_id=1554332039 groups=["ui_layer"]]
 script = ExtResource("7_18vit")
 
 [node name="Hand" type="HBoxContainer" parent="BattleUI" unique_id=1201669563 node_paths=PackedStringArray("player")]
+unique_name_in_owner = true
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -86,7 +89,7 @@ offset_left = -337.5
 offset_top = -128.0
 offset_right = 337.5
 offset_bottom = 27.0
-grow_horizontal = 2
+grow_horizontal = 0
 grow_vertical = 0
 alignment = 1
 script = ExtResource("2_uaw60")
@@ -117,13 +120,15 @@ text = "结束回合"
 
 [node name="DrawPileButton" parent="BattleUI" unique_id=1368294506 node_paths=PackedStringArray("counter") instance=ExtResource("17_djv03")]
 unique_name_in_owner = true
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 31.5
-offset_top = -90.0
-offset_right = 103.5
-offset_bottom = -18.0
+anchors_preset = -1
+anchor_left = 0.059000004
+anchor_top = 0.91700006
+anchor_right = 0.059000004
+anchor_bottom = 0.91700006
+offset_left = -36.468002
+offset_top = -36.216064
+offset_right = 35.531998
+offset_bottom = 35.783936
 grow_vertical = 0
 counter = NodePath("Counter")
 
@@ -138,15 +143,15 @@ horizontal_alignment = 1
 
 [node name="DiscardPileButton" parent="BattleUI" unique_id=1312902306 node_paths=PackedStringArray("counter") instance=ExtResource("17_djv03")]
 unique_name_in_owner = true
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -103.5
-offset_top = -90.0
-offset_right = -31.5
-offset_bottom = -18.0
+anchors_preset = -1
+anchor_left = 0.94100004
+anchor_top = 0.91700006
+anchor_right = 0.94100004
+anchor_bottom = 0.91700006
+offset_left = -35.532104
+offset_top = -36.216064
+offset_right = 36.467896
+offset_bottom = 35.783936
 grow_horizontal = 0
 grow_vertical = 0
 texture_normal = ExtResource("18_g47ei")
@@ -160,6 +165,17 @@ offset_right = 31.5
 offset_bottom = 81.0
 text = "99"
 horizontal_alignment = 1
+
+[node name="CardFxLayer" type="Control" parent="BattleUI" unique_id=223344551]
+z_index = 80
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("23_bcardfx")
 
 [node name="RedFlash" type="CanvasLayer" parent="." unique_id=1421701103]
 layer = 2

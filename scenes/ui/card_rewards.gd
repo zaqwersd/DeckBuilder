@@ -1,7 +1,8 @@
 class_name CardRewards
 extends ColorRect
 
-signal card_reward_selected(card: Card)
+## picked_menu 为选中的 CardMenuUI（会从本面板摘下再飞入牌库）；跳过奖励时发 null
+signal card_reward_selected(picked_menu: Variant, from_global: Vector2)
 
 const CARD_MENU_UI = preload("res://scenes/ui/card_menu_ui.tscn")
 
@@ -9,25 +10,14 @@ const CARD_MENU_UI = preload("res://scenes/ui/card_menu_ui.tscn")
 
 @onready var cards: HBoxContainer = %Cards
 @onready var skip_card_reward: Button = %SkipCardReward
-@onready var take_button: Button = %TakeButton
-
-var selected_card: Card
 
 
 func _ready() -> void:
 	_clear_rewards()
 
-	take_button.pressed.connect(
-		func():
-			if selected_card == null:
-				return
-			card_reward_selected.emit(selected_card)
-			queue_free()
-	)
-
 	skip_card_reward.pressed.connect(
 		func():
-			card_reward_selected.emit(null)
+			card_reward_selected.emit(null, Vector2.ZERO)
 			queue_free()
 	)
 
@@ -36,13 +26,14 @@ func _clear_rewards() -> void:
 	for card: Node in cards.get_children():
 		card.queue_free()
 
-	selected_card = null
-	take_button.disabled = true
 
-
-func _on_card_pick_pressed(card: Card) -> void:
-	selected_card = card
-	take_button.disabled = false
+func _on_reward_tile_pressed(menu: CardMenuUI, _card: Card) -> void:
+	var from := menu.get_global_rect().get_center()
+	var p := menu.get_parent()
+	if p:
+		p.remove_child(menu)
+	card_reward_selected.emit(menu, from)
+	queue_free()
 
 
 func set_rewards(new_cards: Array[Card]) -> void:
@@ -56,4 +47,4 @@ func set_rewards(new_cards: Array[Card]) -> void:
 		var new_card := CARD_MENU_UI.instantiate() as CardMenuUI
 		cards.add_child(new_card)
 		new_card.card = card
-		new_card.card_pick_pressed.connect(_on_card_pick_pressed)
+		new_card.card_pick_pressed.connect(func(c: Card) -> void: _on_reward_tile_pressed(new_card, c))

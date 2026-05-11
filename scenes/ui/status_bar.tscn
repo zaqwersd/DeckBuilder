@@ -1,0 +1,19 @@
+[gd_scene format=3 uid="uid://c8statusbar01"]
+
+[ext_resource type="Theme" uid="uid://c8cqncsqlplyu" path="res://main_theme.tres" id="1_theme"]
+[ext_resource type="Script" path="res://scenes/ui/status_bar.gd" id="2_status_bar"]
+[ext_resource type="PackedScene" uid="uid://d1jm3t35rq40h" path="res://scenes/ui/health_bar.tscn" id="3_health_bar"]
+[ext_resource type="PackedScene" uid="uid://bwet1kdg2v1di" path="res://scenes/status_handler/status_handler.tscn" id="4_status_handler"]
+
+[node name="StatusBar" type="VBoxContainer"]
+offset_right = 8.0
+offset_bottom = 8.0
+theme = ExtResource("1_theme")
+theme_override_constants/separation = 4
+script = ExtResource("2_status_bar")
+
+[node name="HealthRow" parent="." instance=ExtResource("3_health_bar")]
+layout_mode = 2
+
+[node name="StatusHandler" parent="." instance=ExtResource("4_status_handler")]
+layout_mode = 2

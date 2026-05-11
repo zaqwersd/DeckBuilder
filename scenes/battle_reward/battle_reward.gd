@@ -76,10 +76,17 @@ func _on_gold_reward_taken(amount: int) -> void:
 	run_stats.gold += amount
 
 
-func _on_card_reward_taken(card: Card) -> void:
-	if not character_stats or not card:
+func _on_card_reward_taken(picked_menu: Variant, from_global: Vector2) -> void:
+	if not character_stats or picked_menu == null or not (picked_menu is CardMenuUI):
 		return
-		
+	var menu := picked_menu as CardMenuUI
+	var card := menu.card
+	if not card:
+		menu.queue_free()
+		return
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run:
+		await run.play_deck_gain_card_visual_with_pick(menu, from_global)
 	character_stats.deck.add_card(card)
 
 

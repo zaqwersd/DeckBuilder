@@ -124,7 +124,15 @@ func _on_back_button_pressed() -> void:
 	Events.shop_exited.emit()
 
 
-func _on_shop_card_bought(_card: Card, _gold_cost: int) -> void:
+func _on_shop_card_bought(_card: Card, _gold_cost: int, _from: Control) -> void:
+	_shop_card_purchase_flow(_card, _gold_cost, _from)
+
+
+func _shop_card_purchase_flow(_card: Card, _gold_cost: int, _from: Control) -> void:
+	var run := get_tree().get_first_node_in_group("run") as Run
+	var from_center := _from.get_global_rect().get_center() if is_instance_valid(_from) else Vector2.ZERO
+	if run:
+		await run.play_deck_gain_card_visual(_card, from_center)
 	char_stats.deck.add_card(_card)
 	run_stats.gold -= _gold_cost
 	_update_items()

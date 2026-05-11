@@ -9,12 +9,18 @@
 class_name PlayerHandler
 extends Node
 
-const HAND_DRAW_INTERVAL := 0.25
-const HAND_DISCARD_INTERVAL := 0.25
+## 多张牌并行飞入/飞出时，从左到右每条动画起点错开的时间（秒）
+const HAND_SEQUENCE_STAGGER := 0.05
+## 虚无牌仍逐个处理时的间隔（可与弃牌主批次并行风格分开）
+const HAND_ETH_DISCARD_INTERVAL := 0.12
+## 与 BattleCardFx 中动画时长一致（不在此脚本引用 class_name，避免解析顺序报错）
+const BATTLE_DRAW_ANIM_DURATION := 0.26
+const BATTLE_DISCARD_ANIM_DURATION := 0.24
 
 @export var relics: RelicHandler
 @export var player: Player
 @export var hand: Hand
+@export var battle_card_fx: Node
 
 var character: CharacterStats
 
@@ -23,13 +29,21 @@ func _ready() -> void:
 	Events.card_played.connect(_on_card_played)
 
 
-func start_battle(char_stats: CharacterStats) -> void:
+## 洗牌与堆初始化（不含 start_turn）。须先于 `BattleUI.initialize_card_pile_ui()`，
+## 否则首次抽牌时 `BattleCardFx.draw_pile_button` 为空 → 飞入动画被跳过。
+func start_battle_prep(char_stats: CharacterStats) -> void:
 	character = char_stats
 	character.draw_pile = character.deck.custom_duplicate()
 	character.draw_pile.shuffle()
 	character.discard = CardPile.new()
-	relics.relics_activated.connect(_on_relics_activated)
-	player.status_handler.statuses_applied.connect(_on_statuses_applied)
+	if not relics.relics_activated.is_connected(_on_relics_activated):
+		relics.relics_activated.connect(_on_relics_activated)
+	if not player.status_handler.statuses_applied.is_connected(_on_statuses_applied):
+		player.status_handler.statuses_applied.connect(_on_statuses_applied)
+
+
+func start_battle(char_stats: CharacterStats) -> void:
+	start_battle_prep(char_stats)
 	start_turn()
 
 
@@ -44,24 +58,26 @@ func end_turn() -> void:
 	relics.activate_relics_by_type(Relic.Type.END_OF_TURN)
 
 
-func draw_card() -> void:
-	reshuffle_deck_from_discard()
-	hand.add_card(character.draw_pile.draw_card())
-	reshuffle_deck_from_discard()
-
-
 func draw_cards(amount: int, is_start_of_turn_draw: bool = false) -> void:
-	var tween := create_tween()
-	for i in range(amount):
-		tween.tween_callback(draw_card)
-		tween.tween_interval(HAND_DRAW_INTERVAL)
-	
-	tween.finished.connect(
-		func(): 
-			hand.enable_hand()
-			if is_start_of_turn_draw:
-				Events.player_hand_drawn.emit()
-	)
+	var drawn_cards: Array[Card] = []
+	for _i in range(amount):
+		reshuffle_deck_from_discard()
+		drawn_cards.append(character.draw_pile.draw_card())
+		reshuffle_deck_from_discard()
+
+	if battle_card_fx and is_instance_valid(battle_card_fx):
+		for i in range(drawn_cards.size()):
+			var delay := HAND_SEQUENCE_STAGGER * float(i)
+			battle_card_fx.animate_draw_to_hand(drawn_cards[i], hand, player.modifier_handler, delay)
+		var max_t := HAND_SEQUENCE_STAGGER * float(maxi(0, drawn_cards.size() - 1)) + BATTLE_DRAW_ANIM_DURATION + 0.05
+		await get_tree().create_timer(max_t).timeout
+	else:
+		for c in drawn_cards:
+			hand.add_card(c)
+
+	hand.enable_hand()
+	if is_start_of_turn_draw:
+		Events.player_hand_drawn.emit()
 
 
 func discard_cards() -> void:
@@ -69,16 +85,57 @@ func discard_cards() -> void:
 		Events.player_hand_discarded.emit()
 		return
 
-	var tween := create_tween()
-	for card_ui: CardUI in hand.get_children():
-		tween.tween_callback(character.discard.add_card.bind(card_ui.card))
-		tween.tween_callback(hand.discard_card.bind(card_ui))
-		tween.tween_interval(HAND_DISCARD_INTERVAL)
-	
-	tween.finished.connect(
-		func():
-			Events.player_hand_discarded.emit()
-	)
+	# 先结算虚无（ethereal）：全部移出手牌且不进入弃牌堆，再处理其余牌的弃牌动画与入堆
+	while true:
+		var found_ethereal := false
+		for slot in hand.get_children():
+			var card_ui := hand.get_card_ui_in_slot(slot)
+			if card_ui and card_ui.card and card_ui.card.ethereal:
+				found_ethereal = true
+				if battle_card_fx and is_instance_valid(battle_card_fx) and battle_card_fx.has_method("animate_ethereal_vanish"):
+					await battle_card_fx.animate_ethereal_vanish(hand, card_ui, player.modifier_handler)
+				else:
+					hand.discard_card(card_ui)
+				await get_tree().create_timer(HAND_ETH_DISCARD_INTERVAL).timeout
+				break
+		if not found_ethereal:
+			break
+
+	var pending: Array[Dictionary] = []
+	for slot in hand.get_children():
+		var card_ui := hand.get_card_ui_in_slot(slot)
+		if card_ui and card_ui.card:
+			pending.append({
+				"ui": card_ui,
+				"card": card_ui.card,
+				"from": card_ui.get_global_rect().get_center(),
+			})
+
+	if pending.is_empty():
+		for slot in hand.get_children():
+			if is_instance_valid(slot):
+				slot.queue_free()
+		Events.player_hand_discarded.emit()
+		return
+
+	if battle_card_fx and is_instance_valid(battle_card_fx):
+		for i in range(pending.size()):
+			var d: Dictionary = pending[i]
+			battle_card_fx.animate_discard_hand_end_turn(
+				d["ui"] as CardUI,
+				player.modifier_handler,
+				HAND_SEQUENCE_STAGGER * float(i),
+				true,
+				d["from"] as Vector2,
+			)
+		var max_discard_t := HAND_SEQUENCE_STAGGER * float(maxi(0, pending.size() - 1)) + BATTLE_DISCARD_ANIM_DURATION + 0.05
+		await get_tree().create_timer(max_discard_t).timeout
+
+	for d in pending:
+		character.discard.add_card(d["card"] as Card)
+		hand.discard_card(d["ui"] as CardUI)
+
+	Events.player_hand_discarded.emit()
 
 
 func reshuffle_deck_from_discard() -> void:

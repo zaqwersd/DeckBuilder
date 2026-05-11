@@ -10,4 +10,5 @@ stack_type = 2
 can_expire = true
 duration = 1
 icon = ExtResource("1_242in")
-tooltip = "易伤：受到的伤害提高 50%%，持续 %s 回合。"
+name = "易伤"
+tooltip = "%s 回合内，受到的伤害提高 50%%。"

@@ -9,6 +9,13 @@ signal card_pick_pressed(card: Card)
 @onready var visuals: CardVisuals = $Visuals
 
 
+func _ready() -> void:
+	# CenterContainer 默认 PASS 会把点击交给父级，奖励/商店里父级是整屏遮罩时子卡永远点不到
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	if visuals:
+		visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
 func set_modifier_preview(player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler) -> void:
 	if is_node_ready() and visuals:
 		visuals.apply_modifier_context(player_modifiers, enemy_modifiers)

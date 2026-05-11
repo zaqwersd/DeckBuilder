@@ -17,7 +17,16 @@ enum StackType {NONE, INTENSITY, DURATION}
 
 @export_group("Status Visuals")
 @export var icon: Texture
+## 中文显示名；悬停说明标题等用。留空则回退为 id 下划线转空格
+@export var name: String = ""
 @export_multiline var tooltip: String
+
+
+func get_display_name() -> String:
+	var n := name.strip_edges()
+	if not n.is_empty():
+		return n
+	return id.replace("_", " ")
 
 
 func initialize_status(_target: Node) -> void:

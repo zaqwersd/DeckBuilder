@@ -2,8 +2,6 @@ class_name CardPileView
 extends Control
 
 const CARD_MENU_UI_SCENE := preload("res://scenes/ui/card_menu_ui.tscn")
-const CARD_MENU_DESIGN_HALF := Vector2(134, 174)
-
 @export var card_pile: CardPile
 ## 战斗中略小于 1；跑图牌库界面可保持 1。与 CardMenuUI 设计尺寸配套的中心缩放。
 @export_range(0.65, 1.0, 0.01) var display_scale: float = 1.0
@@ -56,10 +54,7 @@ func _update_view(randomized: bool) -> void:
 
 
 func _apply_pile_card_transform(menu: CardMenuUI) -> void:
-	if is_equal_approx(display_scale, 1.0):
-		menu.scale = Vector2.ONE
-		menu.pivot_offset = Vector2.ZERO
-		return
-	menu.scale = Vector2(display_scale, display_scale)
-	menu.pivot_offset = CARD_MENU_DESIGN_HALF
-	menu.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	menu.scale = Vector2.ONE
+	menu.pivot_offset = Vector2.ZERO
+	if not is_equal_approx(display_scale, 1.0):
+		menu.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

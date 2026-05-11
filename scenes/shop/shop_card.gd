@@ -73,7 +73,7 @@ func set_modifier_context(handler: ModifierHandler) -> void:
 func _on_card_pick_pressed(_picked: Card) -> void:
 	if _sold or not _run_stats or _run_stats.gold < gold_cost:
 		return
-	Events.shop_card_bought.emit(card, gold_cost)
+	Events.shop_card_bought.emit(card, gold_cost, card_container)
 	mark_as_sold()
 
 

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://n3va254ct6b3"]
 
-[ext_resource type="Texture2D" uid="uid://cqcal03735mv8" path="res://art/tile_0118.png" id="1_uhc8e"]
+[ext_resource type="Texture2D" uid="uid://d2w1qkqhq530u" path="res://art/slash.png" id="1_4ufwx"]
 [ext_resource type="Script" uid="uid://pl0j2p2fhamc" path="res://characters/blade/cards/blade_slash.gd" id="2_hvnm7"]
 [ext_resource type="AudioStream" uid="uid://dixklg6g4jnsq" path="res://art/slash.ogg" id="3_4dvu8"]
 
@@ -8,8 +8,8 @@
 script = ExtResource("2_hvnm7")
 id = "blade_slash"
 target = 2
-cost = 2
+cost = 1
 card_name = "横扫"
-icon = ExtResource("1_uhc8e")
+icon = ExtResource("1_4ufwx")
 tooltip_text = "[center]对所有敌人造成 [color=\"ff0000\"]%s[/color] 点伤害。[/center]"
 sound = ExtResource("3_4dvu8")

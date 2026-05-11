@@ -3,20 +3,48 @@ extends CanvasLayer
 
 @export var char_stats: CharacterStats : set = _set_char_stats
 
-@onready var hand: Hand = $Hand
+## 不用 @onready %Hand：父节点可能在子树就绪前调用 start_battle() 触发 setter，且 % 在部分实例化路径下可能为 null
+var hand: Hand
 @onready var mana_ui: ManaUI = $ManaUI
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var draw_pile_button: CardPileOpener = %DrawPileButton
 @onready var discard_pile_button: CardPileOpener = %DiscardPileButton
+@onready var card_fx: Node = $CardFxLayer
 @onready var draw_pile_view: CardPileView = %DrawPileView
 @onready var discard_pile_view: CardPileView = %DiscardPileView
 
 
 func _ready() -> void:
+	hand = _resolve_hand_node()
+	_setup_end_turn_button()
 	Events.player_hand_drawn.connect(_on_player_hand_drawn)
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	draw_pile_button.pressed.connect(draw_pile_view.show_current_view.bind("抽牌堆", true))
 	discard_pile_button.pressed.connect(discard_pile_view.show_current_view.bind("弃牌堆"))
+	if char_stats:
+		_apply_char_stats_to_ui_nodes()
+
+
+func _setup_end_turn_button() -> void:
+	# 飞牌幽灵 z=400、拖拽卡 z=128，必须更高以免被挡
+	end_turn_button.z_index = 500
+	end_turn_button.z_as_relative = false
+	var p := end_turn_button.get_parent()
+	if p:
+		p.move_child(end_turn_button, p.get_child_count() - 1)
+	end_turn_button.add_theme_stylebox_override("normal", _gray_button_style(0.42))
+	end_turn_button.add_theme_stylebox_override("hover", _gray_button_style(0.5))
+	end_turn_button.add_theme_stylebox_override("pressed", _gray_button_style(0.34))
+	end_turn_button.add_theme_stylebox_override("disabled", _gray_button_style(0.36))
+	end_turn_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+
+
+func _gray_button_style(lightness: float) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(lightness, lightness, lightness, 1.0)
+	s.set_border_width_all(4)
+	s.border_color = Color(0.55, 0.55, 0.55, 1)
+	return s
 
 
 func initialize_card_pile_ui() -> void:
@@ -24,12 +52,35 @@ func initialize_card_pile_ui() -> void:
 	draw_pile_view.card_pile = char_stats.draw_pile
 	discard_pile_button.card_pile = char_stats.discard
 	discard_pile_view.card_pile = char_stats.discard
+	if card_fx:
+		card_fx.setup(draw_pile_button, discard_pile_button)
 
 
 func _set_char_stats(value: CharacterStats) -> void:
 	char_stats = value
-	mana_ui.char_stats = char_stats
-	hand.char_stats = char_stats
+	if not is_node_ready():
+		return
+	_apply_char_stats_to_ui_nodes()
+
+
+func _resolve_hand_node() -> Hand:
+	var h := get_node_or_null("%Hand") as Hand
+	if h == null:
+		h = get_node_or_null("HandAnchor/Hand") as Hand
+	if h == null:
+		h = get_node_or_null("Hand") as Hand
+	if h == null:
+		push_error("BattleUI: 未找到 Hand（已尝试 %Hand / HandAnchor/Hand / Hand）。")
+	return h
+
+
+func _apply_char_stats_to_ui_nodes() -> void:
+	if hand == null or not is_instance_valid(hand):
+		hand = _resolve_hand_node()
+	if mana_ui and char_stats:
+		mana_ui.char_stats = char_stats
+	if hand and char_stats:
+		hand.char_stats = char_stats
 
 
 func _on_player_hand_drawn() -> void:

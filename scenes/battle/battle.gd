@@ -53,7 +53,8 @@ func _on_player_died() -> void:
 func _on_relics_activated(type: Relic.Type) -> void:
 	match type:
 		Relic.Type.START_OF_COMBAT:
-			player_handler.start_battle(char_stats)
+			player_handler.start_battle_prep(char_stats)
 			battle_ui.initialize_card_pile_ui()
+			player_handler.start_turn()
 		Relic.Type.END_OF_COMBAT:
 			Events.battle_over_screen_requested.emit("胜利！", BattleOverPanel.Type.WIN)

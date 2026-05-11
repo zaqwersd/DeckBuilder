@@ -39,6 +39,8 @@ func take_damage(damage: int) -> void:
 
 
 func can_play_card(card: Card) -> bool:
+	if card.cost < 0:
+		return false
 	return mana >= card.cost
 
 
