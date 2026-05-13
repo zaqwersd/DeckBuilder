@@ -9,7 +9,7 @@ func perform_action() -> void:
 	
 	var tween := create_tween().set_trans(Tween.TRANS_QUINT)
 	var start := enemy.global_position
-	var end := target.global_position + Vector2.RIGHT * 32
+	var end := EnemyAction.attack_lunge_position(start)
 	
 	SFXPlayer.play(sound)
 
@@ -20,8 +20,10 @@ func perform_action() -> void:
 # e.g. for attack actions, the Player's DMG TAKEN modifier modifies the resulting damage number.
 func update_intent_text() -> void:
 	var player := target as Player
-	if not player:
+	if not player or not enemy:
 		return
 	
 	var modified_dmg := player.modifier_handler.get_modified_value(6, Modifier.Type.DMG_TAKEN)
-	intent.current_text = intent.base_text % modified_dmg
+	var per_hit := enemy.modifier_handler.get_modified_value(modified_dmg, Modifier.Type.DMG_DEALT)
+	if intent:
+		intent.set_attack_segments_display(per_hit, 1)

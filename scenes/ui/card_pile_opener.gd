@@ -14,4 +14,6 @@ func set_card_pile(new_value: CardPile) -> void:
 	
 	
 func _on_card_pile_size_changed(cards_amount: int) -> void:
+	if not is_instance_valid(counter):
+		return
 	counter.text = str(cards_amount)

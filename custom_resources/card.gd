@@ -2,23 +2,24 @@ class_name Card
 extends Resource
 
 enum Type {ATTACK, SKILL, POWER, STATUS}
-enum Rarity {COMMON, UNCOMMON, RARE}
+enum Rarity {COMMON, UNCOMMON, RARE, SPECIAL}
 enum Target {SELF, SINGLE_ENEMY, ALL_ENEMIES, EVERYONE}
 
 const RARITY_COLORS := {
 	Card.Rarity.COMMON: Color.GRAY,
-	Card.Rarity.UNCOMMON: Color.CORNFLOWER_BLUE,
+	Card.Rarity.UNCOMMON: Color(129.0 / 255.0, 212.0 / 255.0, 250.0 / 255.0),
 	Card.Rarity.RARE: Color.GOLD,
+	Card.Rarity.SPECIAL: Color(243.0 / 255.0, 108.0 / 255.0, 96.0 / 255.0),
 }
 
 
-## 卡面/提示里与「原始数值」对比后的 BBCode：相等白、低红、高绿（伤害与格挡通用）。子类在 get_updated_tooltip 中直接调用即可。
+## 卡面/提示里与「原始数值」对比后的 BBCode：相等不包色（沿用默认字色）；低于基础红、高于基础绿。子类在 get_updated_tooltip 中直接调用即可。
 func bbcode_for_modified_number(modified: int, base: int) -> String:
 	if modified < base:
 		return "[color=#ff6b6b]%d[/color]" % modified
 	if modified > base:
 		return "[color=#5dff7a]%d[/color]" % modified
-	return "[color=#ffffff]%d[/color]" % modified
+	return str(modified)
 
 
 @export_group("Card Attributes")
@@ -46,6 +47,12 @@ func is_single_targeted() -> bool:
 	return target == Target.SINGLE_ENEMY
 
 
+func get_effect_targets(selected: Array[Node]) -> Array[Node]:
+	if is_single_targeted():
+		return selected.duplicate()
+	return _get_targets(selected)
+
+
 func _get_targets(targets: Array[Node]) -> Array[Node]:
 	if not targets:
 		return []
@@ -68,6 +75,9 @@ func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierH
 		return
 	Events.card_played.emit(self)
 	char_stats.mana -= cost
+	# 能力牌不经过 Damage/Block 效果里的 SFXPlayer.play，需在打出时单独播卡面 sound
+	if sound and type == Type.POWER:
+		SFXPlayer.play(sound)
 
 	if is_single_targeted():
 		apply_effects(targets, modifiers)

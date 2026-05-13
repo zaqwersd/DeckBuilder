@@ -12,5 +12,5 @@ target = 1
 exhausts = true
 card_name = "居合斩"
 icon = ExtResource("1_p73bd")
-tooltip_text = "[center]造成 [color=\"ff0000\"]%s[/color] 点伤害。[br]抽 1 张牌。[br][color=\"aaaaaa\"]消耗。[/color][/center]"
+tooltip_text = "[center]造成 %s 点伤害。[br]抽 1 张牌。[br]消耗。[/center]"
 sound = ExtResource("3_wuigt")

@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://bltkcscivnh8p" path="res://scenes/relic_handler/relic_handler.tscn" id="6_f8fbw"]
 [ext_resource type="PackedScene" uid="uid://bwtke8nmynqt2" path="res://scenes/relic_handler/relic_tooltip.tscn" id="10_xh4qt"]
 [ext_resource type="PackedScene" path="res://scenes/ui/status_hover_tooltip.tscn" id="13_shtip"]
+[ext_resource type="PackedScene" path="res://scenes/ui/card_keyword_tooltip.tscn" id="14_kwtip"]
 [ext_resource type="Script" uid="uid://c1st7wl8w8aqq" path="res://scenes/run/pause_menu.gd" id="11_a4w7h"]
 [ext_resource type="Script" uid="uid://ctpbvifbefjhv" path="res://scenes/ui/run_card_fx.gd" id="12_runfx"]
 
@@ -133,6 +134,10 @@ unique_name_in_owner = true
 visible = false
 
 [node name="StatusHoverTooltip" parent="TopBar" instance=ExtResource("13_shtip")]
+unique_name_in_owner = true
+visible = false
+
+[node name="CardKeywordTooltip" parent="TopBar" instance=ExtResource("14_kwtip")]
 unique_name_in_owner = true
 visible = false
 

@@ -23,6 +23,12 @@ func apply_statuses_by_type(type: Status.Type) -> void:
 		statuses_applied.emit(type)
 		return
 	
+	if Events.is_combat_ended():
+		for status: Status in status_queue:
+			status.apply_status(status_owner)
+		statuses_applied.emit(type)
+		return
+	
 	var tween := create_tween()
 	for status: Status in status_queue:
 		tween.tween_callback(status.apply_status.bind(status_owner))
@@ -73,6 +79,10 @@ func _get_status(id: String) -> Status:
 			return status_ui.status
 	
 	return null
+
+
+func get_status_by_id(status_id: String) -> Status:
+	return _get_status(status_id)
 
 
 func _get_all_statuses() -> Array[Status]:

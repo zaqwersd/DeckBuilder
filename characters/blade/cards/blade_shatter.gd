@@ -1,6 +1,6 @@
 extends Card
 
-const MUSCLE_STATUS = preload("res://statuses/muscle.tres")
+const MUSCLE_STATUS = preload("res://statuses/strength.tres")
 const MUSCLE_LOSS := 2
 
 var base_damage := 27

@@ -12,5 +12,5 @@ target = 2
 cost = 2
 card_name = "崩碎"
 icon = ExtResource("1_shatter")
-tooltip_text = "[center]对所有敌人造成 [color=\"ff0000\"]%s[/color] 点伤害。[br]失去 2 点力量。[/center]"
+tooltip_text = "[center]对所有敌人造成 %s 点伤害。[br]失去 2 点力量。[/center]"
 sound = ExtResource("3_uxg0o")

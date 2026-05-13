@@ -36,6 +36,7 @@ func start_battle_prep(char_stats: CharacterStats) -> void:
 	character.draw_pile = character.deck.custom_duplicate()
 	character.draw_pile.shuffle()
 	character.discard = CardPile.new()
+	character.exhaust = CardPile.new()
 	if not relics.relics_activated.is_connected(_on_relics_activated):
 		relics.relics_activated.connect(_on_relics_activated)
 	if not player.status_handler.statuses_applied.is_connected(_on_statuses_applied):
@@ -58,44 +59,104 @@ func end_turn() -> void:
 	relics.activate_relics_by_type(Relic.Type.END_OF_TURN)
 
 
+func _flush_drawn_cards_to_hand(drawn: Array[Card]) -> void:
+	if not is_instance_valid(hand):
+		return
+	for c in drawn:
+		if c and not hand.has_card_resource(c):
+			hand.add_card(c)
+
+
+func _sync_discard_entire_hand() -> void:
+	if not is_instance_valid(hand):
+		return
+	var uis: Array[CardUI] = []
+	for slot in hand.get_children():
+		var cui := hand.get_card_ui_in_slot(slot)
+		if cui and cui.card:
+			uis.append(cui)
+	for cui in uis:
+		if not is_instance_valid(cui) or not cui.card:
+			continue
+		var c: Card = cui.card
+		if c.ethereal:
+			if character.exhaust:
+				character.exhaust.add_card(c)
+			hand.discard_card(cui)
+		else:
+			character.discard.add_card(c)
+			hand.discard_card(cui)
+
+
 func draw_cards(amount: int, is_start_of_turn_draw: bool = false) -> void:
+	if Events.is_combat_ended():
+		return
 	var drawn_cards: Array[Card] = []
 	for _i in range(amount):
+		if Events.is_combat_ended():
+			_flush_drawn_cards_to_hand(drawn_cards)
+			return
 		reshuffle_deck_from_discard()
 		drawn_cards.append(character.draw_pile.draw_card())
 		reshuffle_deck_from_discard()
 
+	if Events.is_combat_ended():
+		_flush_drawn_cards_to_hand(drawn_cards)
+		if is_start_of_turn_draw:
+			Events.player_hand_drawn.emit()
+		return
+
 	if battle_card_fx and is_instance_valid(battle_card_fx):
 		for i in range(drawn_cards.size()):
 			var delay := HAND_SEQUENCE_STAGGER * float(i)
-			battle_card_fx.animate_draw_to_hand(drawn_cards[i], hand, player.modifier_handler, delay)
+			battle_card_fx.animate_draw_to_hand(drawn_cards[i], hand, delay)
 		var max_t := HAND_SEQUENCE_STAGGER * float(maxi(0, drawn_cards.size() - 1)) + BATTLE_DRAW_ANIM_DURATION + 0.05
 		await get_tree().create_timer(max_t).timeout
+		_flush_drawn_cards_to_hand(drawn_cards)
 	else:
 		for c in drawn_cards:
-			hand.add_card(c)
+			if Events.is_combat_ended():
+				break
+			if is_instance_valid(hand) and not hand.has_card_resource(c):
+				hand.add_card(c)
 
-	hand.enable_hand()
-	if is_start_of_turn_draw:
+	if not is_instance_valid(hand):
+		return
+	if not Events.is_combat_ended():
+		hand.enable_hand()
+	if is_start_of_turn_draw and not Events.is_combat_ended():
 		Events.player_hand_drawn.emit()
 
 
 func discard_cards() -> void:
+	if Events.is_combat_ended():
+		_sync_discard_entire_hand()
+		Events.player_hand_discarded.emit()
+		return
+
 	if hand.get_child_count() == 0:
 		Events.player_hand_discarded.emit()
 		return
 
 	# 先结算虚无（ethereal）：全部移出手牌且不进入弃牌堆，再处理其余牌的弃牌动画与入堆
 	while true:
+		if Events.is_combat_ended():
+			_sync_discard_entire_hand()
+			Events.player_hand_discarded.emit()
+			return
 		var found_ethereal := false
 		for slot in hand.get_children():
 			var card_ui := hand.get_card_ui_in_slot(slot)
 			if card_ui and card_ui.card and card_ui.card.ethereal:
 				found_ethereal = true
 				if battle_card_fx and is_instance_valid(battle_card_fx) and battle_card_fx.has_method("animate_ethereal_vanish"):
-					await battle_card_fx.animate_ethereal_vanish(hand, card_ui, player.modifier_handler)
+					await battle_card_fx.animate_ethereal_vanish(hand, card_ui)
 				else:
 					hand.discard_card(card_ui)
+				if Events.is_combat_ended():
+					_sync_discard_entire_hand()
+					Events.player_hand_discarded.emit()
+					return
 				await get_tree().create_timer(HAND_ETH_DISCARD_INTERVAL).timeout
 				break
 		if not found_ethereal:
@@ -118,22 +179,42 @@ func discard_cards() -> void:
 		Events.player_hand_discarded.emit()
 		return
 
-	if battle_card_fx and is_instance_valid(battle_card_fx):
+	if Events.is_combat_ended():
+		for d in pending:
+			var cui := d["ui"] as CardUI
+			var c := d["card"] as Card
+			if not is_instance_valid(cui) or not c:
+				continue
+			if c.ethereal:
+				if character.exhaust:
+					character.exhaust.add_card(c)
+				hand.discard_card(cui)
+			else:
+				character.discard.add_card(c)
+				hand.discard_card(cui)
+		Events.player_hand_discarded.emit()
+		return
+
+	if battle_card_fx and is_instance_valid(battle_card_fx) and is_instance_valid(player) and player.is_inside_tree():
 		for i in range(pending.size()):
 			var d: Dictionary = pending[i]
 			battle_card_fx.animate_discard_hand_end_turn(
 				d["ui"] as CardUI,
-				player.modifier_handler,
 				HAND_SEQUENCE_STAGGER * float(i),
 				true,
 				d["from"] as Vector2,
 			)
 		var max_discard_t := HAND_SEQUENCE_STAGGER * float(maxi(0, pending.size() - 1)) + BATTLE_DISCARD_ANIM_DURATION + 0.05
-		await get_tree().create_timer(max_discard_t).timeout
+		if not Events.is_combat_ended():
+			await get_tree().create_timer(max_discard_t).timeout
 
 	for d in pending:
-		character.discard.add_card(d["card"] as Card)
-		hand.discard_card(d["ui"] as CardUI)
+		var cui2 := d["ui"] as CardUI
+		var c2 := d["card"] as Card
+		if not is_instance_valid(cui2) or not c2:
+			continue
+		character.discard.add_card(c2)
+		hand.discard_card(cui2)
 
 	Events.player_hand_discarded.emit()
 
@@ -149,9 +230,15 @@ func reshuffle_deck_from_discard() -> void:
 
 
 func _on_card_played(card: Card) -> void:
-	if card.exhausts or card.type == Card.Type.POWER:
+	if card.exhausts:
+		if character.exhaust:
+			character.exhaust.add_card(card)
 		return
-	
+	if card.type == Card.Type.POWER:
+		return
+	# 故障机器等：同一张 Card 资源第二次「视为打出」时不应再次入弃牌堆
+	if character.discard.cards.has(card):
+		return
 	character.discard.add_card(card)
 
 

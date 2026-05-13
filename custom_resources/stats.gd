@@ -12,6 +12,8 @@ signal healing_applied(amount: int)
 @export_range(40, 400, 1) var health_bar_width: int = 180
 ## StatusBar（血条+状态）相对「精灵脚底、水平居中」锚点的偏移；X 正向右，Y 正向下（与脚底间距）。
 @export var status_bar_offset: Vector2 = Vector2(0, 14)
+## 意图条相对 `enemy.tscn` 默认 IntentUI 边距的偏移：X 正向右；Y 正向上（会整体平移 offset_top / offset_bottom，并与 offset_left / offset_right 联动）。
+@export var intent_ui_offset: Vector2 = Vector2.ZERO
 
 @export var max_health := 1 : set = set_max_health
 @export var art: Texture

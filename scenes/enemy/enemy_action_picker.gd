@@ -53,6 +53,11 @@ func setup_chances() -> void:
 		action.accumulated_weight = total_weight
 
 
+## 自定义 AI（如 Boss）在单次行动真正结束、即将 `emit enemy_action_completed` 前调用；默认无操作。
+func notify_picker_action_finished() -> void:
+	pass
+
+
 func _set_enemy(value: Enemy) -> void:
 	enemy = value
 	

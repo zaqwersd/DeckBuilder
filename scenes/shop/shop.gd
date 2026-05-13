@@ -14,8 +14,12 @@ const SHOP_RELIC = preload("res://scenes/shop/shop_relic.tscn")
 @onready var blink_timer: Timer = %BlinkTimer
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
 
+var _kw_tip_menu: CardMenuUI = null
+var _kw_tip_ids: PackedStringArray = PackedStringArray()
+
 
 func _ready() -> void:
+	set_process(true)
 	for col: Node in shop_columns.get_children():
 		col.queue_free()
 
@@ -26,9 +30,73 @@ func _ready() -> void:
 	blink_timer.timeout.connect(_on_blink_timer_timeout)
 
 
+func _exit_tree() -> void:
+	if _kw_tip_menu != null:
+		_kw_tip_menu = null
+		_kw_tip_ids = PackedStringArray()
+		Events.card_keyword_tooltip_hide.emit()
+
+
+func _process(_delta: float) -> void:
+	if _kw_tip_menu != null and not is_instance_valid(_kw_tip_menu):
+		_kw_tip_menu = null
+		_kw_tip_ids = PackedStringArray()
+		Events.card_keyword_tooltip_hide.emit()
+	var winner: CardMenuUI = null
+	var tip_ids: PackedStringArray = PackedStringArray()
+	var best_d2 := INF
+	var mp := get_global_mouse_position()
+	for col: Node in shop_columns.get_children():
+		for ch: Node in col.get_children():
+			if not ch is ShopCard:
+				continue
+			var sc := ch as ShopCard
+			if sc.is_sold():
+				continue
+			var m := sc.current_card_ui
+			if m == null or not is_instance_valid(m):
+				continue
+			if not m.is_listing_pointer_over_visuals():
+				continue
+			if not is_instance_valid(m.visuals):
+				continue
+			var ids := m.visuals.get_keyword_tooltip_ids()
+			if ids.is_empty():
+				continue
+			var d2 := m.visuals.get_global_rect().get_center().distance_squared_to(mp)
+			if d2 < best_d2 - 0.01:
+				winner = m
+				tip_ids = ids
+				best_d2 = d2
+	_sync_shop_listing_keyword_tooltip(winner, tip_ids)
+
+
+func _kw_tip_ids_equal(a: PackedStringArray, b: PackedStringArray) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in range(a.size()):
+		if a[i] != b[i]:
+			return false
+	return true
+
+
+func _sync_shop_listing_keyword_tooltip(winner: CardMenuUI, ids: PackedStringArray) -> void:
+	if winner == _kw_tip_menu and _kw_tip_ids_equal(ids, _kw_tip_ids):
+		return
+	_kw_tip_menu = winner
+	_kw_tip_ids = ids.duplicate() if winner != null else PackedStringArray()
+	if winner == null:
+		Events.card_keyword_tooltip_hide.emit()
+	else:
+		Events.card_keyword_tooltip_show.emit(ids, winner)
+
+
 func populate_shop() -> void:
 	for col: Node in shop_columns.get_children():
 		col.queue_free()
+	_kw_tip_menu = null
+	_kw_tip_ids = PackedStringArray()
+	Events.card_keyword_tooltip_hide.emit()
 
 	var shop_card_array := _pick_shop_cards()
 	var shop_relics_array := _pick_shop_relics()
@@ -69,12 +137,15 @@ func _make_spacer(slot_size: Vector2) -> Control:
 
 func _pick_shop_cards() -> Array[Card]:
 	var available_cards: Array[Card] = char_stats.draftable_cards.duplicate_cards()
+	var wc := run_stats.common_weight if run_stats else RunStats.BASE_COMMON_WEIGHT
+	var wu := run_stats.uncommon_weight if run_stats else RunStats.BASE_UNCOMMON_WEIGHT
+	var wr := run_stats.rare_weight if run_stats else RunStats.BASE_RARE_WEIGHT
 	return RNG.pick_weighted_distinct_cards(
 		available_cards,
 		mini(3, available_cards.size()),
-		RunStats.BASE_COMMON_WEIGHT,
-		RunStats.BASE_UNCOMMON_WEIGHT,
-		RunStats.BASE_RARE_WEIGHT
+		wc,
+		wu,
+		wr
 	)
 
 
@@ -132,7 +203,7 @@ func _shop_card_purchase_flow(_card: Card, _gold_cost: int, _from: Control) -> v
 	var run := get_tree().get_first_node_in_group("run") as Run
 	var from_center := _from.get_global_rect().get_center() if is_instance_valid(_from) else Vector2.ZERO
 	if run:
-		await run.play_deck_gain_card_visual(_card, from_center)
+		run.play_deck_gain_card_visual(_card, from_center)
 	char_stats.deck.add_card(_card)
 	run_stats.gold -= _gold_cost
 	_update_items()

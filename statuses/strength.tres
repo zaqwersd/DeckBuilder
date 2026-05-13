@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="MuscleStatus" format=3 uid="uid://c42kh5n15gn2r"]
+
+[ext_resource type="Texture2D" uid="uid://bho3bya1v7e6o" path="res://art/muscle.png" id="1_jqcf5"]
+[ext_resource type="Script" uid="uid://c7786wwgk52p4" path="res://statuses/strength.gd" id="2_5lqvq"]
+
+[resource]
+script = ExtResource("2_5lqvq")
+id = "muscle"
+type = 2
+stack_type = 1
+stacks = 2
+icon = ExtResource("1_jqcf5")
+name = "力量"
+tooltip = "攻击额外造成 %s 点伤害。"

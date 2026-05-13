@@ -25,5 +25,13 @@ func perform_action() -> void:
 	
 	get_tree().create_timer(0.6, false).timeout.connect(
 		func():
+			if not is_instance_valid(enemy):
+				return
 			Events.enemy_action_completed.emit(enemy)
 	)
+
+
+func update_intent_text() -> void:
+	if intent:
+		intent.display_number = block
+		intent.current_text = ""

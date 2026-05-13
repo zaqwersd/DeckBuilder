@@ -9,7 +9,7 @@ func perform_action() -> void:
 	
 	var tween := create_tween().set_trans(Tween.TRANS_QUINT)
 	var start := enemy.global_position
-	var end := target.global_position + Vector2.RIGHT * 32
+	var end := EnemyAction.attack_lunge_position(start)
 	var damage_effect := DamageEffect.new()
 	var target_array: Array[Node] = [target]
 	damage_effect.amount = damage
@@ -24,14 +24,17 @@ func perform_action() -> void:
 	
 	tween.finished.connect(
 		func():
+			if not is_instance_valid(enemy):
+				return
 			Events.enemy_action_completed.emit(enemy)
 	)
 
 
 func update_intent_text() -> void:
 	var player := target as Player
-	if not player:
+	if not player or not enemy:
 		return
 	
 	var modified_dmg := player.modifier_handler.get_modified_value(damage, Modifier.Type.DMG_TAKEN)
-	intent.current_text = intent.base_text % modified_dmg
+	var per_hit := enemy.modifier_handler.get_modified_value(modified_dmg, Modifier.Type.DMG_DEALT)
+	intent.set_attack_segments_display(per_hit, 2)

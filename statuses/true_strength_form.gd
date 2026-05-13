@@ -1,7 +1,7 @@
 class_name TrueStrengthStatus
 extends Status
 
-const MUSCLE_STATUS = preload("res://statuses/muscle.tres")
+const MUSCLE_STATUS = preload("res://statuses/strength.tres")
 
 var stacks_per_turn := 2
 
@@ -16,4 +16,3 @@ func apply_status(target: Node) -> void:
 	status_effect.execute([target])
 	
 	status_applied.emit(self)
-

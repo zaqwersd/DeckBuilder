@@ -9,9 +9,11 @@ var hand: Hand
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var draw_pile_button: CardPileOpener = %DrawPileButton
 @onready var discard_pile_button: CardPileOpener = %DiscardPileButton
+@onready var exhaust_pile_button: CardPileOpener = %ExhaustPileButton
 @onready var card_fx: Node = $CardFxLayer
 @onready var draw_pile_view: CardPileView = %DrawPileView
 @onready var discard_pile_view: CardPileView = %DiscardPileView
+@onready var exhaust_pile_view: CardPileView = %ExhaustPileView
 
 
 func _ready() -> void:
@@ -21,6 +23,7 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	draw_pile_button.pressed.connect(draw_pile_view.show_current_view.bind("抽牌堆", true))
 	discard_pile_button.pressed.connect(discard_pile_view.show_current_view.bind("弃牌堆"))
+	exhaust_pile_button.pressed.connect(exhaust_pile_view.show_current_view.bind("消耗牌堆"))
 	if char_stats:
 		_apply_char_stats_to_ui_nodes()
 
@@ -52,8 +55,10 @@ func initialize_card_pile_ui() -> void:
 	draw_pile_view.card_pile = char_stats.draw_pile
 	discard_pile_button.card_pile = char_stats.discard
 	discard_pile_view.card_pile = char_stats.discard
+	exhaust_pile_button.card_pile = char_stats.exhaust
+	exhaust_pile_view.card_pile = char_stats.exhaust
 	if card_fx:
-		card_fx.setup(draw_pile_button, discard_pile_button)
+		card_fx.setup(draw_pile_button, discard_pile_button, exhaust_pile_button)
 
 
 func _set_char_stats(value: CharacterStats) -> void:

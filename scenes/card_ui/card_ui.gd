@@ -1,8 +1,9 @@
 class_name CardUI
 extends Control
 
-## 手牌内鼠标悬停时卡牌上移的像素（与 `card_base_state` 一致）
+## 手牌内鼠标悬停时卡牌上移的像素
 const HAND_HOVER_LIFT_PX := 80.0
+const HAND_HOVER_Z := 10
 
 signal reparent_requested(which_card_ui: CardUI)
 
@@ -28,6 +29,8 @@ var hover_lift_tween: Tween
 var hand_slot: Control
 var playable := true : set = _set_playable
 var disabled := true
+## 由 `sync_hand_hover_presentation` 维护，避免每帧重复 tween
+var _hand_hover_visual_active := false
 
 
 func _ready() -> void:
@@ -36,6 +39,15 @@ func _ready() -> void:
 	Events.card_drag_ended.connect(_on_card_drag_or_aim_ended)
 	Events.card_aim_ended.connect(_on_card_drag_or_aim_ended)
 	card_state_machine.init(self)
+	if is_instance_valid(card_visuals):
+		# IGNORE 时上移后的卡图会超出 CardUI 的命中框，点击「抬起区域」收不到 gui_input，导致有抬起却无法出牌
+		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		if not card_visuals.gui_input.is_connected(_on_card_visuals_gui_input):
+			card_visuals.gui_input.connect(_on_card_visuals_gui_input)
+
+
+func _on_card_visuals_gui_input(event: InputEvent) -> void:
+	_on_gui_input(event)
 
 
 func _input(event: InputEvent) -> void:
@@ -56,26 +68,96 @@ func allows_hand_drag_preview() -> bool:
 
 
 func reset_hand_hover_lift_instant() -> void:
+	_hand_hover_visual_active = false
 	if hover_lift_tween and hover_lift_tween.is_running():
 		hover_lift_tween.kill()
 	hover_lift_tween = null
-	position.y = 0.0
+	if is_instance_valid(card_visuals):
+		card_visuals.position.y = 0.0
+
+
+## 禁用手牌等：收起抬起并恢复底板样式（不依赖状态机）。
+func force_hand_hover_visuals_off() -> void:
+	z_index = 0
+	z_as_relative = true
+	if is_instance_valid(card_visuals):
+		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_base)
+		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+	reset_hand_hover_lift_instant()
 
 
 func tween_hand_hover_lift_y(target_y: float, duration: float = 0.12) -> void:
 	if hover_lift_tween and hover_lift_tween.is_running():
 		hover_lift_tween.kill()
-	hover_lift_tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	hover_lift_tween.tween_property(self, "position:y", target_y, duration)
-
-
-func sync_hand_hover_lift_from_mouse() -> void:
-	if disabled:
+	if not is_instance_valid(card_visuals):
 		return
-	if is_hovered():
+	hover_lift_tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	hover_lift_tween.tween_property(card_visuals, "position:y", target_y, duration)
+
+
+## 由 Hand 每帧调用：仅当牌在手牌槽且处于 BASE 时，根据鼠标几何决定是否抬起。
+func sync_hand_hover_presentation() -> void:
+	if disabled:
+		if _hand_hover_visual_active or (is_instance_valid(card_visuals) and absf(card_visuals.position.y) > 0.01):
+			force_hand_hover_visuals_off()
+		elif is_instance_valid(card_visuals):
+			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		return
+	if not is_instance_valid(hand_slot) or get_parent() != hand_slot:
+		_set_hand_hover_visual_active(false)
+		if is_instance_valid(card_visuals):
+			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		return
+	var sm := card_state_machine
+	if not sm or not sm.current_state:
+		return
+	if sm.current_state.state != CardState.State.BASE:
+		_set_hand_hover_visual_active(false)
+		if is_instance_valid(card_visuals):
+			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		return
+	_apply_hand_visual_mouse_pick_filter()
+	_set_hand_hover_visual_active(is_hand_pointer_over_this_card())
+
+
+func _set_hand_hover_visual_active(active: bool) -> void:
+	if active == _hand_hover_visual_active:
+		return
+	if not is_instance_valid(card_visuals):
+		return
+	_hand_hover_visual_active = active
+	if active:
+		z_index = HAND_HOVER_Z
+		z_as_relative = true
+		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_hover)
+		refresh_combat_description()
 		tween_hand_hover_lift_y(-HAND_HOVER_LIFT_PX)
 	else:
-		reset_hand_hover_lift_instant()
+		z_index = 0
+		z_as_relative = true
+		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_base)
+		tween_hand_hover_lift_y(0.0)
+
+
+## 重叠时仅「主目标」牌接收点击，其余牌 CardVisuals 设为 IGNORE 让事件穿透到下层牌。
+func _apply_hand_visual_mouse_pick_filter() -> void:
+	if not is_instance_valid(card_visuals) or not is_instance_valid(hand_slot):
+		return
+	var hp := hand_slot.get_parent()
+	if not (hp is Hand):
+		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		return
+	var fo := (hp as Hand).get_mouse_foremost_hand_card()
+	var overlapping := is_hand_hover_hit_overlapping()
+	if overlapping and fo != null and fo != self:
+		card_visuals.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	else:
+		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+## 回手等时机补一帧同步（Hand 也会在 `_process` 里持续刷新）。
+func sync_hand_hover_lift_from_mouse() -> void:
+	sync_hand_hover_presentation()
 
 
 func play() -> void:
@@ -109,16 +191,41 @@ func _play_resolved() -> void:
 	visible = false
 	played_card.play(played_targets, stats, mods)
 
+	var relic_h: RelicHandler = null
+	var do_defect_echo := false
+	var rn := get_tree().get_first_node_in_group("run")
+	if rn:
+		relic_h = rn.get("relic_handler") as RelicHandler
+	if (
+		relic_h
+		and relic_h.has_relic("defect_machine")
+		and DefectMachineRelic.has_echo_pending()
+	):
+		do_defect_echo = true
+	if do_defect_echo:
+		DefectMachineRelic.consume_echo()
+
 	# 不用 class_name BattleCardFx，避免与 battle_card_fx.gd 的解析顺序/循环依赖导致 CardUI 无法加载
 	var fx: Node = get_tree().get_first_node_in_group("battle_card_fx")
-	if fx and fx.is_inside_tree() and fx.has_method("animate_played_card"):
+	if fx and fx.is_inside_tree() and fx.has_method("animate_played_card") and not Events.is_combat_ended():
 		# 与 res://scenes/ui/battle_card_fx.gd 中 PlayedKind 顺序一致：DISCARD=0, EXHAUST=1, POWER=2
 		var kind: int = 0
 		if played_card.exhausts:
 			kind = 1
 		elif played_card.type == Card.Type.POWER:
 			kind = 2
-		await fx.animate_played_card(played_card, start_center, kind, mods)
+		await fx.animate_played_card(played_card, start_center, kind)
+
+	if (
+		do_defect_echo
+		and not Events.is_combat_ended()
+		and is_instance_valid(relic_h)
+		and relic_h.has_relic("defect_machine")
+		and fx
+		and fx.is_inside_tree()
+		and fx.has_method("animate_defect_machine_echo")
+	):
+		await fx.animate_defect_machine_echo(played_card, played_targets, stats, mods)
 
 	queue_free()
 
@@ -144,6 +251,33 @@ func _prune_invalid_targets() -> void:
 func is_hovered() -> bool:
 	var rect := Rect2(Vector2.ZERO, self.size)
 	return rect.has_point(get_local_mouse_position())
+
+
+## 手牌悬停抬起后视觉在控件矩形上方，与 tooltip 一致：用「扩展矩形」判断是否仍算指着这张牌。
+func get_hand_hover_hit_global_rect() -> Rect2:
+	var gr := get_global_rect()
+	return Rect2(
+		gr.position + Vector2(0, -HAND_HOVER_LIFT_PX),
+		gr.size + Vector2(0, HAND_HOVER_LIFT_PX)
+	)
+
+
+func is_hand_hover_hit_overlapping() -> bool:
+	if disabled:
+		return false
+	return get_hand_hover_hit_global_rect().has_point(get_global_mouse_position())
+
+
+## 手牌内：扩展矩形命中且为本条手里「主目标」牌（由 Hand 按几何距离计算，避免 gui_hover 与 z 不同步导致换牌后点不出）。
+func is_hand_pointer_over_this_card() -> bool:
+	if disabled or not is_instance_valid(hand_slot) or get_parent() != hand_slot:
+		return false
+	if not is_hand_hover_hit_overlapping():
+		return false
+	var hp := hand_slot.get_parent()
+	if hp is Hand:
+		return (hp as Hand).get_mouse_foremost_hand_card() == self
+	return false
 
 
 func refresh_combat_description() -> void:

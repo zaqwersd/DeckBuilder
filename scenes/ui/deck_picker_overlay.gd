@@ -1,0 +1,130 @@
+class_name DeckPickerOverlay
+extends ColorRect
+
+## indices 为卡组真实下标，升序，元素为 int；取消时发空数组（用 Array 避免与 await 的 [] 类型冲突）
+signal pick_confirmed(indices: Array)
+
+const CARD_MENU_UI := preload("res://scenes/ui/card_menu_ui.tscn")
+
+@onready var grid: GridContainer = %Cards
+@onready var confirm: Button = %ConfirmPick
+@onready var cancel: Button = %CancelPick
+@onready var hint: Label = %HintLabel
+
+var _deck: CardPile
+var _picks_required: int = 1
+var _validator: Callable = Callable()
+var _selected_indices: Array[int] = []
+var _index_by_menu: Dictionary = {}
+var _allowed_ids: PackedStringArray = PackedStringArray()
+## 若有效：用当前已选下标数组（已排序）决定是否显示「确定」；无效时用「选满 picks_required 张」
+var _confirm_enabled: Callable = Callable()
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	confirm.visible = false
+	confirm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	confirm.pressed.connect(_on_confirm)
+	cancel.pressed.connect(_on_cancel)
+
+
+func setup(
+	deck: CardPile,
+	picks_required: int,
+	validator: Callable = Callable(),
+	hint_text: String = "",
+	allowed_card_ids: PackedStringArray = PackedStringArray(),
+	confirm_enabled: Callable = Callable()
+) -> void:
+	_deck = deck
+	_picks_required = maxi(1, picks_required)
+	_validator = validator
+	_allowed_ids = allowed_card_ids
+	_confirm_enabled = confirm_enabled
+	if hint and not hint_text.is_empty():
+		hint.text = hint_text
+	_populate()
+
+
+func _id_is_allowed(card_id: String) -> bool:
+	if _allowed_ids.is_empty():
+		return true
+	for a: String in _allowed_ids:
+		if a == card_id:
+			return true
+	return false
+
+
+func _populate() -> void:
+	if not is_node_ready():
+		await ready
+	for c: Node in grid.get_children():
+		c.queue_free()
+	_index_by_menu.clear()
+	_selected_indices.clear()
+	_update_confirm_visibility()
+	if _deck == null:
+		return
+	for i: int in range(_deck.cards.size()):
+		var c: Card = _deck.cards[i]
+		if not _id_is_allowed(c.id):
+			continue
+		var menu := CARD_MENU_UI.instantiate() as CardMenuUI
+		menu.use_listing_hover_zoom = true
+		menu.mouse_filter = Control.MOUSE_FILTER_STOP
+		grid.add_child(menu)
+		menu.card = c
+		_index_by_menu[menu] = i
+		menu.card_pick_pressed.connect(func(_c: Card) -> void: _toggle_pick(menu))
+
+
+func _set_confirm_visible(on: bool) -> void:
+	confirm.visible = on
+	confirm.mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
+
+
+func _update_confirm_visibility() -> void:
+	var ok := false
+	if _confirm_enabled.is_valid():
+		var sel: Array = _selected_indices.duplicate()
+		sel.sort()
+		ok = bool(_confirm_enabled.call(sel))
+	else:
+		ok = _selected_indices.size() == _picks_required
+	_set_confirm_visible(ok)
+
+
+func _toggle_pick(menu: CardMenuUI) -> void:
+	var idx: int = int(_index_by_menu.get(menu, -1))
+	if idx < 0:
+		return
+	var pos := _selected_indices.find(idx)
+	if pos != -1:
+		_selected_indices.remove_at(pos)
+		menu.set_deck_pick_selected(false)
+	else:
+		if _selected_indices.size() >= _picks_required:
+			return
+		_selected_indices.append(idx)
+		menu.set_deck_pick_selected(true)
+	_selected_indices.sort()
+	_update_confirm_visibility()
+
+
+func _on_confirm() -> void:
+	if _selected_indices.size() != _picks_required:
+		return
+	var sel: Array = _selected_indices.duplicate()
+	sel.sort()
+	if _validator.is_valid() and not _validator.call(sel):
+		if hint:
+			hint.text = "选择不符合要求，请重新选择。"
+		return
+	pick_confirmed.emit(sel.duplicate())
+	queue_free()
+
+
+func _on_cancel() -> void:
+	pick_confirmed.emit([])
+	queue_free()

@@ -1,5 +1,21 @@
 extends Node
 
+## 本场战斗已形成终局（玩家死亡或场上已无存活敌人）。抽牌/弃牌/飞牌等协程应短路，避免对已释放节点做动画。
+var combat_ended: bool = false
+
+
+func reset_combat_flow() -> void:
+	combat_ended = false
+
+
+func mark_combat_ended() -> void:
+	combat_ended = true
+
+
+func is_combat_ended() -> bool:
+	return combat_ended
+
+
 # Card-related events
 signal card_drag_started(card_ui: CardUI)
 signal card_drag_ended(card_ui: CardUI)
@@ -26,6 +42,13 @@ signal status_tooltip_requested(statuses: Array[Status])
 ## 战斗/地图：悬停在单个状态图标上显示说明；open_to_right 为 true 时框在图标右侧（玩家），false 时在左侧（敌人）
 signal status_tooltip_hover_show(status: Status, near_to: Control, open_to_right: bool)
 signal status_tooltip_hover_hide
+## 战斗：悬停在敌人意图条（IntentUI）上；`bbcode` 与 `StatusHoverTooltip` 正文格式一致。
+signal intent_tooltip_hover_show(bbcode: String, near_to: Control, open_to_right: bool)
+signal intent_tooltip_hover_hide
+
+## 卡面描述中「虚无」「消耗」「易伤」「力量」等词条悬停（可多段垂直排列）
+signal card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control)
+signal card_keyword_tooltip_hide
 
 # Map-related events
 signal map_exited(room: Room)

@@ -17,6 +17,12 @@ func initialize_relic(_owner: RelicUI) -> void:
 	pass
 
 
+## 仅在玩家「新获得」该遗物时调用一次（商店/奖励/开局遗物）；读档还原列表时不调用。
+## 实参为 `groups` 含 `"run"` 的 Run 节点（避免此处引用 `Run` 造成脚本循环依赖）。
+func apply_persistent_pickup_on_acquire(_run: Node) -> void:
+	pass
+
+
 func activate_relic(_owner: RelicUI) -> void:
 	pass
 

@@ -36,7 +36,8 @@ func array_shuffle(array: Array) -> void:
 		array[i] = tmp
 
 
-## 按稀有度权重不放回抽取；某稀有度在剩余池里已无时其权重为 0，其余再归一化（商店、战后卡牌奖励等）。
+## 不放回抽多张牌：每一步先在「仍可选的牌」里按稀有度权重 roll 出普通/罕见/稀有之一，再在该稀有度子池内均匀随机一张（商店、战后选牌等）。
+## 某稀有度在剩余池里已无时其权重为 0，其余权重相对有效。
 func pick_weighted_distinct_cards(
 	pool: Array[Card],
 	count: int,

@@ -19,12 +19,22 @@ var card_separation: int = 0
 ## 卡牌拖向 ui_layer 时槽会暂时无子节点，勿当作「空槽」删除
 const META_SLOT_DRAG_TEMP_EMPTY := &"_hand_slot_drag_temp_empty"
 
+## 整条手牌栏整体上移（相对场景里写的 offset_top/bottom）。在 `_ready` 应用，保证进战斗必生效。
+const HAND_BAR_RAISE_PX := 50.0
+
 ## 无牌时恢复场景里原来的底边手牌条半宽（offset 对称用）
 var _empty_bar_half_width: float = 337.5
 
 ## 同帧内可多次请求；正在 reflow 时只打脏标记，结束后立刻再跑一轮，避免整帧 deferred
 var _reflow_running: bool = false
 var _reflow_dirty: bool = false
+
+## 手牌词条 tooltip：仅当鼠标与「当前这张牌」重合时显示，由本节点统一发 Events，避免每帧重复 emit
+var _kw_tip_card: CardUI = null
+var _kw_tip_ids: PackedStringArray = PackedStringArray()
+
+## 本帧鼠标下手牌「主目标」：扩展命中区重叠的牌中取距牌心最近者（不依赖 gui_get_hovered_control / z 同步顺序）。
+var _mouse_foremost_hand_card: CardUI = null
 
 
 func _enter_tree() -> void:
@@ -35,11 +45,95 @@ func _ready() -> void:
 	child_entered_tree.connect(_on_child_entered_tree)
 	child_exiting_tree.connect(_on_child_exiting_tree)
 	_empty_bar_half_width = absf(offset_left)
+	offset_top -= HAND_BAR_RAISE_PX
+	offset_bottom -= HAND_BAR_RAISE_PX
 	# 底边锚点居中时：必须同步 offset 宽度 = 内容宽，否则场景固定 ±337.5 会一直占满一条宽带，牌看起来不靠拢
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	_apply_card_separation()
 	_refresh_hand_card_scales()
 	_request_reflow_hand_bar()
+	set_process(true)
+	process_priority = -128
+
+
+func get_mouse_foremost_hand_card() -> CardUI:
+	return _mouse_foremost_hand_card
+
+
+func _update_mouse_foremost_hand_card() -> void:
+	_mouse_foremost_hand_card = null
+	var mp := get_global_mouse_position()
+	var best: CardUI = null
+	var best_d2 := INF
+	var best_si := -999999
+	for slot in get_children():
+		var c := get_card_ui_in_slot(slot)
+		if c == null or c.disabled:
+			continue
+		if c.get_parent() != slot:
+			continue
+		var sm := c.card_state_machine
+		if sm == null or sm.current_state == null:
+			continue
+		if sm.current_state.state != CardState.State.BASE:
+			continue
+		if not c.is_hand_hover_hit_overlapping():
+			continue
+		var d2 := c.get_hand_hover_hit_global_rect().get_center().distance_squared_to(mp)
+		var si := slot.get_index()
+		if d2 < best_d2 - 0.01:
+			best = c
+			best_d2 = d2
+			best_si = si
+		elif is_equal_approx(d2, best_d2) and si > best_si:
+			best = c
+			best_d2 = d2
+			best_si = si
+	_mouse_foremost_hand_card = best
+
+
+func _exit_tree() -> void:
+	if _kw_tip_card != null:
+		_kw_tip_card = null
+		_kw_tip_ids = PackedStringArray()
+		Events.card_keyword_tooltip_hide.emit()
+
+
+func _process(_delta: float) -> void:
+	_update_mouse_foremost_hand_card()
+	var tip_card: CardUI = null
+	var tip_ids: PackedStringArray = PackedStringArray()
+	for slot in get_children():
+		var card := get_card_ui_in_slot(slot)
+		if not card:
+			continue
+		card.sync_hand_hover_presentation()
+		if tip_card == null and card.is_hand_pointer_over_this_card() and is_instance_valid(card.card_visuals):
+			var ids := card.card_visuals.get_keyword_tooltip_ids()
+			if not ids.is_empty():
+				tip_card = card
+				tip_ids = ids
+	_sync_hand_keyword_tooltip(tip_card, tip_ids)
+
+
+func _kw_tip_ids_equal(a: PackedStringArray, b: PackedStringArray) -> bool:
+	if a.size() != b.size():
+		return false
+	for i in range(a.size()):
+		if a[i] != b[i]:
+			return false
+	return true
+
+
+func _sync_hand_keyword_tooltip(winner: CardUI, ids: PackedStringArray) -> void:
+	if winner == _kw_tip_card and _kw_tip_ids_equal(ids, _kw_tip_ids):
+		return
+	_kw_tip_card = winner
+	_kw_tip_ids = ids.duplicate() if winner != null else PackedStringArray()
+	if winner == null:
+		Events.card_keyword_tooltip_hide.emit()
+	else:
+		Events.card_keyword_tooltip_show.emit(ids, winner)
 
 
 func _on_child_exiting_tree(_node: Node) -> void:
@@ -125,6 +219,16 @@ func _refresh_hand_card_scales() -> void:
 		var cui := get_card_ui_in_slot(slot)
 		if cui:
 			_apply_hand_card_transform(cui)
+
+
+func has_card_resource(c: Card) -> bool:
+	if c == null:
+		return false
+	for slot in get_children():
+		var cui := get_card_ui_in_slot(slot)
+		if cui and cui.card == c:
+			return true
+	return false
 
 
 func add_card(card: Card) -> void:
@@ -224,10 +328,8 @@ func enable_hand() -> void:
 		if not card:
 			continue
 		card.disabled = false
-		card.z_index = 0
 		card.refresh_combat_description()
-		if card.is_hovered():
-			card.card_state_machine.on_mouse_entered()
+		card.sync_hand_hover_presentation()
 
 
 func disable_hand() -> void:
@@ -236,8 +338,7 @@ func disable_hand() -> void:
 		if not card:
 			continue
 		card.disabled = true
-		card.z_index = 0
-		card.reset_hand_hover_lift_instant()
+		card.force_hand_hover_visuals_off()
 
 
 func _on_card_ui_reparent_requested(child: CardUI) -> void:
@@ -251,6 +352,8 @@ func _on_card_ui_reparent_requested(child: CardUI) -> void:
 		var new_index := clampi(child.original_index, 0, maxi(0, get_child_count() - 1))
 		move_child.call_deferred(child.hand_slot, new_index)
 	else:
+		if not is_instance_valid(child.hand_slot):
+			return
 		child.reparent(self)
 		child.reset_hand_hover_lift_instant()
 		var new_index_legacy := clampi(child.original_index, 0, maxi(0, get_child_count() - 1))
@@ -265,7 +368,7 @@ func _on_card_ui_reparent_requested(child: CardUI) -> void:
 
 func _sync_card_hover_after_return_to_hand(card: CardUI) -> void:
 	if is_instance_valid(card):
-		card.sync_hand_hover_lift_from_mouse()
+		card.sync_hand_hover_presentation()
 
 
 func _apply_hand_card_transform(card_ui: CardUI) -> void:
@@ -280,17 +383,17 @@ func _apply_hand_card_transform(card_ui: CardUI) -> void:
 		roundf(CARD_UI_BASE_SIZE.y * s)
 	)
 
-	if is_instance_valid(card_ui.hand_slot):
+	# 仅当牌仍是槽的子节点时才写槽的 minimum_size。否则（拖出/打出已 reparent 但 hand_slot 尚未清空）
+	# 会把 shrink_slot 压成的 0 宽又改回满宽，出现「空槽占位」闪一下。
+	if is_instance_valid(card_ui.hand_slot) and card_ui.get_parent() == card_ui.hand_slot:
 		card_ui.hand_slot.custom_minimum_size = scaled_size
-		# 仍在手牌槽内时：不要用全屏锚点参与最小尺寸推算，否则槽会被子控件撑到极大
-		if card_ui.get_parent() == card_ui.hand_slot:
-			card_ui.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-			card_ui.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			card_ui.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
-			card_ui.offset_left = 0.0
-			card_ui.offset_top = 0.0
-			card_ui.offset_right = scaled_size.x
-			card_ui.offset_bottom = scaled_size.y
+		card_ui.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		card_ui.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		card_ui.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+		card_ui.offset_left = 0.0
+		card_ui.offset_top = 0.0
+		card_ui.offset_right = scaled_size.x
+		card_ui.offset_bottom = scaled_size.y
 
 	if is_equal_approx(s, 1.0):
 		card_ui.custom_minimum_size = CARD_UI_BASE_SIZE

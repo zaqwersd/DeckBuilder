@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DefectMachineRelic" format=3 uid="uid://ltn4uyahmmid"]
+
+[ext_resource type="Texture2D" uid="uid://bpriu88tns73x" path="res://art/defect_machine.png" id="1_kmaln"]
+[ext_resource type="Script" uid="uid://ckryi25jumiav" path="res://relics/defect_machine.gd" id="2_scr"]
+
+[resource]
+script = ExtResource("2_scr")
+relic_name = "故障机器"
+id = "defect_machine"
+type = 1
+icon = ExtResource("1_kmaln")
+tooltip = "你每场战斗打出的第一张牌会打出两次。"

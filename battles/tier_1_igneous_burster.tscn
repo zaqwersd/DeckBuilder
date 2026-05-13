@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://c0qjt12oerj4y"]
+
+[ext_resource type="PackedScene" uid="uid://d0efyathkfg74" path="res://scenes/enemy/enemy.tscn" id="1_en"]
+[ext_resource type="Resource" uid="uid://42lmyjuy5k3h" path="res://enemies/igneous_burster/igneous_burster_enemy.tres" id="2_st"]
+
+[node name="Tier1IgneousBurster" type="Node2D" unique_id=1045938897]
+
+[node name="Enemy" parent="." unique_id=1688111553 instance=ExtResource("1_en")]
+position = Vector2(945, 373.5)
+stats = ExtResource("2_st")

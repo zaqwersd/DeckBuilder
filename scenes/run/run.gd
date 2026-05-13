@@ -8,6 +8,7 @@ const SHOP_SCENE := preload("res://scenes/shop/shop.tscn")
 const TREASURE_SCENE = preload("res://scenes/treasure/treasure.tscn")
 const WIN_SCREEN_SCENE := preload("res://scenes/win_screen/win_screen.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
+const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
 
 @export var run_startup: RunStartup
 
@@ -18,6 +19,7 @@ const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 @onready var relic_handler: RelicHandler = %RelicHandler
 @onready var relic_tooltip: RelicTooltip = %RelicTooltip
 @onready var status_hover_tooltip: StatusHoverTooltip = %StatusHoverTooltip
+@onready var card_keyword_tooltip: CardKeywordTooltip = %CardKeywordTooltip
 @onready var deck_button: CardPileOpener = %DeckButton
 @onready var deck_view: CardPileView = %DeckView
 @onready var pause_menu: PauseMenu = $PauseMenu
@@ -50,8 +52,8 @@ func _ready() -> void:
 			_start_run()
 		RunStartup.Type.CONTINUED_RUN:
 			_load_run()
-
-
+	
+	_ensure_debug_console()
 func _start_run() -> void:
 	stats = RunStats.new()
 	
@@ -89,7 +91,7 @@ func _load_run() -> void:
 	character = save_data.char_stats
 	character.deck = save_data.current_deck
 	character.health = save_data.current_health
-	relic_handler.add_relics(save_data.relics)
+	relic_handler.add_relics(save_data.relics, false)
 	_setup_top_bar()
 	_setup_event_connections()
 	
@@ -101,6 +103,8 @@ func _load_run() -> void:
 func _change_view(scene: PackedScene) -> Node:
 	Events.relic_tooltip_hover_hide.emit()
 	Events.status_tooltip_hover_hide.emit()
+	Events.intent_tooltip_hover_hide.emit()
+	Events.card_keyword_tooltip_hide.emit()
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
 	
@@ -115,6 +119,8 @@ func _change_view(scene: PackedScene) -> Node:
 func _show_map() -> void:
 	Events.relic_tooltip_hover_hide.emit()
 	Events.status_tooltip_hover_hide.emit()
+	Events.intent_tooltip_hover_hide.emit()
+	Events.card_keyword_tooltip_hide.emit()
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
 
@@ -151,6 +157,10 @@ func _setup_top_bar():
 	Events.relic_tooltip_hover_hide.connect(relic_tooltip.hide)
 	Events.status_tooltip_hover_show.connect(status_hover_tooltip.show_tooltip)
 	Events.status_tooltip_hover_hide.connect(status_hover_tooltip.hide)
+	Events.intent_tooltip_hover_show.connect(status_hover_tooltip.show_custom_bbcode)
+	Events.intent_tooltip_hover_hide.connect(status_hover_tooltip.hide)
+	Events.card_keyword_tooltip_show.connect(card_keyword_tooltip.show_keyword_blocks)
+	Events.card_keyword_tooltip_hide.connect(card_keyword_tooltip.hide_tooltip)
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck
@@ -161,12 +171,17 @@ func _setup_top_bar():
 
 func play_deck_gain_card_visual(card: Card, from_global: Vector2) -> void:
 	if run_card_fx:
-		await run_card_fx.animate_card_to_deck(card, from_global)
+		run_card_fx.call_deferred("_deferred_animate_card_to_deck", card, from_global)
 
 
 func play_deck_gain_card_visual_with_pick(picked: CardMenuUI, from_global: Vector2) -> void:
 	if run_card_fx:
-		await run_card_fx.animate_picked_menu_to_deck(picked, from_global)
+		run_card_fx.call_deferred("_deferred_animate_picked_to_deck", picked, from_global)
+
+
+func play_deck_remove_card_shrink_remove_and_wait(card: Card) -> void:
+	if run_card_fx:
+		await run_card_fx.animate_card_center_shrink_remove(card)
 
 
 func _show_regular_battle_rewards() -> void:
@@ -198,7 +213,9 @@ func _on_treasure_room_exited(relic: Relic) -> void:
 	reward_scene.run_stats = stats
 	reward_scene.character_stats = character
 	reward_scene.relic_handler = relic_handler
-	
+
+	var treasure_gold := RNG.instance.randi_range(25, 50)
+	reward_scene.add_gold_reward(treasure_gold)
 	reward_scene.add_relic_reward(relic)
 
 
@@ -217,10 +234,49 @@ func _on_shop_entered() -> void:
 
 
 func _on_event_room_entered(room: Room) -> void:
-	var event_room := _change_view(room.event_scene) as EventRoom
-	event_room.character_stats = character
-	event_room.run_stats = stats
-	event_room.setup()
+	var event_room: Node = _change_view(room.event_scene)
+	# 避免 `as EventRoom` 在部分环境下为 null（根节点 type=Control 时转型失败），导致对 nil 赋值 character_stats
+	event_room.set("character_stats", character)
+	event_room.set("run_stats", stats)
+	if event_room.has_method("setup"):
+		event_room.call("setup")
+
+
+func debug_enter_event(id: String) -> String:
+	var scene := _load_event_scene_by_id(id)
+	if scene == null:
+		return "找不到事件：%s（可用 scenes/event_rooms 下 .tscn 名或 res:// 完整路径）" % id
+	var room := Room.new()
+	room.type = Room.Type.EVENT
+	room.event_scene = scene
+	_on_event_room_entered(room)
+	return "已进入事件：%s" % id.strip_edges()
+
+
+func _load_event_scene_by_id(id: String) -> PackedScene:
+	var t := id.strip_edges()
+	if t.is_empty():
+		return null
+	if t.begins_with("res://") and t.ends_with(".tscn") and ResourceLoader.exists(t):
+		return load(t) as PackedScene
+	var base := t.get_file().trim_suffix(".tscn") if t.contains("/") else t.trim_suffix(".tscn")
+	var path := "res://scenes/event_rooms/%s.tscn" % base
+	if ResourceLoader.exists(path):
+		return load(path) as PackedScene
+	return null
+
+
+func _ensure_debug_console() -> void:
+	if get_node_or_null("DebugConsoleLayer") != null:
+		return
+	var layer := CanvasLayer.new()
+	layer.name = "DebugConsoleLayer"
+	layer.layer = 100
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer)
+	var dbg := DEBUG_CONSOLE.new()
+	dbg.name = "GameplayDebugConsole"
+	layer.add_child(dbg)
 
 
 func _on_battle_won() -> void:

@@ -7,6 +7,23 @@ extends Button
 @onready var custom_icon: TextureRect = %CustomIcon
 @onready var custom_text: Label = %CustomText
 
+## 若为遗物奖励，悬停时显示遗物说明（与 RelicUI 一致）。
+var hover_relic: Relic
+
+
+func _ready() -> void:
+	mouse_entered.connect(_on_mouse_entered_reward)
+	mouse_exited.connect(_on_mouse_exited_reward)
+
+
+func _on_mouse_entered_reward() -> void:
+	if hover_relic:
+		Events.relic_tooltip_hover_show.emit(hover_relic, self)
+
+
+func _on_mouse_exited_reward() -> void:
+	Events.relic_tooltip_hover_hide.emit()
+
 
 func set_reward_icon(new_icon: Texture) -> void:
 	reward_icon = new_icon
@@ -27,4 +44,6 @@ func set_reward_text(new_text: String) -> void:
 
 
 func _on_pressed() -> void:
+	if hover_relic:
+		Events.relic_tooltip_hover_hide.emit()
 	queue_free()

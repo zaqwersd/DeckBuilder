@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://d4c8yfl4f4sat"]
 
-[ext_resource type="Texture2D" uid="uid://oe7v35ii8vrs" path="res://art/tile_0102.png" id="1_gn3qd"]
+[ext_resource type="Texture2D" uid="uid://bd7wnjcwu7vak" path="res://art/block.png" id="1_5vr88"]
 [ext_resource type="Script" uid="uid://b2y6h1qug8kas" path="res://characters/blade/cards/blade_block.gd" id="2_avork"]
 [ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_g3rmi"]
 
@@ -10,6 +10,6 @@ id = "blade_block"
 type = 1
 cost = 1
 card_name = "防御"
-icon = ExtResource("1_gn3qd")
-tooltip_text = "[center]获得[color=\"0044ff\"]%s[/color]点格挡。[/center]"
+icon = ExtResource("1_5vr88")
+tooltip_text = "[center]获得%s点格挡。[/center]"
 sound = ExtResource("3_g3rmi")

@@ -16,7 +16,12 @@ func execute(targets: Array[Node]) -> void:
 	var slots := player_handler.hand.get_children().duplicate()
 	RNG.array_shuffle(slots)
 	var chosen_slots := slots.slice(0, amount)
-	
+	var ch := player_handler.character
+
 	for slot in chosen_slots:
-		if is_instance_valid(slot):
-			slot.queue_free()
+		if not is_instance_valid(slot):
+			continue
+		var cui := player_handler.hand.get_card_ui_in_slot(slot as Control)
+		if cui and cui.card and ch and ch.exhaust:
+			ch.exhaust.add_card(cui.card)
+			player_handler.hand.discard_card(cui)

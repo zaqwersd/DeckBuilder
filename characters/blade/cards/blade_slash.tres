@@ -11,5 +11,5 @@ target = 2
 cost = 1
 card_name = "横扫"
 icon = ExtResource("1_4ufwx")
-tooltip_text = "[center]对所有敌人造成 [color=\"ff0000\"]%s[/color] 点伤害。[/center]"
+tooltip_text = "[center]对所有敌人造成 %s 点伤害。[/center]"
 sound = ExtResource("3_4dvu8")

@@ -20,6 +20,8 @@ var mana: int : set = set_mana
 var deck: CardPile
 var discard: CardPile
 var draw_pile: CardPile
+## 本场战斗中因打出消耗、虚无、效果等离开循环的牌
+var exhaust: CardPile
 
 
 func set_mana(value: int) -> void:
@@ -52,4 +54,5 @@ func create_instance() -> Resource:
 	instance.deck = instance.starting_deck.duplicate()
 	instance.draw_pile = CardPile.new()
 	instance.discard = CardPile.new()
+	instance.exhaust = CardPile.new()
 	return instance

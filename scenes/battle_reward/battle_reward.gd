@@ -43,6 +43,7 @@ func add_relic_reward(relic: Relic) -> void:
 	var relic_reward := REWARD_BUTTON.instantiate() as RewardButton
 	relic_reward.reward_icon = relic.icon
 	relic_reward.reward_text = relic.relic_name
+	relic_reward.hover_relic = relic
 	relic_reward.pressed.connect(_on_relic_reward_taken.bind(relic))
 	rewards.add_child.call_deferred(relic_reward)
 
@@ -60,9 +61,9 @@ func _show_card_rewards() -> void:
 	var card_reward_array := RNG.pick_weighted_distinct_cards(
 		available_cards,
 		pick_count,
-		RunStats.BASE_COMMON_WEIGHT,
-		RunStats.BASE_UNCOMMON_WEIGHT,
-		RunStats.BASE_RARE_WEIGHT
+		run_stats.common_weight,
+		run_stats.uncommon_weight,
+		run_stats.rare_weight
 	)
 
 	card_rewards.rewards = card_reward_array
@@ -86,7 +87,7 @@ func _on_card_reward_taken(picked_menu: Variant, from_global: Vector2) -> void:
 		return
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run:
-		await run.play_deck_gain_card_visual_with_pick(menu, from_global)
+		run.play_deck_gain_card_visual_with_pick(menu, from_global)
 	character_stats.deck.add_card(card)
 
 

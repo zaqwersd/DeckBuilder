@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="EnemyStats" format=3 uid="uid://42lmyjuy5k3h"]
+
+[ext_resource type="Script" uid="uid://cqw6nj5nsigxl" path="res://custom_resources/enemy_stats.gd" id="1_es"]
+[ext_resource type="Texture2D" uid="uid://t0exhqrkhy02" path="res://art/igneous_burster.png" id="2_art"]
+[ext_resource type="PackedScene" uid="uid://42lmyg3dr4bo" path="res://enemies/igneous_burster/igneous_burster_ai.tscn" id="3_ai"]
+
+[resource]
+script = ExtResource("1_es")
+ai = ExtResource("3_ai")
+health_bar_width = 200
+status_bar_offset = Vector2(0, 50)
+max_health = 56
+art = ExtResource("2_art")

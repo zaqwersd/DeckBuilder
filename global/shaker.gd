@@ -2,6 +2,8 @@ extends Node
 
 
 func shake(thing: Node2D, strength: float, duration: float = 0.2) -> void:
+	if Events.is_combat_ended():
+		return
 	if not thing:
 		return
 
@@ -18,7 +20,7 @@ func shake(thing: Node2D, strength: float, duration: float = 0.2) -> void:
 		strength *= 0.75
 	
 	tween.finished.connect(
-		func(): 
-			if thing:
+		func():
+			if is_instance_valid(thing):
 				thing.position = orig_pos
 	)

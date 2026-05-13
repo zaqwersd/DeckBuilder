@@ -11,10 +11,13 @@ func _ready() -> void:
 
 
 func duplicate_last_card() -> void:
-	var dup: Card = character_stats.deck.cards[-1].duplicate() as Card
+	if character_stats == null or character_stats.deck.cards.is_empty():
+		return
+	var last: Card = character_stats.deck.cards[character_stats.deck.cards.size() - 1]
+	var dup: Card = last.duplicate(true) as Card
 	var run := _find_run()
 	if run:
-		await run.play_deck_gain_card_visual(dup, Vector2.ZERO)
+		run.play_deck_gain_card_visual(dup, Vector2.ZERO)
 	character_stats.deck.add_card(dup)
 
 

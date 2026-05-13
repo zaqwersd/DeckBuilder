@@ -1,0 +1,79 @@
+[gd_scene format=3 uid="uid://nvguqotvc0me"]
+
+[ext_resource type="Script" uid="uid://c2o5v0p3uxk1i" path="res://scenes/event_rooms/martial_master_event.gd" id="1_script"]
+
+[node name="MartialMasterEvent" type="Control" unique_id=177685389]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=312398717]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.1, 0.18, 0.78)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1380648995]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -400.0
+offset_top = -204.0
+offset_right = 400.0
+offset_bottom = 216.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="VBoxContainer" unique_id=1564499405]
+layout_mode = 2
+text = "武功大师"
+horizontal_alignment = 1
+
+[node name="Story" type="Label" parent="VBoxContainer" unique_id=1773149992]
+layout_mode = 2
+text = "你遇到了一个看起来武功造诣很高的人，于是向他请教。
+他向你指点道：「攻防一体才是武术的最高境界。」
+大师的一番话让你有如醍醐灌顶。"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="OptionStrikeBlock" type="Button" parent="VBoxContainer" unique_id=1751611098]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 100)
+layout_mode = 2
+
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/OptionStrikeBlock" unique_id=110463233]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 6.0
+offset_right = -10.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+bbcode_enabled = true
+text = "[center]从你的牌组中移除一张 [color=#ffe082]打击[/color] 和 [color=#ffe082]防御[/color]。
+获得 [color=#ffa9b9]铁斩波[/color]。[/center]"
+scroll_active = false
+vertical_alignment = 1
+
+[node name="OptionTwoPick" type="Button" parent="VBoxContainer" unique_id=2070394441]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 88)
+layout_mode = 2
+text = "从一张随机攻击牌与一张随机技能牌中，
+选择一张加入卡组。"

@@ -8,7 +8,14 @@ const CARD_MENU_UI := preload("res://scenes/ui/card_menu_ui.tscn")
 
 var deck_button: Control
 
-const FLY_DURATION := 0.28
+const FLY_DURATION := 0.34
+## 仅当 from_global == ZERO（凭空出现在屏中）时先停留再飞入；商店/奖励从控件位置飞出则不停留
+const CENTER_HOLD_BEFORE_DECK_FLY := 1.0
+## 中央显现：复制/凭空入库先 0→1 再停留、飞入（时长为原先一半 ≈ 2 倍速度）
+const CENTER_REVEAL_DURATION := 0.17
+const SPIRAL_TURNS := 2.25
+## 飞入牌库全程仅旋转一整圈
+const FLY_ROTATIONS := 1.0
 
 
 func _ready() -> void:
@@ -34,6 +41,49 @@ func setup(deck_btn: Control) -> void:
 	deck_button = deck_btn
 
 
+func _deferred_animate_card_to_deck(card: Card, from_global: Vector2) -> void:
+	await animate_card_to_deck(card, from_global)
+
+
+func _deferred_animate_picked_to_deck(picked: CardMenuUI, from_global: Vector2) -> void:
+	await animate_picked_menu_to_deck(picked, from_global)
+
+
+const SHRINK_REMOVE_DURATION := 0.38
+
+
+func animate_card_center_shrink_remove(card: Card) -> void:
+	if not card:
+		return
+	var ghost := CARD_MENU_UI.instantiate() as CardMenuUI
+	var layer := get_parent()
+	if layer:
+		layer.add_child(ghost)
+	else:
+		add_child(ghost)
+	ghost.top_level = true
+	ghost.z_index = 200
+	ghost.z_as_relative = false
+	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.card = card
+	ghost.visible = false
+	await _prepare_card_menu_pivot(ghost)
+	if not is_instance_valid(ghost):
+		return
+	var vp_center := get_viewport().get_visible_rect().get_center()
+	_place_visual_center_at(ghost, vp_center)
+	ghost.rotation = 0.0
+	ghost.scale = Vector2.ONE
+	ghost.visible = true
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD)
+	tw.set_ease(Tween.EASE_IN)
+	tw.tween_property(ghost, "scale", Vector2.ZERO, SHRINK_REMOVE_DURATION)
+	await tw.finished
+	if is_instance_valid(ghost):
+		ghost.queue_free()
+
+
 func animate_picked_menu_to_deck(picked: CardMenuUI, from_global: Vector2) -> void:
 	if not deck_button or not is_instance_valid(picked) or not picked.card:
 		if is_instance_valid(picked):
@@ -47,11 +97,25 @@ func animate_picked_menu_to_deck(picked: CardMenuUI, from_global: Vector2) -> vo
 	picked.z_as_relative = false
 	picked.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	await _prepare_card_menu_pivot(picked)
-	var from := from_global
-	if from == Vector2.ZERO:
-		from = picked.get_global_rect().get_center()
-	picked.visible = true
-	await _fly_card_menu_to_deck_center(picked, from)
+	if not is_instance_valid(picked):
+		return
+	if from_global == Vector2.ZERO:
+		var vp_center := get_viewport().get_visible_rect().get_center()
+		_place_visual_center_at(picked, vp_center)
+		picked.rotation = 0.0
+		picked.scale = Vector2.ZERO
+		picked.visible = true
+		await _tween_center_scale_reveal(picked)
+		if not is_instance_valid(picked):
+			return
+		var from_center := picked.get_global_rect().get_center()
+		await get_tree().create_timer(CENTER_HOLD_BEFORE_DECK_FLY).timeout
+		if not is_instance_valid(picked):
+			return
+		await _fly_card_menu_to_deck_center(picked, from_center)
+	else:
+		picked.visible = true
+		await _fly_card_menu_to_deck_center(picked, from_global)
 	if is_instance_valid(picked):
 		picked.queue_free()
 
@@ -76,15 +140,21 @@ func animate_card_to_deck(card: Card, from_global: Vector2) -> void:
 	if from_global == Vector2.ZERO:
 		var vp_center := get_viewport().get_visible_rect().get_center()
 		_place_visual_center_at(ghost, vp_center)
-		ghost.scale = Vector2.ONE
+		ghost.rotation = 0.0
+		ghost.scale = Vector2.ZERO
 		ghost.visible = true
+		await _tween_center_scale_reveal(ghost)
+		if not is_instance_valid(ghost):
+			return
 		from = ghost.get_global_rect().get_center()
+		await get_tree().create_timer(CENTER_HOLD_BEFORE_DECK_FLY).timeout
 	else:
 		_place_visual_center_at(ghost, from_global)
 		ghost.scale = Vector2.ONE
 		ghost.visible = true
 		from = from_global
-
+	if not is_instance_valid(ghost):
+		return
 	await _fly_card_menu_to_deck_center(ghost, from)
 	if is_instance_valid(ghost):
 		ghost.queue_free()
@@ -98,10 +168,14 @@ func _fly_card_menu_to_deck_center(node: CardMenuUI, from: Vector2) -> void:
 	step.p0 = from
 	step.p1 = mid
 	step.p2 = to
+	step.spiral_turns = SPIRAL_TURNS
+	step.rotation_turns = FLY_ROTATIONS
+	node.rotation = 0.0
 	step.apply(0.0)
 	var tw := create_tween()
-	tw.set_ease(Tween.EASE_IN_OUT)
-	tw.set_trans(Tween.TRANS_SINE)
+	# 由慢渐快：插值前期移动少、后期移动多
+	tw.set_ease(Tween.EASE_IN)
+	tw.set_trans(Tween.TRANS_QUAD)
 	tw.tween_method(Callable(step, "apply"), 0.0, 1.0, FLY_DURATION)
 	await tw.finished
 
@@ -110,6 +184,16 @@ func _deck_target_center() -> Vector2:
 	if not is_instance_valid(deck_button):
 		return Vector2.ZERO
 	return deck_button.get_global_rect().get_center()
+
+
+func _tween_center_scale_reveal(node: Control) -> void:
+	if not is_instance_valid(node):
+		return
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD)
+	tw.set_ease(Tween.EASE_OUT)
+	tw.tween_property(node, "scale", Vector2.ONE, CENTER_REVEAL_DURATION)
+	await tw.finished
 
 
 func _place_visual_center_at(ghost: Control, global_center: Vector2) -> void:
@@ -153,6 +237,8 @@ class RunFlyTweenStep extends RefCounted:
 	var p0: Vector2
 	var p1: Vector2
 	var p2: Vector2
+	var spiral_turns: float = 2.25
+	var rotation_turns: float = 1.0
 
 	func apply(te: float) -> void:
 		if not is_instance_valid(ghost):
@@ -160,6 +246,18 @@ class RunFlyTweenStep extends RefCounted:
 		var sc := 1.0 - te
 		ghost.scale = Vector2.ONE * sc
 		var u := 1.0 - te
-		var pos := u * u * p0 + 2.0 * u * te * p1 + te * te * p2
+		var base := u * u * p0 + 2.0 * u * te * p1 + te * te * p2
+		var chord := p2 - p0
+		var perp := Vector2(-chord.y, chord.x)
+		if perp.length() < 0.001:
+			perp = Vector2(0.0, 1.0)
+		else:
+			perp = perp.normalized()
+		var dist := chord.length()
+		var amp := clampf(dist * 0.14, 18.0, 140.0)
+		var envelope := (1.0 - te) * (1.0 - te)
+		var spiral_off := -perp * amp * sin(TAU * spiral_turns * te) * envelope
+		var pos := base + spiral_off
 		var delta := pos - ghost.get_global_rect().get_center()
 		ghost.global_position += delta
+		ghost.rotation = te * TAU * rotation_turns

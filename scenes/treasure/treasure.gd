@@ -1,6 +1,8 @@
 class_name Treasure
 extends Control
 
+const TREASURE_OPEN_SFX := preload("res://art/treasure.ogg")
+
 @export var treasure_relic_pool: Array[Relic]
 @export var relic_handler: RelicHandler
 @export var char_stats: CharacterStats
@@ -30,4 +32,5 @@ func _on_treasure_chest_gui_input(event: InputEvent) -> void:
 		return
 	
 	if event.is_action_pressed("left_mouse"):
+		SFXPlayer.play(TREASURE_OPEN_SFX)
 		animation_player.play("open")

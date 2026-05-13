@@ -4,7 +4,8 @@ extends Node
 const X_DIST := 135.0
 const Y_DIST := 112.5
 const PLACEMENT_RANDOMNESS := 22.5
-const FLOORS := 15
+## 地图总行数；Boss 在最后一行（第 FLOORS 层，row = FLOORS - 1）
+const FLOORS := 16
 const MAP_WIDTH := 7
 const PATHS := 6
 const MONSTER_ROOM_WEIGHT := 12.0
@@ -160,8 +161,8 @@ func _setup_room_types() -> void:
 		if room.next_rooms.size() > 0:
 				room.type = Room.Type.TREASURE
 				
-	# last floor before the boss is always a campfire
-	for room: Room in map_data[13]:
+	# Boss 前一整层固定营火
+	for room: Room in map_data[FLOORS - 2]:
 		if room.next_rooms.size() > 0:
 				room.type = Room.Type.CAMPFIRE
 	
@@ -192,16 +193,15 @@ func _set_room_randomly(room_to_set: Room) -> void:
 		campfire_below_4 = is_campfire and room_to_set.row < 3
 		consecutive_campfire = is_campfire and has_campfire_parent
 		consecutive_shop = is_shop and has_shop_parent
-		campfire_on_13 = is_campfire and room_to_set.row == 12
+		campfire_on_13 = is_campfire and room_to_set.row == FLOORS - 3
 		
 	room_to_set.type = type_candidate
 
 	if type_candidate == Room.Type.MONSTER:
+		## 第 1–5 层（row 0–4）：弱怪池 tier 0；第 6 层起小怪：强怪池 tier 1；Boss 仍为 tier 2
 		var tier_for_monster_rooms := 0
-		
-		if room_to_set.row > 2:
+		if room_to_set.row >= 5:
 			tier_for_monster_rooms = 1
-			
 		room_to_set.battle_stats = battle_stats_pool.get_random_battle_for_tier(tier_for_monster_rooms)
 	
 	if type_candidate == Room.Type.EVENT:

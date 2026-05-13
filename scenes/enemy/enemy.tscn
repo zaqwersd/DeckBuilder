@@ -31,7 +31,7 @@ shape = SubResource("RectangleShape2D_3gsft")
 [node name="StatusBar" parent="." instance=ExtResource("3_status_bar")]
 status_tooltips_open_to_right = false
 
-[node name="IntentUI" parent="." groups=["intent"] instance=ExtResource("5_xytk4")]
+[node name="IntentUI" parent="." instance=ExtResource("5_xytk4")]
 offset_top = -108
 offset_bottom = -45
 

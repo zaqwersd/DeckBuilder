@@ -20,9 +20,15 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 	var all_new_enemies := battle_stats.enemies.instantiate()
 	
 	for new_enemy: Node2D in all_new_enemies.get_children():
-		var new_enemy_child := new_enemy.duplicate() as Enemy
+		var template := new_enemy as Enemy
+		if template == null:
+			continue
+		var new_enemy_child := template.duplicate() as Enemy
 		add_child(new_enemy_child)
 		new_enemy_child.status_handler.statuses_applied.connect(_on_enemy_statuses_applied.bind(new_enemy_child))
+		# duplicate() 后导出 Resource 偶发为 null，用模板再赋一次以触发 create_instance
+		if is_instance_valid(template.stats):
+			new_enemy_child.stats = template.stats
 		
 	all_new_enemies.queue_free()
 

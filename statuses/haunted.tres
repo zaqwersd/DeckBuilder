@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="HauntedStatus" format=3 uid="uid://bhauntedres01"]
+
+[ext_resource type="Texture2D" uid="uid://cao406og7u7u" path="res://art/haunted.png" id="1_d6sdf"]
+[ext_resource type="Script" uid="uid://c70s1lvyvn5g" path="res://statuses/haunted.gd" id="2_haunt"]
+
+[resource]
+script = ExtResource("2_haunt")
+id = "haunted"
+type = 2
+stack_type = 1
+icon = ExtResource("1_d6sdf")
+name = "恶灵缠身"
+tooltip = "每当一张「恶灵」被消耗，受到%s点伤害。"

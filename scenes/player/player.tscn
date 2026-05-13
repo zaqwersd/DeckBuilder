@@ -14,6 +14,7 @@ scale = Vector2(3, 3)
 texture = ExtResource("1_0r2oj")
 
 [node name="StatusBar" parent="." instance=ExtResource("2_status_bar")]
+status_tooltips_open_to_right = true
 
 [node name="ModifierHandler" parent="." instance=ExtResource("5_v2emp")]
 

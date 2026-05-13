@@ -1,0 +1,26 @@
+[gd_scene load_steps=3 format=3 uid="uid://cintent_slot01"]
+
+[ext_resource type="Script" path="res://scenes/ui/intent_slot.gd" id="1_slot"]
+[ext_resource type="Texture2D" path="res://art/tile_0106.png" id="2_ph"]
+
+[node name="IntentSlot" type="HBoxContainer"]
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+script = ExtResource("1_slot")
+
+[node name="Icon" type="TextureRect" parent="."]
+mouse_filter = 2
+custom_minimum_size = Vector2(48, 48)
+layout_mode = 2
+texture = ExtResource("2_ph")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ValueLabel" type="Label" parent="."]
+mouse_filter = 2
+layout_mode = 2
+size_flags_vertical = 1
+theme_override_font_sizes/font_size = 32
+horizontal_alignment = 1
+vertical_alignment = 1

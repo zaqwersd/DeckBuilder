@@ -1,0 +1,79 @@
+[gd_scene format=3 uid="uid://bwmjwro6b5mvs"]
+
+[ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_insert_three.gd" id="2_ins"]
+[ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_strike15_haunted.gd" id="3_s15h"]
+[ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_buff2_haunted1.gd" id="4_b2h1"]
+[ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_double8.gd" id="5_tri"]
+[ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_strike15_insert2.gd" id="6_s6"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="8_int"]
+[ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="9_atk"]
+[ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="10_blk"]
+
+[sub_resource type="Resource" id="R_er"]
+script = ExtResource("8_int")
+kind = 4
+
+[sub_resource type="Resource" id="R_atk15"]
+script = ExtResource("8_int")
+kind = 0
+base_text = ""
+
+[sub_resource type="Resource" id="R_debuff"]
+script = ExtResource("8_int")
+kind = 3
+base_text = ""
+
+[sub_resource type="Resource" id="R_buff2"]
+script = ExtResource("8_int")
+kind = 2
+
+[sub_resource type="Resource" id="R_debuff2"]
+script = ExtResource("8_int")
+kind = 3
+base_text = ""
+
+[sub_resource type="Resource" id="R_atk3"]
+script = ExtResource("8_int")
+kind = 0
+base_text = ""
+
+[sub_resource type="Resource" id="R_atk6"]
+script = ExtResource("8_int")
+kind = 0
+base_text = ""
+
+[sub_resource type="Resource" id="R_er2"]
+script = ExtResource("8_int")
+kind = 4
+
+[node name="EvilSpiritBossAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="InsertThreeGhosts" type="Node" parent="."]
+script = ExtResource("2_ins")
+erosion_intent = SubResource("R_er")
+sound = ExtResource("10_blk")
+
+[node name="Strike15Haunted" type="Node" parent="."]
+script = ExtResource("3_s15h")
+strike_intent = SubResource("R_atk15")
+debuff_intent = SubResource("R_debuff")
+sound = ExtResource("9_atk")
+
+[node name="BuffTwoHaunted1" type="Node" parent="."]
+script = ExtResource("4_b2h1")
+str_intent = SubResource("R_buff2")
+debuff_intent = SubResource("R_debuff2")
+sound = ExtResource("10_blk")
+
+[node name="TripleHit" type="Node" parent="."]
+script = ExtResource("5_tri")
+intent = SubResource("R_atk3")
+sound = ExtResource("9_atk")
+
+[node name="Strike6Insert2Ghosts" type="Node" parent="."]
+script = ExtResource("6_s6")
+intent = SubResource("R_atk6")
+erosion_intent = SubResource("R_er2")
+sound = ExtResource("9_atk")

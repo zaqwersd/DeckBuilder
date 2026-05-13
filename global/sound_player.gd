@@ -1,6 +1,13 @@
 extends Node
 
 
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	for ch in get_children():
+		if ch is Node:
+			(ch as Node).process_mode = Node.PROCESS_MODE_ALWAYS
+
+
 func play(audio: AudioStream, single=false) -> void:
 	if not audio:
 		return

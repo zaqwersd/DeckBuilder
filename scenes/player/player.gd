@@ -102,12 +102,21 @@ func update_stats() -> void:
 	_layout_status_bar()
 
 
-func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
+func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bool = true) -> void:
 	if stats.health <= 0:
 		return
 	
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
 	var modified_damage := modifier_handler.get_modified_value(damage, which_modifier)
+	
+	if not use_tween_delay:
+		Shaker.shake(self, 72, 0.15)
+		stats.take_damage(modified_damage)
+		sprite_2d.material = null
+		if stats.health <= 0:
+			Events.player_died.emit()
+			queue_free()
+		return
 	
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
@@ -116,8 +125,38 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	
 	tween.finished.connect(
 		func():
+			if not is_instance_valid(self):
+				return
 			sprite_2d.material = null
 			
+			if stats.health <= 0:
+				Events.player_died.emit()
+				queue_free()
+	)
+
+
+## 与意图数字一致：已按 `player.modifier_handler` + `enemy.modifier_handler` 链式算好的最终伤害，不再二次修饰。
+func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
+	if stats.health <= 0:
+		return
+	sprite_2d.material = WHITE_SPRITE_MATERIAL
+	if not use_tween_delay:
+		Shaker.shake(self, 72, 0.15)
+		stats.take_damage(final_damage)
+		sprite_2d.material = null
+		if stats.health <= 0:
+			Events.player_died.emit()
+			queue_free()
+		return
+	var tween := create_tween()
+	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
+	tween.tween_callback(stats.take_damage.bind(final_damage))
+	tween.tween_interval(0.17)
+	tween.finished.connect(
+		func():
+			if not is_instance_valid(self):
+				return
+			sprite_2d.material = null
 			if stats.health <= 0:
 				Events.player_died.emit()
 				queue_free()

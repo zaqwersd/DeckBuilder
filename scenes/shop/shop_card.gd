@@ -18,6 +18,10 @@ var _run_stats: RunStats
 var _sold := false
 
 
+func is_sold() -> bool:
+	return _sold
+
+
 func update(run_stats: RunStats) -> void:
 	if _sold:
 		return
@@ -43,26 +47,38 @@ func set_card(new_card: Card) -> void:
 		card_menu_ui.queue_free()
 	
 	var new_card_menu_ui := CARD_MENU_UI.instantiate() as CardMenuUI
+	new_card_menu_ui.use_listing_hover_zoom = true
 	card_container.add_child(new_card_menu_ui)
 	new_card_menu_ui.card = card
 	if not new_card_menu_ui.card_pick_pressed.is_connected(_on_card_pick_pressed):
 		new_card_menu_ui.card_pick_pressed.connect(_on_card_pick_pressed)
 	current_card_ui = new_card_menu_ui
-	_apply_shop_card_menu_scale.call_deferred(new_card_menu_ui, 0)
+	# 勿通过 call_deferred 传 Node：消息队列里会出现 Object→Object 转换失败
+	call_deferred("_deferred_apply_shop_card_menu_scale")
 
 
-func _apply_shop_card_menu_scale(ui: CardMenuUI, attempt: int = 0) -> void:
-	if not is_instance_valid(ui) or ui.get_parent() != card_container:
+func _deferred_apply_shop_card_menu_scale() -> void:
+	_apply_shop_card_menu_scale(0)
+
+
+func _deferred_retry_shop_card_menu_scale(attempt: int) -> void:
+	_apply_shop_card_menu_scale(attempt)
+
+
+func _apply_shop_card_menu_scale(attempt: int) -> void:
+	var menu := current_card_ui
+	if not is_instance_valid(menu) or not menu is CardMenuUI or menu.get_parent() != card_container:
 		return
-	if ui.size == Vector2.ZERO and attempt < 10:
-		_apply_shop_card_menu_scale.call_deferred(ui, attempt + 1)
+	if menu.size == Vector2.ZERO and attempt < 10:
+		call_deferred("_deferred_retry_shop_card_menu_scale", attempt + 1)
 		return
 	# 用固定槽位包住缩放后的卡面，避免布局仍按未缩放尺寸占位把遗物行挤出视口
-	ui.pivot_offset = Vector2.ZERO
-	ui.scale = Vector2.ONE * SHOP_CARD_MENU_SCALE
-	var scaled := ui.size * SHOP_CARD_MENU_SCALE
+	menu.pivot_offset = Vector2.ZERO
+	menu.scale = Vector2.ONE * SHOP_CARD_MENU_SCALE
+	var scaled := menu.size * SHOP_CARD_MENU_SCALE
 	card_container.custom_minimum_size = scaled
-	ui.position = Vector2.ZERO
+	menu.position = Vector2.ZERO
+	menu.refresh_listing_hover_pivot()
 
 
 func set_modifier_context(handler: ModifierHandler) -> void:
