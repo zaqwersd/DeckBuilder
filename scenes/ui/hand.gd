@@ -49,11 +49,9 @@ func _ready() -> void:
 	child_entered_tree.connect(_on_child_entered_tree)
 	child_exiting_tree.connect(_on_child_exiting_tree)
 	_empty_bar_half_width = absf(offset_left)
-	offset_top -= HAND_BAR_RAISE_PX
-	offset_bottom -= HAND_BAR_RAISE_PX
 	# 底边锚点居中时：必须同步 offset 宽度 = 内容宽，否则场景固定 ±337.5 会一直占满一条宽带，牌看起来不靠拢
-	## 副轴竖直居中：与单卡高度一致时各槽对齐；若条带略高于单卡，避免「槽+牌」双端贴底把新抽到的牌压得更低。
-	alignment = BoxContainer.ALIGNMENT_CENTER
+	## 副轴贴底对齐：卡牌基准位置应该一致，只通过 CardVisuals.position.y 控制抬起
+	alignment = BoxContainer.ALIGNMENT_END
 	_apply_card_separation()
 	_refresh_hand_card_scales()
 	_request_reflow_hand_bar()
@@ -182,15 +180,16 @@ func _on_child_exiting_tree(_node: Node) -> void:
 	_request_reflow_hand_bar()
 
 
-func _on_child_entered_tree(node: Node) -> void:
-	var cui := get_card_ui_in_slot(node)
-	if cui:
-		call_deferred("_apply_hand_card_transform", cui)
+func _on_child_entered_tree(_node: Node) -> void:
+	## 不再自动应用变换，由 add_card 和 _on_card_ui_reparent_requested 统一管理
+	## 避免重复调用导致的布局竞争
+	pass
 
 
-func _on_hand_slot_child_entered(child: Node) -> void:
-	if child is CardUI:
-		call_deferred("_apply_hand_card_transform", child as CardUI)
+func _on_hand_slot_child_entered(_child: Node) -> void:
+	## 不再自动应用变换，由 add_card 统一管理
+	## 避免与 add_card 中的立即调用冲突
+	pass
 
 
 ## 牌离槽瞬间同步处理：拖出时压扁槽宽以便其余牌立刻靠拢；永久离槽则本帧删空槽
@@ -287,20 +286,23 @@ func add_card(card: Card) -> void:
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# 避免 HBox 把槽横向/纵向拉满剩余空间，导致整张牌被撑到异常大、右侧留白
 	slot.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	## 副轴贴顶：条带高于单卡时槽顶对齐，避免与 CardUI 的贴底组合把牌整体压沉。
-	slot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	## 副轴贴底：卡牌基准位置应该一致，悬停抬起由 CardUI 内部处理
+	slot.size_flags_vertical = Control.SIZE_SHRINK_END
+	## 关键：立即设置槽的高度，确保与已有槽一致，避免首帧高度不同导致位置偏移
+	var uniform_slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
+	slot.custom_minimum_size = Vector2(0, uniform_slot_h)
 	slot.child_entered_tree.connect(_on_hand_slot_child_entered)
 	add_child(slot)
 
 	var new_card_ui := CARD_UI_SCENE.instantiate() as CardUI
-	## 预制场景里可能带全屏锚点/负 offset；进槽前先固定为左上，避免首帧布局算出错误 global_rect。
-	new_card_ui.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
-	new_card_ui.set_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_MINSIZE, 0)
 	slot.add_child(new_card_ui)
+	## 关键：添加到场景树后（_ready 已调用），立即初始化 CardVisuals 位置为 0
+	## 必须在 _apply_hand_card_transform 之前，确保基准位置正确
+	if new_card_ui.card_visuals:
+		new_card_ui.card_visuals.position.y = 0.0
 	new_card_ui.hand_slot = slot
 	# 打出/销毁时 CardUI 离树：用 tree_exited 比 child_exiting+await 更稳；空槽若留着会仍带 custom_minimum_size 占一条缝
 	new_card_ui.tree_exited.connect(_on_card_tree_exited_from_slot.bind(slot))
-	new_card_ui.position = Vector2.ZERO
 	new_card_ui.reparent_requested.connect(_on_card_ui_reparent_requested)
 	new_card_ui.parent = self
 	new_card_ui.char_stats = char_stats
@@ -316,10 +318,11 @@ func add_card(card: Card) -> void:
 		)
 	new_card_ui.refresh_combat_description()
 	new_card_ui.reset_hand_hover_lift_instant()
-	if _hand_input_enabled:
-		call_deferred("_sync_new_card_hand_hover", new_card_ui)
+	## 关键：立即应用变换确保首帧位置正确，同时 deferred 确保布局稳定后再次应用
 	_apply_hand_card_transform(new_card_ui)
-	call_deferred("_apply_hand_card_transform", new_card_ui)
+	if _hand_input_enabled:
+		new_card_ui.sync_hand_hover_presentation()
+	call_deferred("_apply_hand_card_transform_and_sync", new_card_ui)
 	_request_reflow_hand_bar()
 	_schedule_deferred_hand_layout_resync()
 
@@ -344,11 +347,10 @@ func _reflow_hand_bar() -> void:
 		if get_card_ui_in_slot(slot) != null:
 			slots_with_card.append(slot)
 	var n := slots_with_card.size()
-	var bar_h := size.y
-	if bar_h < 1.0:
-		bar_h = roundf(CARD_UI_BASE_SIZE.y * display_scale)
+	## 统一槽高度：所有槽使用相同的固定高度，避免新槽与旧槽高度不一致
+	var uniform_slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
 	if n == 0:
-		custom_minimum_size = Vector2(0.0, bar_h)
+		custom_minimum_size = Vector2(0.0, uniform_slot_h)
 		offset_left = -_empty_bar_half_width
 		offset_right = _empty_bar_half_width
 		update_minimum_size()
@@ -356,21 +358,21 @@ func _reflow_hand_bar() -> void:
 		return
 	var sep := float(card_separation)
 	var total_w := 0.0
-	var max_h := 0.0
 	for slot in slots_with_card:
 		var ctl := slot as Control
 		if ctl == null:
 			continue
 		var ms: Vector2 = ctl.get_combined_minimum_size()
 		total_w += ms.x
-		max_h = maxf(max_h, ms.y)
+		## 统一设置所有槽的高度，确保对齐一致
+		ctl.custom_minimum_size = Vector2(ms.x, uniform_slot_h)
 	if n > 1:
 		total_w += sep * float(n - 1)
 	var half := total_w * 0.5
 	offset_left = -half
 	offset_right = half
-	## 有牌时高度按槽内容对齐，避免 min 高度被旧 size.y「撑高」导致副轴多出空隙、新牌看起来下沉。
-	custom_minimum_size = Vector2(total_w, max_h)
+	## Hand 高度按统一槽高度设置
+	custom_minimum_size = Vector2(total_w, uniform_slot_h)
 	update_minimum_size()
 	queue_sort()
 
@@ -442,24 +444,19 @@ func _on_card_ui_reparent_requested(child: CardUI) -> void:
 		move_child.call_deferred(child, new_index_legacy)
 	child.set_deferred("disabled", false)
 	child.refresh_combat_description()
-	_apply_hand_card_transform(child)
-	call_deferred("_apply_hand_card_transform", child)
-	call_deferred("_sync_card_hover_after_return_to_hand", child)
+	## 统一使用单次 deferred 调用，避免布局竞争
+	call_deferred("_apply_hand_card_transform_and_sync", child)
 	_request_reflow_hand_bar()
 	_schedule_deferred_hand_layout_resync()
 
 
-func _sync_card_hover_after_return_to_hand(card: CardUI) -> void:
-	if is_instance_valid(card):
-		card.sync_hand_hover_presentation()
-
-
-func _sync_new_card_hand_hover(cui: CardUI) -> void:
-	if not is_instance_valid(cui) or not is_instance_valid(cui.hand_slot):
+## 统一的 deferred 变换应用，避免多次调用导致的布局竞争
+func _apply_hand_card_transform_and_sync(card_ui: CardUI) -> void:
+	if not is_instance_valid(card_ui):
 		return
-	if cui.get_parent() != cui.hand_slot:
-		return
-	cui.sync_hand_hover_presentation()
+	_apply_hand_card_transform(card_ui)
+	if _hand_input_enabled:
+		card_ui.sync_hand_hover_presentation()
 
 
 func _apply_hand_card_transform(card_ui: CardUI) -> void:
@@ -477,15 +474,19 @@ func _apply_hand_card_transform(card_ui: CardUI) -> void:
 	# 仅当牌仍是槽的子节点时才写槽的 minimum_size。否则（拖出/打出已 reparent 但 hand_slot 尚未清空）
 	# 会把 shrink_slot 压成的 0 宽又改回满宽，出现「空槽占位」闪一下。
 	if is_instance_valid(card_ui.hand_slot) and card_ui.get_parent() == card_ui.hand_slot:
-		card_ui.hand_slot.custom_minimum_size = scaled_size
+		## 使用统一的槽高度，与 _reflow_hand_bar 保持一致
+		var uniform_slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
+		card_ui.hand_slot.custom_minimum_size = Vector2(scaled_size.x, uniform_slot_h)
 		card_ui.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		card_ui.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		## CardUI 在 slot 内贴底对齐，确保基准位置一致
+		card_ui.size_flags_vertical = Control.SIZE_SHRINK_END
+		## 使用 PRESET_TOP_LEFT 确保 CardUI 在手牌槽内固定位置
 		card_ui.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+		## CardUI 的 offset 只管理基础位置和尺寸，使用统一高度
 		card_ui.offset_left = 0.0
 		card_ui.offset_top = 0.0
 		card_ui.offset_right = scaled_size.x
-		card_ui.offset_bottom = scaled_size.y
-		card_ui.position = Vector2.ZERO
+		card_ui.offset_bottom = uniform_slot_h
 
 	if is_equal_approx(s, 1.0):
 		card_ui.custom_minimum_size = CARD_UI_BASE_SIZE

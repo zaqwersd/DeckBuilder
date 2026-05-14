@@ -24,6 +24,8 @@ var combat_player: Player
 var original_index := 0
 var parent: Control
 var tween: Tween
+## 手牌悬停抬起动画（0.1s 二态切换）
+var _hover_lift_tween: Tween
 ## 由 Hand.add_card 写入：卡牌所属手牌槽，用于悬停位移与回手排序（避免 HBox 每帧盖写 position）
 var hand_slot: Control
 var playable := true : set = _set_playable
@@ -73,11 +75,12 @@ func allows_hand_drag_preview() -> bool:
 
 func reset_hand_hover_lift_instant() -> void:
 	_hand_hover_visual_active = false
+	if _hover_lift_tween and _hover_lift_tween.is_running():
+		_hover_lift_tween.kill()
+		_hover_lift_tween = null
+	## 强制 CardVisuals 回到基准位置（y = 0）
 	if is_instance_valid(card_visuals):
-		## CardVisuals 为全锚点铺满父节点时，用 offset 二态（0 / -抬起量），不用 tween，避免中间高度。
-		card_visuals.offset_top = 0.0
-		card_visuals.offset_bottom = 0.0
-		card_visuals.position = Vector2.ZERO
+		card_visuals.position.y = 0.0
 
 
 ## 禁用手牌等：收起抬起并恢复底板样式（不依赖状态机）。
@@ -90,13 +93,45 @@ func force_hand_hover_visuals_off() -> void:
 	reset_hand_hover_lift_instant()
 
 
-## 手牌悬停：卡面仅在「正常(0)」与「抬起(-HAND_HOVER_LIFT_PX)」两档，不用动画避免半抬起。
-func _apply_hand_hover_offset_immediate() -> void:
+## 手牌悬停：卡面仅在「正常(0)」与「抬起(-HAND_HOVER_LIFT_PX)」两档，用 0.1s tween 动画连接。
+## 注意：CardVisuals 使用锚点布局，修改 offset 可能不可靠，改用 position.y 实现抬起效果。
+func _tween_hand_hover_offset(target_y: float, duration: float = 0.1) -> void:
 	if not is_instance_valid(card_visuals):
 		return
-	var y_off := -HAND_HOVER_LIFT_PX if _hand_hover_visual_active else 0.0
-	card_visuals.offset_top = y_off
-	card_visuals.offset_bottom = y_off
+	## 停止任何正在运行的动画
+	if _hover_lift_tween and _hover_lift_tween.is_running():
+		_hover_lift_tween.kill()
+	_hover_lift_tween = null
+	
+	## 获取当前实际位置
+	var current_y := card_visuals.position.y
+	
+	## 安全处理：如果当前值异常（不在 0 或 -HAND_HOVER_LIFT_PX 附近），强制重置为 0
+	var is_current_valid := (
+		is_equal_approx(current_y, 0.0) 
+		or is_equal_approx(current_y, -HAND_HOVER_LIFT_PX)
+	)
+	if not is_current_valid:
+		card_visuals.position.y = 0.0
+		current_y = 0.0
+	
+	## 如果当前值和目标值已经很接近，直接设置为目标值，不做动画
+	if is_equal_approx(current_y, target_y):
+		card_visuals.position.y = target_y
+		return
+	
+	_hover_lift_tween = (
+		create_tween()
+		.set_trans(Tween.TRANS_QUAD)
+		.set_ease(Tween.EASE_OUT)
+	)
+	_hover_lift_tween.tween_property(card_visuals, "position:y", target_y, duration)
+	## 动画完成回调：确保最终值精确到位
+	_hover_lift_tween.finished.connect(
+		func() -> void:
+			if is_instance_valid(card_visuals):
+				card_visuals.position.y = target_y
+	, CONNECT_ONE_SHOT)
 
 
 ## 由 Hand 每帧调用：仅当牌在手牌槽且处于 BASE 时，根据鼠标几何决定是否抬起。
@@ -112,7 +147,6 @@ func sync_hand_hover_presentation() -> void:
 		return
 	if not is_instance_valid(hand_slot) or get_parent() != hand_slot:
 		_set_hand_hover_visual_active(false)
-		_apply_hand_hover_offset_immediate()
 		if is_instance_valid(card_visuals):
 			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 		return
@@ -121,25 +155,26 @@ func sync_hand_hover_presentation() -> void:
 		return
 	if sm.current_state.state != CardState.State.BASE:
 		_set_hand_hover_visual_active(false)
-		_apply_hand_hover_offset_immediate()
 		if is_instance_valid(card_visuals):
 			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 		return
 	_apply_hand_visual_mouse_pick_filter()
 	_set_hand_hover_visual_active(is_hand_pointer_over_this_card())
-	_apply_hand_hover_offset_immediate()
 
 
 func _hand_hover_visual_offsets_not_snapped() -> bool:
 	if not is_instance_valid(card_visuals):
 		return false
-	var t := card_visuals.offset_top
-	var b := card_visuals.offset_bottom
-	if not is_equal_approx(t, b):
+	## 有正在运行的抬起动画时，视为未对齐到最终状态
+	if _hover_lift_tween and _hover_lift_tween.is_running():
 		return true
-	if absf(t) <= 0.01:
+	var y := card_visuals.position.y
+	## 检查是否在有效位置（0 或 -HAND_HOVER_LIFT_PX）
+	if is_equal_approx(y, 0.0):
 		return false
-	return not is_equal_approx(t, -HAND_HOVER_LIFT_PX)
+	if is_equal_approx(y, -HAND_HOVER_LIFT_PX):
+		return false
+	return true
 
 
 func _set_hand_hover_visual_active(active: bool) -> void:
@@ -157,7 +192,10 @@ func _set_hand_hover_visual_active(active: bool) -> void:
 		z_index = 0
 		z_as_relative = true
 		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_base)
-	_apply_hand_hover_offset_immediate()
+	## 0.1s tween 动画切换到目标位置：突出(-HAND_HOVER_LIFT_PX) 或 正常(0)
+	## 动画进行中时如果状态再次变化，必须等当前动画完成或强制结束后再开始新动画
+	var target_y := -HAND_HOVER_LIFT_PX if active else 0.0
+	_tween_hand_hover_offset(target_y, 0.1)
 
 
 ## 重叠时仅「主目标」牌接收点击，其余牌 CardVisuals 设为 IGNORE 让事件穿透到下层牌。
@@ -275,11 +313,17 @@ func is_hovered() -> bool:
 
 
 ## 手牌悬停抬起后视觉在控件矩形上方，与 tooltip 一致：用「扩展矩形」判断是否仍算指着这张牌。
+## 使用 CardVisuals 的当前 position.y 来计算实际的视觉位置。
 func get_hand_hover_hit_global_rect() -> Rect2:
 	var gr := get_global_rect()
+	var lift_y := 0.0
+	if is_instance_valid(card_visuals):
+		lift_y = card_visuals.position.y
+	## 扩展命中区以包含抬起区域（从当前视觉位置到正常位置）
+	var top_extension := minf(lift_y, -HAND_HOVER_LIFT_PX)
 	return Rect2(
-		gr.position + Vector2(0, -HAND_HOVER_LIFT_PX),
-		gr.size + Vector2(0, HAND_HOVER_LIFT_PX)
+		gr.position + Vector2(0, top_extension),
+		gr.size + Vector2(0, absf(top_extension))
 	)
 
 
@@ -289,7 +333,7 @@ func is_hand_hover_hit_overlapping() -> bool:
 	return get_hand_hover_hit_global_rect().has_point(get_global_mouse_position())
 
 
-## 手牌内：须为本条手里「主目标」牌；未抬起时只用卡面本体命中（避免鼠标在手牌上方空白处误判）；已抬起后用扩展区保持手感。
+## 手牌内：须为本条手里「主目标」牌；使用固定命中区域（不考虑当前是否抬起）
 func is_hand_pointer_over_this_card() -> bool:
 	if disabled or not is_instance_valid(hand_slot) or get_parent() != hand_slot:
 		return false
@@ -298,9 +342,8 @@ func is_hand_pointer_over_this_card() -> bool:
 		return false
 	if (hp as Hand).get_mouse_foremost_hand_card() != self:
 		return false
-	if _hand_hover_visual_active:
-		return is_hand_hover_hit_overlapping()
-	return get_global_rect().has_point(get_global_mouse_position())
+	## 使用扩展命中区（包含抬起区域），不依赖当前动画状态
+	return is_hand_hover_hit_overlapping()
 
 
 func refresh_combat_description() -> void:

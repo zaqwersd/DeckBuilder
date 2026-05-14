@@ -504,9 +504,11 @@ func _refresh_description_text() -> void:
 		_apply_description_default_color_for_style()
 		return
 	Card.push_visual_number_bbcode_style(number_bbcode_style)
+	# 检查敌人修饰器是否仍然有效（敌人可能已死亡）
+	var valid_enemy_modifiers := _enemy_modifiers if is_instance_valid(_enemy_modifiers) else null
 	var raw := _prepend_intrinsic_line_bbcode(
 		card.get_updated_visual_description_bbcode(
-			_player_modifiers, _enemy_modifiers, _combat_player_for_desc
+			_player_modifiers, valid_enemy_modifiers, _combat_player_for_desc
 		)
 	)
 	Card.pop_visual_number_bbcode_style()
@@ -521,9 +523,11 @@ func get_keyword_tooltip_ids() -> PackedStringArray:
 	if card == null:
 		return PackedStringArray()
 	Card.push_visual_number_bbcode_style(number_bbcode_style)
+	# 检查敌人修饰器是否仍然有效（敌人可能已死亡）
+	var valid_enemy_modifiers := _enemy_modifiers if is_instance_valid(_enemy_modifiers) else null
 	var raw := _prepend_intrinsic_line_bbcode(
 		card.get_updated_visual_description_bbcode(
-			_player_modifiers, _enemy_modifiers, _combat_player_for_desc
+			_player_modifiers, valid_enemy_modifiers, _combat_player_for_desc
 		)
 	)
 	Card.pop_visual_number_bbcode_style()

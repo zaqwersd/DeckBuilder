@@ -64,17 +64,17 @@ const BB_UPGRADE_NEGATIVE_REMOVABLE := CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE
 const BB_UPGRADE_INACTIVE_KEYWORD := CardUpgradeUiColors.BB_INACTIVE_KEYWORD
 
 
-## modified 为战斗结算后的数；intrinsic 为当前卡面该轨「未吃修饰」的基准。局外：满级且相等为默认字色，可升级且相等为黄字。战斗：一律只按 modified 与 intrinsic 比白/红/绿。
-func bbcode_for_modified_number_with_upgrade_hint(modified: int, intrinsic: int, upgrade_track_maxed: bool) -> String:
+## modified 为战斗结算后的数；base 为当前卡面该轨「未吃修饰」的基准。局外：满级且相等为默认字色，可升级且相等为黄字。战斗：一律只按 modified 与 base 比白/红/绿。
+func bbcode_for_modified_number_with_upgrade_hint(modified: int, base: int, upgrade_track_maxed: bool) -> String:
 	if is_visual_number_bbcode_combat():
-		if modified < intrinsic:
+		if modified < base:
 			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_RED, modified]
-		if modified > intrinsic:
+		if modified > base:
 			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
 		return "[color=%s]%d[/color]" % [COMBAT_BODY_TEXT, modified]
-	if modified < intrinsic:
+	if modified < base:
 		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, modified]
-	if modified > intrinsic:
+	if modified > base:
 		return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
 	if upgrade_track_maxed:
 		return str(modified)

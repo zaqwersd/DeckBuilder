@@ -41,8 +41,21 @@ func activate_relics_by_type(type: Relic.Type) -> void:
 
 
 func add_relics(relics_array: Array[Relic], apply_persistent_pickup: bool = true) -> void:
+	print("add_relics: 尝试添加 %d 个遗物" % relics_array.size())
+	var added := 0
 	for relic: Relic in relics_array:
-		add_relic(relic, apply_persistent_pickup)
+		if not is_instance_valid(relic):
+			push_warning("add_relics: 跳过无效的遗物实例")
+			continue
+		if relic.id.is_empty():
+			push_warning("add_relics: 跳过ID为空的遗物")
+			continue
+		if not has_relic(relic.id):
+			add_relic(relic, apply_persistent_pickup)
+			added += 1
+		else:
+			print("add_relics: 跳过重复的遗物 %s" % relic.id)
+	print("add_relics: 成功添加 %d 个遗物" % added)
 
 
 func add_relic(relic: Relic, apply_persistent_pickup: bool = true) -> void:
@@ -83,7 +96,10 @@ func get_all_relics() -> Array[Relic]:
 	var relics_array: Array[Relic] = []
 	
 	for relic_ui: RelicUI in relic_ui_nodes:
-		relics_array.append(relic_ui.relic)
+		if is_instance_valid(relic_ui) and is_instance_valid(relic_ui.relic):
+			relics_array.append(relic_ui.relic)
+		else:
+			push_warning("get_all_relics: 跳过无效的 relic_ui 或 relic")
 	
 	return relics_array
 
@@ -102,3 +118,9 @@ func _on_relics_child_exiting_tree(relic_ui: RelicUI) -> void:
 	
 	if relic_ui.relic:
 		relic_ui.relic.deactivate_relic(relic_ui)
+
+
+func clear_relics() -> void:
+	for relic_ui: RelicUI in relics.get_children():
+		if is_instance_valid(relic_ui):
+			relic_ui.queue_free()

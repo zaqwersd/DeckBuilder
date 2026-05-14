@@ -13,6 +13,5 @@ cost = 2
 intrinsic = true
 card_name = "巨剑"
 icon = ExtResource("1_ktc67")
-description = "[center]所有攻击牌伤害增加1倍。所有攻击牌耗能增加1。[/center]"
 tooltip_text = "[center]所有攻击牌伤害增加1倍。所有攻击牌耗能增加1。[/center]"
 sound = ExtResource("3_snd")

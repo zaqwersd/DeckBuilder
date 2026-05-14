@@ -71,14 +71,31 @@ func _save_run(was_on_map: bool) -> void:
 	save_data.rng_seed = RNG.instance.seed
 	save_data.rng_state = RNG.instance.state
 	save_data.run_stats = stats
-	save_data.char_stats = character
-	save_data.current_deck = character.deck
-	save_data.current_health = character.health
-	save_data.relics = relic_handler.get_all_relics()
 	save_data.last_room = map.last_room
 	save_data.map_data = map.map_data.duplicate()
 	save_data.floors_climbed = map.floors_climbed
 	save_data.was_on_map = was_on_map
+	
+	# 获取当前遗物列表
+	var current_relics := relic_handler.get_all_relics()
+	print("_save_run: 保存 %d 个遗物 (战斗快照=%s, was_on_map=%s)" % [
+		current_relics.size(),
+		"有" if save_data.combat_snapshot != null else "无",
+		was_on_map
+	])
+	
+	# 如果有战斗快照（战斗进行中），不覆盖角色状态
+	# 这样中途退出后重进时可以恢复到战斗开始时的状态
+	if save_data.combat_snapshot != null and not was_on_map:
+		# 战斗中：保留快照中的状态，但遗物仍然需要保存（战斗中遗物不会改变）
+		save_data.relics = current_relics
+	else:
+		# 正常保存：没有快照或在地图上
+		save_data.char_stats = character
+		save_data.current_deck = character.deck
+		save_data.current_health = character.health
+		save_data.relics = current_relics
+	
 	save_data.save_data()
 
 
@@ -86,20 +103,23 @@ func _load_run() -> void:
 	save_data = SaveGame.load_data()
 	assert(save_data, "无法加载上次的存档")
 	
-	RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 	stats = save_data.run_stats
 	character = save_data.char_stats
 	character.deck = save_data.current_deck
 	character.health = save_data.current_health
-	relic_handler.add_relics(save_data.relics, false)
 	if save_data.campfire_leave_pending:
 		save_data.apply_campfire_pending_rollback_to(character)
-	_setup_top_bar()
+	
 	_setup_event_connections()
 	
 	map.load_map(save_data.map_data, save_data.floors_climbed, save_data.last_room)
+	
 	if save_data.last_room and not save_data.was_on_map:
+		# 不在地图上（战斗、商店、事件等房间）
 		if save_data.campfire_leave_pending and save_data.last_room.type == Room.Type.CAMPFIRE:
+			# 营火房间的特殊处理
+			_load_relics_from_save_data()  # 加载遗物
+			_setup_top_bar()
 			_change_view(
 				CAMPFIRE_SCENE,
 				func(n: Node) -> void:
@@ -108,7 +128,52 @@ func _load_run() -> void:
 					cf.restore_leave_pending_campfire_ui()
 			)
 		else:
-			_on_map_exited(save_data.last_room)
+			# 其他房间（战斗、商店等）
+			if save_data.combat_snapshot != null:
+				# 有战斗快照：先恢复快照，然后设置UI
+				save_data.combat_snapshot.apply_to(character, relic_handler, save_data.relics)
+				# 如果快照恢复后遗物仍为空，尝试从 save_data.relics 恢复
+				if relic_handler.get_all_relics().is_empty() and not save_data.relics.is_empty():
+					push_warning("战斗快照恢复后遗物仍为空，尝试从 save_data.relics 恢复...")
+					relic_handler.add_relics(save_data.relics, false)
+				_setup_top_bar()  # 快照恢复后才设置UI
+				_on_battle_room_entered(save_data.combat_snapshot.room, true)
+			else:
+				# 没有战斗快照：正常加载遗物
+				_load_relics_from_save_data()
+				_setup_top_bar()
+				RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+				_on_map_exited(save_data.last_room)
+	else:
+		# 在地图上
+		_load_relics_from_save_data()
+		_setup_top_bar()
+		RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+
+
+func _load_relics_from_save_data() -> void:
+	"""从存档加载遗物，优先使用战斗快照中的遗物"""
+	if save_data == null:
+		return
+	
+	print("_load_relics_from_save_data: 战斗快照=%s, save_data.relics数量=%d" % [
+		"有" if save_data.combat_snapshot != null else "无",
+		save_data.relics.size()
+	])
+	
+	# 如果有战斗快照，遗物会在后续通过 apply_to 恢复
+	# 这里只处理没有快照的情况
+	if save_data.combat_snapshot == null:
+		# 没有战斗快照，直接从存档加载遗物
+		if not save_data.relics.is_empty():
+			print("从 save_data.relics 加载 %d 个遗物" % save_data.relics.size())
+			relic_handler.add_relics(save_data.relics, false)
+			print("加载完成，当前遗物数量: %d" % relic_handler.get_all_relics().size())
+		else:
+			# 存档中没有遗物（新游戏或bug），添加初始遗物
+			print("存档中没有遗物，由 _setup_top_bar 添加初始遗物")
+	else:
+		print("有战斗快照，遗物将由 apply_to 恢复")
 
 
 func _change_view(scene: PackedScene, configure_before_add: Callable = Callable()) -> Node:
@@ -165,23 +230,39 @@ func _setup_event_connections() -> void:
 
 
 func _setup_top_bar():
-	character.stats_changed.connect(health_ui.update_stats.bind(character))
+	if not character.stats_changed.is_connected(health_ui.update_stats.bind(character)):
+		character.stats_changed.connect(health_ui.update_stats.bind(character))
 	health_ui.update_stats(character)
 	gold_ui.run_stats = stats
 	
-	relic_handler.add_relic(character.starting_relic)
-	Events.relic_tooltip_hover_show.connect(relic_tooltip.show_tooltip)
-	Events.relic_tooltip_hover_hide.connect(relic_tooltip.hide)
-	Events.status_tooltip_hover_show.connect(status_hover_tooltip.show_tooltip)
-	Events.status_tooltip_hover_hide.connect(status_hover_tooltip.hide)
-	Events.intent_tooltip_hover_show.connect(status_hover_tooltip.show_custom_bbcode)
-	Events.intent_tooltip_hover_hide.connect(status_hover_tooltip.hide)
-	Events.card_keyword_tooltip_show.connect(card_keyword_tooltip.show_keyword_blocks)
-	Events.card_keyword_tooltip_hide.connect(card_keyword_tooltip.hide_tooltip)
+	# 只有在没有遗物时才添加初始遗物（避免加载存档时重复添加）
+	var current_relics := relic_handler.get_all_relics()
+	if current_relics.is_empty():
+		print("_setup_top_bar: 没有遗物，添加初始遗物: %s" % character.starting_relic.id)
+		relic_handler.add_relic(character.starting_relic)
+	else:
+		print("_setup_top_bar: 已有 %d 个遗物，跳过初始遗物添加" % current_relics.size())
+	if not Events.relic_tooltip_hover_show.is_connected(relic_tooltip.show_tooltip):
+		Events.relic_tooltip_hover_show.connect(relic_tooltip.show_tooltip)
+	if not Events.relic_tooltip_hover_hide.is_connected(relic_tooltip.hide):
+		Events.relic_tooltip_hover_hide.connect(relic_tooltip.hide)
+	if not Events.status_tooltip_hover_show.is_connected(status_hover_tooltip.show_tooltip):
+		Events.status_tooltip_hover_show.connect(status_hover_tooltip.show_tooltip)
+	if not Events.status_tooltip_hover_hide.is_connected(status_hover_tooltip.hide):
+		Events.status_tooltip_hover_hide.connect(status_hover_tooltip.hide)
+	if not Events.intent_tooltip_hover_show.is_connected(status_hover_tooltip.show_custom_bbcode):
+		Events.intent_tooltip_hover_show.connect(status_hover_tooltip.show_custom_bbcode)
+	if not Events.intent_tooltip_hover_hide.is_connected(status_hover_tooltip.hide):
+		Events.intent_tooltip_hover_hide.connect(status_hover_tooltip.hide)
+	if not Events.card_keyword_tooltip_show.is_connected(card_keyword_tooltip.show_keyword_blocks):
+		Events.card_keyword_tooltip_show.connect(card_keyword_tooltip.show_keyword_blocks)
+	if not Events.card_keyword_tooltip_hide.is_connected(card_keyword_tooltip.hide_tooltip):
+		Events.card_keyword_tooltip_hide.connect(card_keyword_tooltip.hide_tooltip)
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck
-	deck_button.pressed.connect(deck_view.show_current_view.bind("牌库"))
+	if not deck_button.pressed.is_connected(deck_view.show_current_view.bind("牌库")):
+		deck_button.pressed.connect(deck_view.show_current_view.bind("牌库"))
 	if run_card_fx:
 		run_card_fx.setup(deck_button)
 
@@ -215,12 +296,38 @@ func _show_regular_battle_rewards() -> void:
 	reward_scene.add_card_reward()
 
 
-func _on_battle_room_entered(room: Room) -> void:
+func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
+	# 如果不是重新加载（即新进入战斗），创建战斗快照
+	if not is_reload:
+		_save_combat_snapshot(room)
+	
 	var battle_scene: Battle = _change_view(BATTLE_SCENE) as Battle
+	if not is_instance_valid(battle_scene):
+		push_error("无法实例化战斗场景")
+		return
 	battle_scene.char_stats = character
 	battle_scene.battle_stats = room.battle_stats
 	battle_scene.relics = relic_handler
 	battle_scene.start_battle()
+
+
+func _save_combat_snapshot(room: Room) -> void:
+	if save_data == null:
+		return
+	var current_relics := relic_handler.get_all_relics()
+	save_data.combat_snapshot = CombatSnapshot.create_from(character, current_relics, room)
+	# 确保遗物也被保存到 save_data.relics（作为后备）
+	save_data.relics = current_relics.duplicate()
+	_save_run(false)
+
+
+func _clear_combat_snapshot() -> void:
+	if save_data == null:
+		return
+	save_data.combat_snapshot = null
+	# 清除遗物缓存
+	CombatSnapshot._relics_cache.clear()
+	_save_run(false)
 
 
 func _on_treasure_room_entered() -> void:
@@ -307,6 +414,7 @@ func _ensure_debug_console() -> void:
 
 
 func _on_battle_won() -> void:
+	_clear_combat_snapshot()
 	if map.floors_climbed == MapGenerator.FLOORS:
 		var win_screen := _change_view(WIN_SCREEN_SCENE) as WinScreen
 		win_screen.character = character
@@ -317,6 +425,7 @@ func _on_battle_won() -> void:
 
 func _on_pause_save_and_quit() -> void:
 	if save_data:
+		# 如果在战斗中退出，保持现有的战斗快照（不覆盖为当前状态）
 		_save_run(map.visible)
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
@@ -326,12 +435,12 @@ func _on_window_close_requested() -> void:
 		_save_run(map.visible)
 
 
-func _on_map_exited(room: Room) -> void:
+func _on_map_exited(room: Room, is_reload: bool = false) -> void:
 	_save_run(false)
 	
 	match room.type:
 		Room.Type.MONSTER:
-			_on_battle_room_entered(room)
+			_on_battle_room_entered(room, is_reload)
 		Room.Type.TREASURE:
 			_on_treasure_room_entered()
 		Room.Type.CAMPFIRE:
@@ -339,6 +448,6 @@ func _on_map_exited(room: Room) -> void:
 		Room.Type.SHOP:
 			_on_shop_entered()
 		Room.Type.BOSS:
-			_on_battle_room_entered(room)
+			_on_battle_room_entered(room, is_reload)
 		Room.Type.EVENT:
 			_on_event_room_entered(room)

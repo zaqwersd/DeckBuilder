@@ -31,6 +31,9 @@ const CAMPFIRE_PENDING_UPGRADE := 2
 @export var campfire_pending_card_backup: Card = null
 @export var campfire_committed_upgrade_card: Card = null
 
+## 战斗快照：进入战斗时保存的初始状态，用于中途退出后重进时恢复
+@export var combat_snapshot: CombatSnapshot = null
+
 
 func clear_campfire_pending_staging() -> void:
 	campfire_leave_pending = false

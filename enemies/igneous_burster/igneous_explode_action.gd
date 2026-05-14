@@ -32,6 +32,9 @@ func perform_action() -> void:
 	if is_instance_valid(player) and player.stats.health > 0:
 		player.take_damage_final(final_dmg, false)
 		SFXPlayer.play(sound)
+		# 造成伤害后检查玩家是否死亡
+		if player.stats.health <= 0:
+			Events.player_died.emit()
 	Events.enemy_action_completed.emit(enemy)
 	if is_instance_valid(enemy):
 		Events.enemy_died.emit(enemy)

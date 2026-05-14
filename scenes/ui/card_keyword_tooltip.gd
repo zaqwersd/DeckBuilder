@@ -134,6 +134,9 @@ func _render_keyword_blocks(seed_ids: PackedStringArray, near_to: Control) -> vo
 	if gen != _layout_generation:
 		return
 
+	# 检查 near_to 是否仍然有效（可能在等待期间被释放）
+	if not is_instance_valid(near_to):
+		return
 	_position_panel(near_to)
 	set_process_input(true)
 	show()
