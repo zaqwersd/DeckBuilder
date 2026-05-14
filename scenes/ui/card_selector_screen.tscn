@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://c8qx8qsfq4q4c"]
+[gd_scene format=3 uid="uid://c8qx8qsfq4q4c"]
 
 [ext_resource type="Script" uid="uid://d4f3y2x1w8x5k" path="res://scenes/ui/card_selector_screen.gd" id="1_abc123"]
 
