@@ -56,6 +56,13 @@ func debug_replace_battle(new_stats: BattleStats) -> void:
 func _on_enemies_child_order_changed() -> void:
 	if not _combat_started:
 		return
+	# 只有在玩家存活且战斗未结束时，才判定胜利
+	if Events.is_combat_ended():
+		return
+	if not is_instance_valid(player) or not is_instance_valid(player.stats):
+		return
+	if player.stats.health <= 0:
+		return
 	if enemy_handler.get_child_count() == 0 and is_instance_valid(relics):
 		Events.mark_combat_ended()
 		relics.activate_relics_by_type(Relic.Type.END_OF_COMBAT)

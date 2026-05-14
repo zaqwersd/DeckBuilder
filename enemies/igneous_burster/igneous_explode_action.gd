@@ -29,12 +29,21 @@ func perform_action() -> void:
 	tw.tween_property(spr, "scale", base_scale * peak_scale_mul, charge_duration)
 	tw.tween_property(spr, "modulate", peak_modulate, charge_duration)
 	await tw.finished
-	if is_instance_valid(player) and player.stats.health > 0:
+	
+	# 造成伤害
+	if is_instance_valid(player):
 		player.take_damage_final(final_dmg, false)
 		SFXPlayer.play(sound)
-		# 造成伤害后检查玩家是否死亡
-		if player.stats.health <= 0:
-			Events.player_died.emit()
+	
+	# 等待一帧确保伤害生效，然后检查玩家是否死亡
+	await get_tree().process_frame
+	
+	# 如果玩家死亡，发送死亡事件并直接返回（不自爆，战斗已结束）
+	if is_instance_valid(player) and player.stats.health <= 0:
+		Events.player_died.emit()
+		return
+	
+	# 玩家没死，继续自爆流程
 	Events.enemy_action_completed.emit(enemy)
 	if is_instance_valid(enemy):
 		Events.enemy_died.emit(enemy)

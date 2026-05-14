@@ -49,10 +49,14 @@ func increment_upgrade_track(track_id: String) -> void:
 	super.increment_upgrade_track(track_id)
 	if track_id == "cost":
 		cost = _intrinsic_cost()
+	# 当 intrinsic_line 升级满后，卡牌变成固有的
+	if track_id == "intrinsic_line" and is_upgrade_track_maxed("intrinsic_line"):
+		intrinsic = true
 
 
 func should_show_intrinsic_keyword_in_combat_description() -> bool:
-	return intrinsic and is_upgrade_track_maxed("intrinsic_line")
+	# 只有当 intrinsic_line 升级满后才显示固有
+	return is_upgrade_track_maxed("intrinsic_line")
 
 
 func get_visual_description_bbcode() -> String:
