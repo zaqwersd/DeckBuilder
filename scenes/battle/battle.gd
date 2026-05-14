@@ -70,7 +70,12 @@ func _on_enemy_turn_ended() -> void:
 		return
 	if not is_instance_valid(player_handler):
 		return
-	if is_instance_valid(player) and is_instance_valid(player.stats) and player.stats.health <= 0:
+	## 须先判断 player 是否仍有效：若已 queue_free，`is_instance_valid(player) and health<=0` 会因短路不进入 return，会误开玩家回合。
+	if not is_instance_valid(player) or not is_instance_valid(player.stats):
+		return
+	if player.stats.health <= 0:
+		return
+	if Events.is_combat_ended():
 		return
 	player_handler.start_turn()
 	enemy_handler.reset_enemy_actions()

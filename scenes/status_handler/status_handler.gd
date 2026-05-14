@@ -49,6 +49,7 @@ func add_status(status: Status) -> void:
 		new_status_ui.status = status
 		new_status_ui.status.status_applied.connect(_on_status_applied)
 		new_status_ui.status.initialize_status(status_owner)
+		_emit_player_hand_cost_context_if_needed()
 		return
 
 	# If it's unique and we already have it, we can return
@@ -58,12 +59,18 @@ func add_status(status: Status) -> void:
 	# If it's duration-stackable, expand it
 	if status.can_expire and status.stack_type == Status.StackType.DURATION:
 		_get_status(status.id).duration += status.duration
+		_emit_player_hand_cost_context_if_needed()
 		return
 	
 	# If it's stackable, stack it
 	if status.stack_type == Status.StackType.INTENSITY:
 		_get_status(status.id).stacks += status.stacks
-	
+		_emit_player_hand_cost_context_if_needed()
+
+
+func _emit_player_hand_cost_context_if_needed() -> void:
+	if status_owner is Player:
+		Events.player_hand_cost_context_changed.emit()
 
 func _has_status(id: String) -> bool:
 	for status_ui: StatusUI in get_children():

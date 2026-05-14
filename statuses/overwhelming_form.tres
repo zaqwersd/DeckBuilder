@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="OverwhelmingStatus" format=3 uid="uid://ccr36ugv7q5hs"]
+
+[ext_resource type="Texture2D" uid="uid://cn2c1psh561cc" path="res://art/tile_0127.png" id="1_ic"]
+[ext_resource type="Script" uid="uid://o64dwk2dj6di" path="res://statuses/overwhelming_form.gd" id="2_sc"]
+
+[resource]
+script = ExtResource("2_sc")
+id = "overwhelming"
+type = 2
+stack_type = 1
+stacks = 1
+icon = ExtResource("1_ic")
+name = "巨剑"
+tooltip = "攻击牌耗能增加%s；攻击牌伤害变为%s倍。"

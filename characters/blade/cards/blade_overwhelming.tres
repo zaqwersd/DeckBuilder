@@ -1,0 +1,18 @@
+[gd_resource type="Resource" format=3 uid="uid://dsn83j43202am"]
+
+[ext_resource type="Texture2D" uid="uid://qf4ykxsnd7bq" path="res://art/overwhelming.png" id="1_ktc67"]
+[ext_resource type="Script" uid="uid://c43eo58wglix7" path="res://characters/blade/cards/blade_overwhelming.gd" id="2_sc"]
+[ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_snd"]
+
+[resource]
+script = ExtResource("2_sc")
+id = "blade_overwhelming"
+type = 2
+rarity = 2
+cost = 2
+intrinsic = true
+card_name = "巨剑"
+icon = ExtResource("1_ktc67")
+description = "[center]所有攻击牌伤害增加1倍。所有攻击牌耗能增加1。[/center]"
+tooltip_text = "[center]所有攻击牌伤害增加1倍。所有攻击牌耗能增加1。[/center]"
+sound = ExtResource("3_snd")

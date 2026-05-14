@@ -16,6 +16,8 @@ const HAND_ETH_DISCARD_INTERVAL := 0.12
 ## 与 BattleCardFx 中动画时长一致（不在此脚本引用 class_name，避免解析顺序报错）
 const BATTLE_DRAW_ANIM_DURATION := 0.26
 const BATTLE_DISCARD_ANIM_DURATION := 0.24
+## 固有牌与首回合抽牌：手牌张数上限（与固有「填满手牌」规则一致）
+const HAND_CARDS_MAX := 10
 
 @export var relics: RelicHandler
 @export var player: Player
@@ -23,6 +25,8 @@ const BATTLE_DISCARD_ANIM_DURATION := 0.24
 @export var battle_card_fx: Node
 
 var character: CharacterStats
+## 本场战斗中，弃牌堆尚未洗回抽牌堆时：每次抽牌优先抽到「固有」牌；洗牌后与普通牌无异。
+var _intrinsic_draw_priority: bool = true
 
 
 func _ready() -> void:
@@ -33,8 +37,21 @@ func _ready() -> void:
 ## 否则首次抽牌时 `BattleCardFx.draw_pile_button` 为空 → 飞入动画被跳过。
 func start_battle_prep(char_stats: CharacterStats) -> void:
 	character = char_stats
-	character.draw_pile = character.deck.custom_duplicate()
-	character.draw_pile.shuffle()
+	_intrinsic_draw_priority = true
+	var raw_pile := character.deck.custom_duplicate()
+	var intr: Array[Card] = []
+	var rest: Array[Card] = []
+	for c: Card in raw_pile.cards:
+		if c.intrinsic:
+			intr.append(c)
+		else:
+			rest.append(c)
+	RNG.array_shuffle(intr)
+	RNG.array_shuffle(rest)
+	character.draw_pile = CardPile.new()
+	character.draw_pile.cards.append_array(intr)
+	character.draw_pile.cards.append_array(rest)
+	character.draw_pile.card_pile_size_changed.emit(character.draw_pile.cards.size())
 	character.discard = CardPile.new()
 	character.exhaust = CardPile.new()
 	if not relics.relics_activated.is_connected(_on_relics_activated):
@@ -49,6 +66,10 @@ func start_battle(char_stats: CharacterStats) -> void:
 
 
 func start_turn() -> void:
+	if Events.is_combat_ended():
+		return
+	if not is_instance_valid(player) or not is_instance_valid(player.status_handler):
+		return
 	character.block = 0
 	character.reset_mana()
 	relics.activate_relics_by_type(Relic.Type.START_OF_TURN)
@@ -88,16 +109,41 @@ func _sync_discard_entire_hand() -> void:
 			hand.discard_card(cui)
 
 
+func _count_cards_in_hand() -> int:
+	if not is_instance_valid(hand):
+		return 0
+	var n := 0
+	for slot in hand.get_children():
+		var cui := hand.get_card_ui_in_slot(slot)
+		if cui and cui.card:
+			n += 1
+	return n
+
+
+func _pop_draw_card() -> Card:
+	if _intrinsic_draw_priority:
+		var cards := character.draw_pile.cards
+		for i in range(cards.size()):
+			var c: Card = cards[i]
+			if c and c.intrinsic:
+				return character.draw_pile.remove_card_at(i)
+	return character.draw_pile.draw_card()
+
+
 func draw_cards(amount: int, is_start_of_turn_draw: bool = false) -> void:
 	if Events.is_combat_ended():
 		return
+	var space := HAND_CARDS_MAX - _count_cards_in_hand()
+	amount = clampi(amount, 0, maxi(0, space))
 	var drawn_cards: Array[Card] = []
 	for _i in range(amount):
 		if Events.is_combat_ended():
 			_flush_drawn_cards_to_hand(drawn_cards)
 			return
 		reshuffle_deck_from_discard()
-		drawn_cards.append(character.draw_pile.draw_card())
+		if character.draw_pile.empty():
+			break
+		drawn_cards.append(_pop_draw_card())
 		reshuffle_deck_from_discard()
 
 	if Events.is_combat_ended():
@@ -222,11 +268,13 @@ func discard_cards() -> void:
 func reshuffle_deck_from_discard() -> void:
 	if not character.draw_pile.empty():
 		return
-
+	if character.discard.empty():
+		return
 	while not character.discard.empty():
 		character.draw_pile.add_card(character.discard.draw_card())
 
 	character.draw_pile.shuffle()
+	_intrinsic_draw_priority = false
 
 
 func _on_card_played(card: Card) -> void:
@@ -251,6 +299,8 @@ func _on_statuses_applied(type: Status.Type) -> void:
 
 
 func _on_relics_activated(type: Relic.Type) -> void:
+	if not is_instance_valid(player) or not is_instance_valid(player.status_handler):
+		return
 	match type:
 		Relic.Type.START_OF_TURN:
 			player.status_handler.apply_statuses_by_type(Status.Type.START_OF_TURN)

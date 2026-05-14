@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3 uid="uid://d20gx8xpmgpdi"]
+
+[ext_resource type="Texture2D" uid="uid://dqqaa4b818sm6" path="res://art/press_blade.png" id="1_s6pmg"]
+[ext_resource type="Script" uid="uid://dahno37qm63n2" path="res://characters/blade/cards/blade_press_blade.gd" id="2_press"]
+[ext_resource type="AudioStream" uid="uid://dixklg6g4jnsq" path="res://art/slash.ogg" id="3_0l7j0"]
+
+[resource]
+script = ExtResource("2_press")
+id = "blade_press_blade"
+target = 1
+cost = 2
+card_name = "压剑"
+icon = ExtResource("1_s6pmg")
+tooltip_text = "[center]造成8点伤害，给予2层易伤。[/center]"
+sound = ExtResource("3_0l7j0")

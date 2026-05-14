@@ -1,7 +1,6 @@
 class_name ShopCard
 extends VBoxContainer
 
-const CARD_MENU_UI = preload("res://scenes/ui/card_menu_ui.tscn")
 const SHOP_CARD_MENU_SCALE := 1
 ## 与 shop_card.tscn 根节点一致：售出后占位，避免同列其它格位移
 const SLOT_SIZE := Vector2(120, 170)
@@ -46,8 +45,7 @@ func set_card(new_card: Card) -> void:
 	for card_menu_ui: CardMenuUI in card_container.get_children():
 		card_menu_ui.queue_free()
 	
-	var new_card_menu_ui := CARD_MENU_UI.instantiate() as CardMenuUI
-	new_card_menu_ui.use_listing_hover_zoom = true
+	var new_card_menu_ui := CardGridListing.make_listing_card_menu()
 	card_container.add_child(new_card_menu_ui)
 	new_card_menu_ui.card = card
 	if not new_card_menu_ui.card_pick_pressed.is_connected(_on_card_pick_pressed):

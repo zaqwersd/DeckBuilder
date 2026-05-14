@@ -58,20 +58,22 @@ func show_custom_bbcode(bbcode: String, near_to: Control = null, open_to_right: 
 	var trimmed := bbcode.strip_edges()
 	if trimmed.is_empty():
 		return
+	var near_valid: Control = null
+	if is_instance_valid(near_to):
+		near_valid = near_to
 	if (
 		visible
 		and _is_custom_tooltip
 		and _active_custom_bbcode == trimmed
-		and _active_source == near_to
+		and _active_source == near_valid
 		and _open_to_right == open_to_right
-		and is_instance_valid(near_to)
 	):
 		return
 
 	_is_custom_tooltip = true
 	_active_custom_bbcode = trimmed
 	_active_status = null
-	_active_source = near_to
+	_active_source = near_valid
 	_open_to_right = open_to_right
 	_layout_generation += 1
 	var gen_c := _layout_generation
@@ -84,7 +86,10 @@ func show_custom_bbcode(bbcode: String, near_to: Control = null, open_to_right: 
 	await _apply_dynamic_text_size(gen_c)
 	if gen_c != _layout_generation:
 		return
-	_position_panel_once(near_to, open_to_right)
+	var anchor: Control = null
+	if is_instance_valid(near_to):
+		anchor = near_to
+	_position_panel_once(anchor, open_to_right)
 	if gen_c != _layout_generation:
 		return
 	await get_tree().process_frame
@@ -96,20 +101,22 @@ func show_custom_bbcode(bbcode: String, near_to: Control = null, open_to_right: 
 func show_tooltip(status: Status, near_to: Control = null, open_to_right: bool = true) -> void:
 	if not status:
 		return
+	var near_valid: Control = null
+	if is_instance_valid(near_to):
+		near_valid = near_to
 	if (
 		visible
 		and not _is_custom_tooltip
 		and _active_status == status
-		and _active_source == near_to
+		and _active_source == near_valid
 		and _open_to_right == open_to_right
-		and is_instance_valid(near_to)
 	):
 		return
 
 	_is_custom_tooltip = false
 	_active_custom_bbcode = ""
 	_active_status = status
-	_active_source = near_to
+	_active_source = near_valid
 	_open_to_right = open_to_right
 	_layout_generation += 1
 	var gen := _layout_generation
@@ -122,7 +129,10 @@ func show_tooltip(status: Status, near_to: Control = null, open_to_right: bool =
 	await _apply_dynamic_text_size(gen)
 	if gen != _layout_generation:
 		return
-	_position_panel_once(near_to, open_to_right)
+	var anchor2: Control = null
+	if is_instance_valid(near_to):
+		anchor2 = near_to
+	_position_panel_once(anchor2, open_to_right)
 	if gen != _layout_generation:
 		return
 	await get_tree().process_frame
@@ -173,7 +183,7 @@ func _apply_dynamic_text_size(gen: int) -> void:
 		return
 
 
-func _position_panel_once(near_to: Control, open_to_right: bool) -> void:
+func _position_panel_once(near_to: Control = null, open_to_right: bool = true) -> void:
 	panel_root.reset_size()
 	var vp := get_viewport().get_visible_rect()
 	var sz := panel_root.size

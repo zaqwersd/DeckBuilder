@@ -5,6 +5,35 @@ enum Type {ATTACK, SKILL, POWER, STATUS}
 enum Rarity {COMMON, UNCOMMON, RARE, SPECIAL}
 enum Target {SELF, SINGLE_ENEMY, ALL_ENEMIES, EVERYONE}
 
+## 卡面数值 BBCode：战斗手牌/战斗牌堆为白底 + 仅按实际与基准比红/绿；局外列表/升级/奖励等为黄/灰/红词条色。
+enum NumberBbcodeStyle {COMBAT_PILES_AND_HAND, LISTING_UPGRADE}
+
+## 战斗中与基准相比偏低/偏高（与局外「可弱化负面」红同色，便于统一调色板）
+const COMBAT_MODIFIED_RED := "#f36c60"
+const COMBAT_MODIFIED_GREEN := "#5dff7a"
+const COMBAT_BODY_TEXT := "#ffffff"
+
+static var _visual_number_bbcode_stack: Array[NumberBbcodeStyle] = []
+
+
+static func push_visual_number_bbcode_style(style: NumberBbcodeStyle) -> void:
+	_visual_number_bbcode_stack.append(style)
+
+
+static func pop_visual_number_bbcode_style() -> void:
+	if not _visual_number_bbcode_stack.is_empty():
+		_visual_number_bbcode_stack.pop_back()
+
+
+static func get_current_visual_number_bbcode_style() -> NumberBbcodeStyle:
+	if _visual_number_bbcode_stack.is_empty():
+		return NumberBbcodeStyle.LISTING_UPGRADE
+	return _visual_number_bbcode_stack[_visual_number_bbcode_stack.size() - 1]
+
+
+static func is_visual_number_bbcode_combat() -> bool:
+	return get_current_visual_number_bbcode_style() == NumberBbcodeStyle.COMBAT_PILES_AND_HAND
+
 const RARITY_COLORS := {
 	Card.Rarity.COMMON: Color.GRAY,
 	Card.Rarity.UNCOMMON: Color(129.0 / 255.0, 212.0 / 255.0, 250.0 / 255.0),
@@ -13,13 +42,53 @@ const RARITY_COLORS := {
 }
 
 
-## 卡面/提示里与「原始数值」对比后的 BBCode：相等不包色（沿用默认字色）；低于基础红、高于基础绿。子类在 get_updated_tooltip 中直接调用即可。
+## 卡面/提示里与「原始数值」对比后的 BBCode。战斗：白字为等；局外：等沿用默认字色，低/高用词条色。
 func bbcode_for_modified_number(modified: int, base: int) -> String:
+	if is_visual_number_bbcode_combat():
+		if modified < base:
+			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_RED, modified]
+		if modified > base:
+			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
+		return "[color=%s]%d[/color]" % [COMBAT_BODY_TEXT, modified]
 	if modified < base:
-		return "[color=#ff6b6b]%d[/color]" % modified
+		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, modified]
 	if modified > base:
-		return "[color=#5dff7a]%d[/color]" % modified
+		return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
 	return str(modified)
+
+
+const BB_COLOR_UPGRADEABLE := CardUpgradeUiColors.BB_VALUE
+## 与 `CardUpgradeUiColors` 图例三色一致，供子类拼装营火升级等 BBCode（黄 / 可弱化负面红 / 未激活灰）。
+const BB_UPGRADE_VALUE := CardUpgradeUiColors.BB_VALUE
+const BB_UPGRADE_NEGATIVE_REMOVABLE := CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE
+const BB_UPGRADE_INACTIVE_KEYWORD := CardUpgradeUiColors.BB_INACTIVE_KEYWORD
+
+
+## modified 为战斗结算后的数；intrinsic 为当前卡面该轨「未吃修饰」的基准。局外：满级且相等为默认字色，可升级且相等为黄字。战斗：一律只按 modified 与 intrinsic 比白/红/绿。
+func bbcode_for_modified_number_with_upgrade_hint(modified: int, intrinsic: int, upgrade_track_maxed: bool) -> String:
+	if is_visual_number_bbcode_combat():
+		if modified < intrinsic:
+			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_RED, modified]
+		if modified > intrinsic:
+			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
+		return "[color=%s]%d[/color]" % [COMBAT_BODY_TEXT, modified]
+	if modified < intrinsic:
+		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, modified]
+	if modified > intrinsic:
+		return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
+	if upgrade_track_maxed:
+		return str(modified)
+	return "[color=%s]%d[/color]" % [BB_COLOR_UPGRADEABLE, modified]
+
+
+## 左下角费用数字是否应用「可升级」黄字（费用不在描述里写时用）。
+func should_visualize_cost_as_upgradeable() -> bool:
+	return false
+
+
+## 战斗卡面（手牌/战斗牌堆）是否在描述前显示「固有」词条行；未激活（灰）时可由子类返回 false。
+func should_show_intrinsic_keyword_in_combat_description() -> bool:
+	return intrinsic
 
 
 @export_group("Card Attributes")
@@ -31,6 +100,11 @@ func bbcode_for_modified_number(modified: int, base: int) -> String:
 @export var exhausts: bool = false
 ## 虚无：回合结束时若仍在手牌中则消耗（不进弃牌堆），与打出消耗 exhausts 不同
 @export var ethereal: bool = false
+## 固有：每场战斗开始时优先入手；弃牌堆洗回牌库后与普通牌相同（见词条说明）。
+@export var intrinsic: bool = false
+
+## 各升级轨已升级次数（0=链首数值）；持久化在卡组单卡实例上。
+@export var upgrade_track_steps: Dictionary = {}
 
 @export_group("Card Visuals")
 ## 卡面显示名称；留空则用 id 下划线转空格作为占位名
@@ -41,6 +115,76 @@ func bbcode_for_modified_number(modified: int, base: int) -> String:
 @export_multiline var description: String = ""
 @export_multiline var tooltip_text: String
 @export var sound: AudioStream
+
+
+func get_upgrade_steps_applied(track_id: String) -> int:
+	return int(upgrade_track_steps.get(track_id, 0))
+
+
+## 升级轨 id 列表；无升级则空数组。
+func get_upgrade_track_ids() -> PackedStringArray:
+	return PackedStringArray()
+
+
+## 某轨数值链：下标 = 已应用该轨升级次数；链长 1 表示不可升。
+func get_upgrade_chain(track_id: String) -> PackedInt32Array:
+	return PackedInt32Array()
+
+
+func get_upgrade_value_at(track_id: String, steps_override: int = -1) -> int:
+	var steps := steps_override if steps_override >= 0 else get_upgrade_steps_applied(track_id)
+	var ch := get_upgrade_chain(track_id)
+	if ch.is_empty():
+		return 0
+	var idx := clampi(steps, 0, ch.size() - 1)
+	return ch[idx]
+
+
+func is_upgrade_track_maxed(track_id: String) -> bool:
+	var ch := get_upgrade_chain(track_id)
+	if ch.is_empty():
+		return true
+	return get_upgrade_steps_applied(track_id) >= ch.size() - 1
+
+
+func has_any_upgradeable_track() -> bool:
+	for tid: String in get_upgrade_track_ids():
+		if not is_upgrade_track_maxed(tid):
+			return true
+	return false
+
+
+## 营火/牌库：可点击的黄字数值（ugp meta）；该轨已升满则为白字。
+func bbcode_upgrade_pick_digit(track_id: String, value: int) -> String:
+	if is_upgrade_track_maxed(track_id):
+		return str(value)
+	return "[url=ugp:%s][color=%s]%d[/color][/url]" % [track_id, BB_UPGRADE_VALUE, value]
+
+
+## 营火/牌库：可点击的「可弱化负面」红字数值。
+func bbcode_upgrade_pick_negative_digit(track_id: String, value: int) -> String:
+	if is_upgrade_track_maxed(track_id):
+		return str(value)
+	return "[url=ugp:%s][color=%s]%d[/color][/url]" % [track_id, BB_UPGRADE_NEGATIVE_REMOVABLE, value]
+
+
+## 营火「点击词条升级」卡面描述；无可升级内容时返回空字符串。
+func get_upgrade_pick_description_bbcode() -> String:
+	return ""
+
+
+func increment_upgrade_track(track_id: String) -> void:
+	if is_upgrade_track_maxed(track_id):
+		return
+	var s := get_upgrade_steps_applied(track_id)
+	upgrade_track_steps[track_id] = s + 1
+
+
+func get_total_upgrade_count() -> int:
+	var n := 0
+	for tid: String in get_upgrade_track_ids():
+		n += get_upgrade_steps_applied(tid)
+	return n
 
 
 func is_single_targeted() -> bool:
@@ -70,19 +214,25 @@ func _get_targets(targets: Array[Node]) -> Array[Node]:
 			return []
 
 
-func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierHandler) -> void:
+func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierHandler, mana_to_spend: int = -1) -> void:
 	if cost < 0:
 		return
+	var spend := mana_to_spend if mana_to_spend >= 0 else cost
 	Events.card_played.emit(self)
-	char_stats.mana -= cost
+	char_stats.mana -= spend
 	# 能力牌不经过 Damage/Block 效果里的 SFXPlayer.play，需在打出时单独播卡面 sound
 	if sound and type == Type.POWER:
 		SFXPlayer.play(sound)
 
+	var wrap_attack := type == Type.ATTACK
+	if wrap_attack:
+		Events.begin_attack_card_effects()
 	if is_single_targeted():
 		apply_effects(targets, modifiers)
 	else:
 		apply_effects(_get_targets(targets), modifiers)
+	if wrap_attack:
+		Events.end_attack_card_effects()
 
 
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
@@ -117,15 +267,16 @@ func _bbcode_visible_line_breaks(text: String) -> String:
 	return text.replace("\n", "[br]")
 
 
-func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler) -> String:
+func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null) -> String:
 	return tooltip_text
 
 
 ## 卡面 RichTextLabel 用；默认与「更新后的提示文案」一致并居中（子类可覆盖以区分卡面/提示格式）。
 func get_updated_visual_description_bbcode(
 	_player_modifiers: ModifierHandler,
-	_enemy_modifiers: ModifierHandler
+	_enemy_modifiers: ModifierHandler,
+	_combat_player: Node = null
 ) -> String:
-	var body := get_updated_tooltip(_player_modifiers, _enemy_modifiers)
+	var body := get_updated_tooltip(_player_modifiers, _enemy_modifiers, _combat_player)
 	var out := body if body.contains("[center]") else "[center]%s[/center]" % body
 	return _bbcode_visible_line_breaks(out)

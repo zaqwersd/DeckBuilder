@@ -7,12 +7,15 @@ func get_default_tooltip() -> String:
 	return tooltip_text % base_damage
 
 
-func get_updated_tooltip(player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler) -> String:
+func get_updated_tooltip(
+	player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler, combat_player: Node = null
+) -> String:
 	var modified_dmg := base_damage
 	if player_modifiers:
 		modified_dmg = player_modifiers.get_modified_value(base_damage, Modifier.Type.DMG_DEALT)
 	if enemy_modifiers:
 		modified_dmg = enemy_modifiers.get_modified_value(modified_dmg, Modifier.Type.DMG_TAKEN)
+	modified_dmg = OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, modified_dmg, type)
 	return tooltip_text % bbcode_for_modified_number(modified_dmg, base_damage)
 
 

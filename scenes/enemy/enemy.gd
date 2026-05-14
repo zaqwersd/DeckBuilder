@@ -312,6 +312,13 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
 	var modified_damage := modifier_handler.get_modified_value(damage, which_modifier)
+	if (
+		which_modifier == Modifier.Type.DMG_TAKEN
+		and Events.is_inside_attack_card_effects()
+	):
+		var p := get_tree().get_first_node_in_group("battle_player") as Player
+		if p:
+			modified_damage = OverwhelmingStatus.apply_multiplier_to_final_attack_damage(p, modified_damage)
 	
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))

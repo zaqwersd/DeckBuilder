@@ -2,17 +2,27 @@
 
 [ext_resource type="Script" path="res://scenes/ui/deck_picker_overlay.gd" id="1_script"]
 
-[node name="DeckPickerOverlay" type="ColorRect"]
+[node name="DeckPickerOverlay" type="Control"]
 z_index = 80
 z_as_relative = false
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
-color = Color(0, 0, 0, 0.65)
 script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.65)
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1

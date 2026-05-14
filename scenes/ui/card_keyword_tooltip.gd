@@ -3,12 +3,6 @@ extends Control
 
 const VIEWPORT_MARGIN := 10.0
 const GAP_FROM_SOURCE := 12.0
-const BLOCK_SEP := 8.0
-
-const BB_ETHEREAL := "[color=#ffdd33][b]虚无[/b][/color]\n如果回合结束后这张牌在你的手牌中，则将这张牌消耗。"
-const BB_EXHAUST := "[color=#ffdd33][b]消耗[/b][/color]\n消耗的牌会进入你的消耗牌堆。"
-const BB_VULNERABLE := "[color=#ffdd33][b]易伤[/b][/color]\n受到的伤害增加50%。"
-const BB_STRENGTH := "[color=#ffdd33][b]力量[/b][/color]\n增加造成的伤害。"
 
 ## RichTextLabel 字号用 `*_font_size`；`normal_font`/`bold_font` 是 Font 资源名，对它们 set font_size 无效。
 const KEYWORD_TOOLTIP_FONT_SIZE := 16
@@ -24,6 +18,9 @@ var _layout_generation := 0
 func _ready() -> void:
 	hide()
 	set_process_input(false)
+	if is_instance_valid(vbox):
+		## 多块上下排布时整体靠左（VBox 横轴对齐）
+		vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 
 func _notification(what: int) -> void:
@@ -48,13 +45,62 @@ func _input(event: InputEvent) -> void:
 func show_keyword_blocks(ids: PackedStringArray, near_to: Control) -> void:
 	if ids.is_empty():
 		return
+	await _render_keyword_blocks(ids, near_to)
+
+
+func hide_tooltip() -> void:
+	hide()
+
+
+## 按正文内 `[url=kw:…]` 做 DFS：先展示当前词条，再立刻接上链接指向的词条（无需悬停）。
+func _expand_tooltip_ids_depth_first(seed_ids: PackedStringArray) -> PackedStringArray:
+	var out: Array[String] = []
+	var seen: Dictionary = {}
+	for i in range(seed_ids.size()):
+		_dfs_append_tooltip_id(String(seed_ids[i]), seen, out)
+	return PackedStringArray(out)
+
+
+func _dfs_append_tooltip_id(id: String, seen: Dictionary, out: Array[String]) -> void:
+	if id.is_empty() or seen.has(id):
+		return
+	if CardKeywordBbcode.get_keyword_tooltip_body_bbcode(id, false).is_empty():
+		return
+	seen[id] = true
+	out.append(id)
+	var body := CardKeywordBbcode.get_keyword_tooltip_body_bbcode(id, true)
+	var linked := CardKeywordBbcode.collect_kw_ids_in_order_from_bbcode(body)
+	for j in range(linked.size()):
+		_dfs_append_tooltip_id(String(linked[j]), seen, out)
+
+
+func _render_keyword_blocks(seed_ids: PackedStringArray, near_to: Control) -> void:
 	_layout_generation += 1
 	var gen := _layout_generation
 	hide()
 	set_process_input(false)
 	for c in vbox.get_children():
 		c.queue_free()
-	for id in ids:
+
+	var expanded := _expand_tooltip_ids_depth_first(seed_ids)
+	if expanded.is_empty():
+		return
+
+	var seed_set: Dictionary = {}
+	for i in range(seed_ids.size()):
+		seed_set[String(seed_ids[i])] = true
+
+	for bi in range(expanded.size()):
+		var id := String(expanded[bi])
+		if bi > 0:
+			var sep := HSeparator.new()
+			sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			sep.custom_minimum_size = Vector2(0, 1)
+			vbox.add_child(sep)
+		var embed_links: bool = seed_set.has(id)
+		var body := CardKeywordBbcode.get_keyword_tooltip_body_bbcode(id, embed_links)
+		if body.is_empty():
+			continue
 		var rtl := RichTextLabel.new()
 		rtl.bbcode_enabled = true
 		rtl.fit_content = true
@@ -64,32 +110,21 @@ func show_keyword_blocks(ids: PackedStringArray, near_to: Control) -> void:
 		rtl.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		rtl.add_theme_font_size_override("normal_font_size", KEYWORD_TOOLTIP_FONT_SIZE)
 		rtl.add_theme_font_size_override("bold_font_size", KEYWORD_TOOLTIP_FONT_SIZE)
+		## 链接词条已由下方块展示，无需再悬停点链
 		rtl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		match String(id):
-			"ethereal":
-				rtl.text = BB_ETHEREAL
-			"exhaust":
-				rtl.text = BB_EXHAUST
-			"vulnerable":
-				rtl.text = BB_VULNERABLE
-			"strength":
-				rtl.text = BB_STRENGTH
-			_:
-				continue
+		rtl.text = CardKeywordBbcode.wrap_ascii_digit_runs_bold(CardKeywordBbcode.inject_keywords(body))
 		vbox.add_child(rtl)
 
 	if vbox.get_child_count() == 0:
 		return
 
 	vbox.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-
 	if get_parent():
 		get_parent().move_child(self, -1)
 
 	await get_tree().process_frame
 	if gen != _layout_generation:
 		return
-	# RichTextLabel fit_content 再留一帧，避免 combined size 未更新导致定位不准
 	await get_tree().process_frame
 	if gen != _layout_generation:
 		return
@@ -146,7 +181,3 @@ func _position_panel(near_to: Control) -> void:
 	pos.x = clampf(pos.x, vp.position.x + VIEWPORT_MARGIN, maxf(vp.position.x + VIEWPORT_MARGIN, max_x))
 	pos.y = clampf(pos.y, vp.position.y + VIEWPORT_MARGIN, maxf(vp.position.y + VIEWPORT_MARGIN, max_y))
 	panel_root.global_position = pos
-
-
-func hide_tooltip() -> void:
-	hide()

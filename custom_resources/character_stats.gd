@@ -40,10 +40,11 @@ func take_damage(damage: int) -> void:
 		Events.player_hit.emit()
 
 
-func can_play_card(card: Card) -> bool:
+func can_play_card(card: Card, effective_mana_cost: int = -1) -> bool:
 	if card.cost < 0:
 		return false
-	return mana >= card.cost
+	var need := effective_mana_cost if effective_mana_cost >= 0 else card.cost
+	return mana >= need
 
 
 func create_instance() -> Resource:

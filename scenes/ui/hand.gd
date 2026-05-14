@@ -28,6 +28,10 @@ var _empty_bar_half_width: float = 337.5
 ## 同帧内可多次请求；正在 reflow 时只打脏标记，结束后立刻再跑一轮，避免整帧 deferred
 var _reflow_running: bool = false
 var _reflow_dirty: bool = false
+## 本帧末统一再算槽尺寸/reflow（晚于各 `call_deferred("_apply_hand_card_transform")`），避免新牌与其它手牌差一帧竖直错位。
+var _hand_layout_resync_pending: bool = false
+## 与 `enable_hand` / `disable_hand` 同步：玩家回合可操作时，中途 `add_card` 的新卡也应可点。
+var _hand_input_enabled: bool = false
 
 ## 手牌词条 tooltip：仅当鼠标与「当前这张牌」重合时显示，由本节点统一发 Events，避免每帧重复 emit
 var _kw_tip_card: CardUI = null
@@ -48,16 +52,38 @@ func _ready() -> void:
 	offset_top -= HAND_BAR_RAISE_PX
 	offset_bottom -= HAND_BAR_RAISE_PX
 	# 底边锚点居中时：必须同步 offset 宽度 = 内容宽，否则场景固定 ±337.5 会一直占满一条宽带，牌看起来不靠拢
+	## 副轴竖直居中：与单卡高度一致时各槽对齐；若条带略高于单卡，避免「槽+牌」双端贴底把新抽到的牌压得更低。
 	alignment = BoxContainer.ALIGNMENT_CENTER
 	_apply_card_separation()
 	_refresh_hand_card_scales()
 	_request_reflow_hand_bar()
 	set_process(true)
 	process_priority = -128
+	if not Events.player_hand_cost_context_changed.is_connected(_on_player_hand_cost_context_changed):
+		Events.player_hand_cost_context_changed.connect(_on_player_hand_cost_context_changed)
+
+
+func _on_player_hand_cost_context_changed() -> void:
+	for slot in get_children():
+		var cui := get_card_ui_in_slot(slot)
+		if not cui or not cui.char_stats or not cui.card:
+			continue
+		cui.refresh_mana_cost_display()
+		cui.playable = cui.char_stats.can_play_card(cui.card, cui.get_effective_mana_cost())
 
 
 func get_mouse_foremost_hand_card() -> CardUI:
 	return _mouse_foremost_hand_card
+
+
+func _clear_hover_and_keyword_tooltip_for_obscured_ui() -> void:
+	_mouse_foremost_hand_card = null
+	if _kw_tip_card != null or not _kw_tip_ids.is_empty():
+		_sync_hand_keyword_tooltip(null, PackedStringArray())
+	for slot in get_children():
+		var c := get_card_ui_in_slot(slot)
+		if c:
+			c.force_hand_hover_visuals_off()
 
 
 func _update_mouse_foremost_hand_card() -> void:
@@ -65,7 +91,8 @@ func _update_mouse_foremost_hand_card() -> void:
 	var mp := get_global_mouse_position()
 	var best: CardUI = null
 	var best_d2 := INF
-	var best_si := -999999
+	## 多张牌扩展命中区重叠时：用「卡面本体」中心比距，平局取更靠左的槽，避免新抽到最右侧的牌在等距时永远抢 hover。
+	var best_si := 999999
 	for slot in get_children():
 		var c := get_card_ui_in_slot(slot)
 		if c == null or c.disabled:
@@ -79,13 +106,13 @@ func _update_mouse_foremost_hand_card() -> void:
 			continue
 		if not c.is_hand_hover_hit_overlapping():
 			continue
-		var d2 := c.get_hand_hover_hit_global_rect().get_center().distance_squared_to(mp)
+		var d2 := c.get_global_rect().get_center().distance_squared_to(mp)
 		var si := slot.get_index()
 		if d2 < best_d2 - 0.01:
 			best = c
 			best_d2 = d2
 			best_si = si
-		elif is_equal_approx(d2, best_d2) and si > best_si:
+		elif is_equal_approx(d2, best_d2) and si < best_si:
 			best = c
 			best_d2 = d2
 			best_si = si
@@ -100,7 +127,21 @@ func _exit_tree() -> void:
 
 
 func _process(_delta: float) -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		_clear_hover_and_keyword_tooltip_for_obscured_ui()
+		return
 	_update_mouse_foremost_hand_card()
+	var block_kw_list := false
+	for slot in get_children():
+		var cmeta := get_card_ui_in_slot(slot)
+		if (
+			cmeta
+			and cmeta.is_hand_pointer_over_this_card()
+			and is_instance_valid(cmeta.card_visuals)
+			and cmeta.card_visuals.is_description_kw_meta_active()
+		):
+			block_kw_list = true
+			break
 	var tip_card: CardUI = null
 	var tip_ids: PackedStringArray = PackedStringArray()
 	for slot in get_children():
@@ -113,7 +154,8 @@ func _process(_delta: float) -> void:
 			if not ids.is_empty():
 				tip_card = card
 				tip_ids = ids
-	_sync_hand_keyword_tooltip(tip_card, tip_ids)
+	if not block_kw_list:
+		_sync_hand_keyword_tooltip(tip_card, tip_ids)
 
 
 func _kw_tip_ids_equal(a: PackedStringArray, b: PackedStringArray) -> bool:
@@ -245,25 +287,53 @@ func add_card(card: Card) -> void:
 	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# 避免 HBox 把槽横向/纵向拉满剩余空间，导致整张牌被撑到异常大、右侧留白
 	slot.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	## 副轴贴顶：条带高于单卡时槽顶对齐，避免与 CardUI 的贴底组合把牌整体压沉。
 	slot.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	slot.child_entered_tree.connect(_on_hand_slot_child_entered)
 	add_child(slot)
 
 	var new_card_ui := CARD_UI_SCENE.instantiate() as CardUI
+	## 预制场景里可能带全屏锚点/负 offset；进槽前先固定为左上，避免首帧布局算出错误 global_rect。
+	new_card_ui.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	new_card_ui.set_offsets_preset(Control.PRESET_TOP_LEFT, Control.PRESET_MODE_MINSIZE, 0)
 	slot.add_child(new_card_ui)
 	new_card_ui.hand_slot = slot
 	# 打出/销毁时 CardUI 离树：用 tree_exited 比 child_exiting+await 更稳；空槽若留着会仍带 custom_minimum_size 占一条缝
 	new_card_ui.tree_exited.connect(_on_card_tree_exited_from_slot.bind(slot))
 	new_card_ui.position = Vector2.ZERO
 	new_card_ui.reparent_requested.connect(_on_card_ui_reparent_requested)
-	new_card_ui.card = card
 	new_card_ui.parent = self
 	new_card_ui.char_stats = char_stats
+	new_card_ui.combat_player = owning_player
+	new_card_ui.card = card
 	new_card_ui.player_modifiers = owning_player.modifier_handler
+	if _hand_input_enabled:
+		new_card_ui.disabled = false
+	if new_card_ui.char_stats and new_card_ui.card:
+		new_card_ui.playable = new_card_ui.char_stats.can_play_card(
+			new_card_ui.card,
+			new_card_ui.get_effective_mana_cost()
+		)
 	new_card_ui.refresh_combat_description()
+	new_card_ui.reset_hand_hover_lift_instant()
+	if _hand_input_enabled:
+		call_deferred("_sync_new_card_hand_hover", new_card_ui)
 	_apply_hand_card_transform(new_card_ui)
 	call_deferred("_apply_hand_card_transform", new_card_ui)
 	_request_reflow_hand_bar()
+	_schedule_deferred_hand_layout_resync()
+
+
+func _schedule_deferred_hand_layout_resync() -> void:
+	if _hand_layout_resync_pending:
+		return
+	_hand_layout_resync_pending = true
+	call_deferred("_deferred_flush_hand_layout_resync")
+
+
+func _deferred_flush_hand_layout_resync() -> void:
+	_hand_layout_resync_pending = false
+	resync_layout_after_draw()
 
 
 func _reflow_hand_bar() -> void:
@@ -299,9 +369,19 @@ func _reflow_hand_bar() -> void:
 	var half := total_w * 0.5
 	offset_left = -half
 	offset_right = half
-	custom_minimum_size = Vector2(total_w, maxf(max_h, bar_h))
+	## 有牌时高度按槽内容对齐，避免 min 高度被旧 size.y「撑高」导致副轴多出空隙、新牌看起来下沉。
+	custom_minimum_size = Vector2(total_w, max_h)
 	update_minimum_size()
 	queue_sort()
+
+
+## 抽牌飞入与 `add_card` 内 deferred 变换跑完后，再统一算槽尺寸与 reflow，避免新槽与其它手牌差一帧竖直基准。
+func resync_layout_after_draw() -> void:
+	for slot in get_children():
+		var cui := get_card_ui_in_slot(slot)
+		if cui:
+			_apply_hand_card_transform(cui)
+	_request_reflow_hand_bar()
 
 
 func get_card_ui_in_slot(slot_or_card: Node) -> CardUI:
@@ -323,6 +403,7 @@ func discard_card(card: CardUI) -> void:
 
 
 func enable_hand() -> void:
+	_hand_input_enabled = true
 	for slot in get_children():
 		var card := get_card_ui_in_slot(slot)
 		if not card:
@@ -333,6 +414,7 @@ func enable_hand() -> void:
 
 
 func disable_hand() -> void:
+	_hand_input_enabled = false
 	for slot in get_children():
 		var card := get_card_ui_in_slot(slot)
 		if not card:
@@ -364,11 +446,20 @@ func _on_card_ui_reparent_requested(child: CardUI) -> void:
 	call_deferred("_apply_hand_card_transform", child)
 	call_deferred("_sync_card_hover_after_return_to_hand", child)
 	_request_reflow_hand_bar()
+	_schedule_deferred_hand_layout_resync()
 
 
 func _sync_card_hover_after_return_to_hand(card: CardUI) -> void:
 	if is_instance_valid(card):
 		card.sync_hand_hover_presentation()
+
+
+func _sync_new_card_hand_hover(cui: CardUI) -> void:
+	if not is_instance_valid(cui) or not is_instance_valid(cui.hand_slot):
+		return
+	if cui.get_parent() != cui.hand_slot:
+		return
+	cui.sync_hand_hover_presentation()
 
 
 func _apply_hand_card_transform(card_ui: CardUI) -> void:
@@ -394,6 +485,7 @@ func _apply_hand_card_transform(card_ui: CardUI) -> void:
 		card_ui.offset_top = 0.0
 		card_ui.offset_right = scaled_size.x
 		card_ui.offset_bottom = scaled_size.y
+		card_ui.position = Vector2.ZERO
 
 	if is_equal_approx(s, 1.0):
 		card_ui.custom_minimum_size = CARD_UI_BASE_SIZE

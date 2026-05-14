@@ -135,13 +135,13 @@ func _build_ui() -> void:
 	top_bar.add_child(close_btn)
 
 	_hint = Label.new()
-	_hint.text = "隐藏时按 ` 打开 | Esc /「关闭」| \\enemy \\card \\health（须战斗中）| \\event | \\relic add/delete id"
+	_hint.text = "隐藏时按 ` 打开 | Esc /「关闭」| \\enemy \\card … \\health（须战斗中）| \\event | \\relic add/delete id"
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vb.add_child(_hint)
 
 	_line = LineEdit.new()
-	_line.placeholder_text = "输入指令…"
+	_line.placeholder_text = "例：\\card hand blade_slash 2 | \\card deck ghost | \\card blade_slash"
 	_line.clear_button_enabled = true
 	_line.text_submitted.connect(_on_line_submitted)
 	_line.text_changed.connect(_on_line_text_changed)
@@ -315,13 +315,14 @@ func _refresh_suggestions() -> void:
 		_hide_suggestions()
 		return
 	var kind: String = ctx["kind"]
-	var prefix: String = ctx["prefix"]
+	var prefix: String = str(ctx.get("prefix", ""))
 	var pool: PackedStringArray
 	match kind:
 		"enemy":
 			pool = _battle_ids
 		"card":
-			pool = _card_ids
+			_fill_card_command_suggestions()
+			return
 		"event":
 			pool = _event_ids
 		"relic":
@@ -358,10 +359,8 @@ func _parse_autocomplete_context(line: String) -> Dictionary:
 			rest = rest.substr(1)
 		return {"kind": "enemy", "prefix": rest}
 	if t.begins_with("\\card"):
-		var rest2 := t.substr(5)
-		if rest2.begins_with(" "):
-			rest2 = rest2.substr(1)
-		return {"kind": "card", "prefix": rest2}
+		var rest2 := t.substr(5).strip_edges()
+		return {"kind": "card", "rest": rest2}
 	if t.begins_with("\\event"):
 		var rest3 := t.substr(6)
 		if rest3.begins_with(" "):
@@ -401,6 +400,96 @@ func _filter_ids(pool: PackedStringArray, prefix: String) -> Array[String]:
 	return out
 
 
+## PackedStringArray 多元素字面量在部分 Godot 版本下不能作为 const，用成员变量初始化。
+var _CARD_POS_SUGGEST: PackedStringArray = PackedStringArray([
+	"hand", "deck", "draw", "discard", "exhaust",
+])
+
+
+func _card_cmd_split_args(arg: String) -> Array[String]:
+	var out: Array[String] = []
+	for part in arg.split(" ", false):
+		var x := part.strip_edges()
+		if not x.is_empty():
+			out.append(x)
+	return out
+
+
+func _card_cmd_canonical_position(tok: String) -> String:
+	var sl := tok.strip_edges().to_lower()
+	match sl:
+		"hand":
+			return "hand"
+		"deck":
+			return "deck"
+		"draw":
+			return "draw"
+		"discard":
+			return "discard"
+		"exhaust":
+			return "exhaust"
+		_:
+			return ""
+
+
+func _card_cmd_where_label(where: String) -> String:
+	match where:
+		"hand":
+			return "hand"
+		"deck":
+			return "deck"
+		"draw":
+			return "draw pile"
+		"discard":
+			return "discard pile"
+		"exhaust":
+			return "exhaust pile"
+	return where
+
+
+func _fill_card_command_suggestions() -> void:
+	var ctx := _parse_autocomplete_context(_line.text)
+	var rest: String = str(ctx.get("rest", ""))
+	var bits := _card_cmd_split_args(rest)
+	var matches: Array[String] = []
+	if bits.is_empty():
+		matches.append_array(_filter_ids(_CARD_POS_SUGGEST, ""))
+	elif bits.size() == 1:
+		var b0 := bits[0]
+		var c0 := _card_cmd_canonical_position(b0)
+		if c0 != "":
+			var all_ids := _filter_ids(_card_ids, "")
+			var lim := mini(SUGGEST_MAX, all_ids.size())
+			for j in range(lim):
+				matches.append(all_ids[j])
+		else:
+			matches.append_array(_filter_ids(_CARD_POS_SUGGEST, b0))
+			for id in _filter_ids(_card_ids, b0):
+				if matches.size() >= SUGGEST_MAX:
+					break
+				if not matches.has(id):
+					matches.append(id)
+	else:
+		var cfirst := _card_cmd_canonical_position(bits[0])
+		if cfirst != "":
+			var card_pref := bits[1] if bits.size() >= 2 else ""
+			matches.append_array(_filter_ids(_card_ids, card_pref))
+		elif bits.size() >= 2 and bits[1].is_valid_int():
+			matches.append_array(_filter_ids(_card_ids, bits[0]))
+		else:
+			matches.append_array(_filter_ids(_card_ids, bits[0]))
+	if matches.is_empty():
+		_hide_suggestions()
+		return
+	var n := mini(matches.size(), SUGGEST_MAX)
+	for i in n:
+		_suggest.add_item(matches[i])
+	var rows := mini(n, 10)
+	_suggest.custom_minimum_size.y = rows * SUGGEST_ROW_PX + 8.0
+	_suggest.visible = true
+	call_deferred("_apply_panel_to_viewport")
+
+
 func _on_suggest_item_selected(index: int) -> void:
 	if _suggest == null or _line == null:
 		return
@@ -414,7 +503,30 @@ func _on_suggest_item_selected(index: int) -> void:
 	if kind == "enemy":
 		_line.text = "\\enemy %s" % picked
 	elif kind == "card":
-		_line.text = "\\card %s" % picked
+		var tline := _line.text.strip_edges()
+		var arg_part := tline.substr(5).strip_edges() if tline.begins_with("\\card") else ""
+		var bits := _card_cmd_split_args(arg_part)
+		var picked_pos := _card_cmd_canonical_position(picked)
+		if bits.is_empty():
+			if picked_pos != "":
+				_line.text = "\\card %s " % picked
+			else:
+				_line.text = "\\card %s" % picked
+		elif bits.size() == 1:
+			var c0 := _card_cmd_canonical_position(bits[0])
+			if c0 != "":
+				_line.text = "\\card %s %s" % [bits[0], picked]
+			elif picked_pos != "":
+				_line.text = "\\card %s " % picked
+			else:
+				_line.text = "\\card %s" % picked
+		elif _card_cmd_canonical_position(bits[0]) != "":
+			if bits.size() >= 3:
+				_line.text = "\\card %s %s %s" % [bits[0], picked, bits[2]]
+			else:
+				_line.text = "\\card %s %s" % [bits[0], picked]
+		else:
+			_line.text = "\\card %s" % picked
 	elif kind == "event":
 		_line.text = "\\event %s" % picked
 	elif kind == "relic":
@@ -453,7 +565,7 @@ func _run_command(text: String) -> String:
 		"\\relic":
 			return _cmd_relic(arg)
 		_:
-			return "未知指令。使用 \\enemy / \\card / \\health（战斗）| \\event | \\relic add/delete id"
+			return "未知指令。使用 \\enemy / \\card <位置> <id> [数量] / \\health（战斗）| \\event | \\relic add/delete id"
 
 
 func _cmd_event(arg: String) -> String:
@@ -486,26 +598,100 @@ func _cmd_enemy(arg: String) -> String:
 
 
 func _cmd_card(arg: String) -> String:
-	if arg.is_empty():
-		return "\\card 需要卡牌 id，例如 blade_slash"
+	var bits := _card_cmd_split_args(arg)
+	if bits.is_empty():
+		return "用法：\\card <位置> <id> [数量]；战斗外仅 deck。位置：hand | deck | draw | discard | exhaust。省略位置时视为 hand（须战斗中）。例：\\card hand blade_slash 2"
+	_ensure_run()
+	if _run == null or not is_instance_valid(_run):
+		return "未找到 Run。"
+	var cs: CharacterStats = _run.character
+	if cs == null:
+		return "无 CharacterStats。"
 	var bt := _current_battle()
-	if bt == null:
-		return "当前不在战斗，无法加入手牌。"
-	var path := _find_card_tres_path(arg)
+	var in_battle := bt != null
+
+	var where: String
+	var card_id: String
+	var count: int = 1
+
+	if bits.size() == 1:
+		where = "hand"
+		card_id = bits[0]
+	elif bits.size() == 2:
+		var p2 := _card_cmd_canonical_position(bits[0])
+		if p2 != "":
+			where = p2
+			card_id = bits[1]
+		elif bits[1].is_valid_int():
+			where = "hand"
+			card_id = bits[0]
+			count = clampi(int(bits[1]), 1, 99)
+		else:
+			return "无法理解：%s（需要 \\card <位置> <id> 或 \\card <id> <数量>）" % arg
+	else:
+		var p3 := _card_cmd_canonical_position(bits[0])
+		if p3 == "":
+			return "未知位置「%s」。使用 hand / deck / draw / discard / exhaust" % bits[0]
+		if bits.size() > 3:
+			return "参数过多（最多：位置 id 数量）。"
+		where = p3
+		card_id = bits[1]
+		if bits.size() >= 3:
+			if not bits[2].is_valid_int():
+				return "数量须为正整数：%s" % bits[2]
+			count = clampi(int(bits[2]), 1, 99)
+
+	if not in_battle and where != "deck":
+		return "战斗外仅允许向 deck 添加（\\card deck <id> [数量]）。"
+
+	var path := _find_card_tres_path(card_id)
 	if path.is_empty():
-		return "找不到 id 为「%s」的卡牌 .tres" % arg
+		return "找不到 id 为「%s」的卡牌 .tres" % card_id
 	var card_res: Resource = ResourceLoader.load(path)
 	if card_res == null or not (card_res is Card):
 		return "加载失败或不是 Card：%s" % path
-	var inst: Card = (card_res as Card).duplicate(true) as Card
-	var bu: BattleUI = bt.get("battle_ui") as BattleUI
-	if bu == null:
-		return "BattleUI 未就绪。"
-	var hand: Hand = bu.hand
-	if hand == null:
-		return "Hand 未就绪。"
-	hand.add_card(inst)
-	return "已加入手牌：%s（%s）" % [inst.get_display_name(), path]
+
+	var pile: CardPile = null
+	var hand: Hand = null
+	match where:
+		"deck":
+			pile = cs.deck
+		"draw", "discard", "exhaust":
+			if not in_battle:
+				return "战斗外无法向 %s 添加。" % where
+			var bcs: CharacterStats = bt.get("char_stats") as CharacterStats
+			if bcs == null:
+				return "战斗中无 CharacterStats。"
+			match where:
+				"draw":
+					pile = bcs.draw_pile
+				"discard":
+					pile = bcs.discard
+				"exhaust":
+					pile = bcs.exhaust
+		"hand":
+			if not in_battle:
+				return "战斗外无法向 hand 添加。"
+			var bu: BattleUI = bt.get("battle_ui") as BattleUI
+			if bu == null:
+				return "BattleUI 未就绪。"
+			hand = bu.hand
+			if hand == null:
+				return "Hand 未就绪。"
+
+	var cname := (card_res as Card).get_display_name()
+	var wlabel := _card_cmd_where_label(where)
+	for _i in range(count):
+		var inst: Card = (card_res as Card).duplicate(true) as Card
+		match where:
+			"deck", "draw", "discard", "exhaust":
+				pile.add_card(inst)
+			"hand":
+				hand.add_card(inst)
+
+	if where == "deck":
+		return "已向牌库添加 %d×「%s」（%s）；战斗中本场抽牌堆不变，之后场次生效。" % [count, cname, path]
+	return "已向%s添加 %d×「%s」（%s）" % [wlabel, count, cname, path]
 
 
 func _find_relic_tres_path(relic_id: String) -> String:

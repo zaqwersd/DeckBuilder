@@ -66,6 +66,8 @@ func animate_card_center_shrink_remove(card: Card) -> void:
 	ghost.z_as_relative = false
 	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost.card = card
+	if ghost.visuals:
+		ghost.visuals.freeze_font_sync_for_fly_phantom = true
 	ghost.visible = false
 	await _prepare_card_menu_pivot(ghost)
 	if not is_instance_valid(ghost):
@@ -96,6 +98,8 @@ func animate_picked_menu_to_deck(picked: CardMenuUI, from_global: Vector2) -> vo
 	picked.z_index = 200
 	picked.z_as_relative = false
 	picked.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if picked.visuals:
+		picked.visuals.freeze_font_sync_for_fly_phantom = true
 	await _prepare_card_menu_pivot(picked)
 	if not is_instance_valid(picked):
 		return
@@ -134,6 +138,8 @@ func animate_card_to_deck(card: Card, from_global: Vector2) -> void:
 	ghost.z_as_relative = false
 	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost.card = card
+	if ghost.visuals:
+		ghost.visuals.freeze_font_sync_for_fly_phantom = true
 	ghost.visible = false
 	await _prepare_card_menu_pivot(ghost)
 	var from: Vector2

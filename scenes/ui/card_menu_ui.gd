@@ -33,6 +33,8 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSFORM_CHANGED and is_instance_valid(visuals):
+		if visuals.freeze_font_sync_for_fly_phantom:
+			return
 		visuals.schedule_minimum_screen_font_sync()
 
 
@@ -46,7 +48,12 @@ func _disconnect_listing_hover_signals() -> void:
 
 
 func _listing_mouse_over_visuals() -> bool:
+	if Events.is_pointer_ui_obscured_for(self):
+		return false
 	if not visuals:
+		return false
+	## 父级 hide 后 get_global_rect 仍可能落在原屏幕区域，必须用可见性否则「幽灵」悬停与 tooltip
+	if not is_visible_in_tree():
 		return false
 	var gr := visuals.get_global_rect()
 	return gr.grow(4.0).has_point(get_global_mouse_position())
@@ -59,6 +66,12 @@ func is_listing_pointer_over_visuals() -> bool:
 
 func _process(_delta: float) -> void:
 	if not use_listing_hover_zoom or not visuals:
+		return
+	if Events.is_pointer_ui_obscured_for(self):
+		if _listing_hover_geom_active or not is_equal_approx(visuals.scale.x, 1.0):
+			_listing_hover_geom_active = false
+			_apply_deck_pick_panel_style()
+			_tween_listing_hover_scale(false)
 		return
 	var want := _listing_mouse_over_visuals()
 	if want == _listing_hover_geom_active:
@@ -95,6 +108,8 @@ func refresh_listing_hover_pivot() -> void:
 
 
 func _on_visuals_mouse_entered() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
 	if use_listing_hover_zoom:
 		return
 	if not _deck_pick_selected:
@@ -103,6 +118,8 @@ func _on_visuals_mouse_entered() -> void:
 
 
 func _on_visuals_mouse_exited() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
 	if use_listing_hover_zoom:
 		return
 	_apply_deck_pick_panel_style()

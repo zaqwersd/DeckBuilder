@@ -1,0 +1,193 @@
+[gd_scene format=3 uid="uid://b57bl0n2ipjno"]
+
+[ext_resource type="Script" uid="uid://dlaqrphq0u7rq" path="res://scenes/ui/card_upgrade_flow.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://313csfw3voyr" path="res://art/arrow_small.png" id="2_arrow"]
+
+[node name="CardUpgradeFlow" type="Control" unique_id=1569399385]
+z_index = 120
+z_as_relative = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="." unique_id=1398103892]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.65098)
+
+[node name="Phase1" type="VBoxContainer" parent="." unique_id=2141165357]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 32.0
+offset_right = -32.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="PickTitle" type="Label" parent="Phase1" unique_id=283704964]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "点击词条以升级。"
+horizontal_alignment = 1
+
+[node name="CenterCard1" type="CenterContainer" parent="Phase1" unique_id=1515288321]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="UpgradeChoices" type="RichTextLabel" parent="Phase1" unique_id=1983449974]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 2
+mouse_filter = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+autowrap_mode = 2
+horizontal_alignment = 1
+
+[node name="Bottom1" type="HBoxContainer" parent="Phase1" unique_id=2071061218]
+layout_mode = 2
+alignment = 1
+
+[node name="CancelPhase1" type="Button" parent="Phase1/Bottom1" unique_id=937590056]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "取消"
+
+[node name="Phase2" type="VBoxContainer" parent="." unique_id=683350365]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 32.0
+offset_right = -32.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="RowCards" type="HBoxContainer" parent="Phase2" unique_id=1835177610]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="CenterLeft" type="CenterContainer" parent="Phase2/RowCards" unique_id=1446597576]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="Arrow" type="TextureRect" parent="Phase2/RowCards" unique_id=1742160468]
+unique_name_in_owner = true
+texture_filter = 3
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_arrow")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CenterRight" type="CenterContainer" parent="Phase2/RowCards" unique_id=1431519618]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 8
+
+[node name="Bottom2" type="HBoxContainer" parent="Phase2" unique_id=2052737212]
+layout_mode = 2
+theme_override_constants/separation = 32
+alignment = 1
+
+[node name="CancelPhase2" type="Button" parent="Phase2/Bottom2" unique_id=694551323]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "取消"
+
+[node name="ConfirmUpgrade" type="Button" parent="Phase2/Bottom2" unique_id=2142009315]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "确定"
+
+[node name="UpgradeLegend" type="MarginContainer" parent="." unique_id=2000000001]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -1132.0
+offset_top = 50.0
+offset_right = -892.0
+offset_bottom = 550.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="UpgradeLegend" unique_id=2000000002]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UpgradeLegendTitlePanel" type="Panel" parent="UpgradeLegend/VBox" unique_id=2000000003]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="UpgradeLegend/VBox/UpgradeLegendTitlePanel" unique_id=2000000004]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 36
+text = "说明"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="UpgradeLegendBodyPanel" type="Panel" parent="UpgradeLegend/VBox" unique_id=2000000005]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="UpgradeLegendRichText" type="RichTextLabel" parent="UpgradeLegend/VBox/UpgradeLegendBodyPanel" unique_id=2000000006]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 6.0
+offset_right = -8.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+vertical_alignment = 1

@@ -152,9 +152,10 @@ func _on_option_strike_block() -> void:
 		character_stats.deck,
 		2,
 		_validate_strike_and_block,
-		"请各选一张「打击」与「防御」（仅列出卡组中符合条件的牌）。",
+		"选择一张打击和一张防御。",
 		allowed,
-		Callable(self, "_validate_strike_and_block")
+		Callable(self, "_validate_strike_and_block"),
+		Callable()
 	)
 	var indices: Array = await overlay.pick_confirmed
 	if indices.is_empty():

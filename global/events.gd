@@ -6,6 +6,22 @@ var combat_ended: bool = false
 
 func reset_combat_flow() -> void:
 	combat_ended = false
+	_attack_card_effect_depth = 0
+
+
+var _attack_card_effect_depth: int = 0
+
+
+func begin_attack_card_effects() -> void:
+	_attack_card_effect_depth += 1
+
+
+func end_attack_card_effects() -> void:
+	_attack_card_effect_depth = maxi(0, _attack_card_effect_depth - 1)
+
+
+func is_inside_attack_card_effects() -> bool:
+	return _attack_card_effect_depth > 0
 
 
 func mark_combat_ended() -> void:
@@ -16,12 +32,71 @@ func is_combat_ended() -> bool:
 	return combat_ended
 
 
+## 全屏/叠层 UI：仅栈顶子树响应「几何悬停」类交互（手牌抬起、列表 1.1 倍、列表词条 tooltip）。
+## 由 CardPileView / CardUpgradeFlow / DeckPickerOverlay / CardRewards 等在显示时 push，关闭时 pop。
+var _pointer_exclusive_stack: Array[Node] = []
+
+
+func begin_pointer_exclusive_ui(owner: Node) -> void:
+	if owner == null:
+		return
+	if not _pointer_exclusive_stack.is_empty() and _pointer_exclusive_stack.back() == owner:
+		return
+	_pointer_exclusive_stack.append(owner)
+
+
+func end_pointer_exclusive_ui(owner: Node) -> void:
+	if owner == null:
+		return
+	var idx := _pointer_exclusive_stack.rfind(owner)
+	if idx < 0:
+		return
+	if idx == _pointer_exclusive_stack.size() - 1:
+		_pointer_exclusive_stack.pop_back()
+		return
+	_pointer_exclusive_stack.remove_at(idx)
+
+
+func get_pointer_exclusive_leaf() -> Node:
+	if _pointer_exclusive_stack.is_empty():
+		return null
+	return _pointer_exclusive_stack[_pointer_exclusive_stack.size() - 1]
+
+
+func _effective_canvas_layer(n: Node) -> int:
+	var x: Node = n
+	while is_instance_valid(x):
+		if x is CanvasLayer:
+			return (x as CanvasLayer).layer
+		x = x.get_parent()
+	return 0
+
+
+## 当存在独占层且 `control` 不在该层子树内时，应跳过悬停/缩放/tooltip（仍可用 gui 命中挡住点击）。
+func is_pointer_ui_obscured_for(control: Node) -> bool:
+	var leaf := get_pointer_exclusive_leaf()
+	if leaf == null or not is_instance_valid(leaf):
+		return false
+	if leaf == control:
+		return false
+	if leaf.is_ancestor_of(control):
+		return false
+	var ll := _effective_canvas_layer(leaf)
+	var cl := _effective_canvas_layer(control)
+	if cl != ll:
+		return cl < ll
+	## 同 CanvasLayer：独占叶一般为后叠上的全屏/模态（如升级叠在选牌上），非子孙的一律视为在下层。
+	return true
+
+
 # Card-related events
 signal card_drag_started(card_ui: CardUI)
 signal card_drag_ended(card_ui: CardUI)
 signal card_aim_started(card_ui: CardUI)
 signal card_aim_ended(card_ui: CardUI)
 signal card_played(card: Card)
+## 玩家状态栏层数变化（如巨剑）：手牌需刷新攻击牌实际耗能显示。
+signal player_hand_cost_context_changed
 
 # Player-related events
 signal player_hand_drawn

@@ -41,10 +41,10 @@ func _ready() -> void:
 	if not run_startup:
 		return
 	
-	pause_menu.save_and_quit.connect(
-		func(): 
-			get_tree().change_scene_to_file(MAIN_MENU_PATH)
-	)
+	pause_menu.save_and_quit.connect(_on_pause_save_and_quit)
+	var win := get_window()
+	if win and not win.close_requested.is_connected(_on_window_close_requested):
+		win.close_requested.connect(_on_window_close_requested)
 	
 	match run_startup.type:
 		RunStartup.Type.NEW_RUN:
@@ -92,15 +92,26 @@ func _load_run() -> void:
 	character.deck = save_data.current_deck
 	character.health = save_data.current_health
 	relic_handler.add_relics(save_data.relics, false)
+	if save_data.campfire_leave_pending:
+		save_data.apply_campfire_pending_rollback_to(character)
 	_setup_top_bar()
 	_setup_event_connections()
 	
 	map.load_map(save_data.map_data, save_data.floors_climbed, save_data.last_room)
 	if save_data.last_room and not save_data.was_on_map:
-		_on_map_exited(save_data.last_room)
+		if save_data.campfire_leave_pending and save_data.last_room.type == Room.Type.CAMPFIRE:
+			_change_view(
+				CAMPFIRE_SCENE,
+				func(n: Node) -> void:
+					var cf := n as Campfire
+					cf.char_stats = character
+					cf.restore_leave_pending_campfire_ui()
+			)
+		else:
+			_on_map_exited(save_data.last_room)
 
 
-func _change_view(scene: PackedScene) -> Node:
+func _change_view(scene: PackedScene, configure_before_add: Callable = Callable()) -> Node:
 	Events.relic_tooltip_hover_hide.emit()
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
@@ -110,6 +121,8 @@ func _change_view(scene: PackedScene) -> Node:
 	
 	get_tree().paused = false
 	var new_view := scene.instantiate()
+	if configure_before_add.is_valid():
+		configure_before_add.call(new_view)
 	current_view.add_child(new_view)
 	map.hide_map()
 	
@@ -127,6 +140,10 @@ func _show_map() -> void:
 	map.show_map()
 	map.unlock_next_rooms()
 	
+	if save_data:
+		if save_data.campfire_leave_pending:
+			save_data.commit_campfire_pending_to(character)
+		save_data.clear_campfire_pending_staging()
 	_save_run(true)
 
 
@@ -172,6 +189,11 @@ func _setup_top_bar():
 func play_deck_gain_card_visual(card: Card, from_global: Vector2) -> void:
 	if run_card_fx:
 		run_card_fx.call_deferred("_deferred_animate_card_to_deck", card, from_global)
+
+
+func await_deck_gain_card_visual(card: Card, from_global: Vector2 = Vector2.ZERO) -> void:
+	if run_card_fx and card:
+		await run_card_fx.animate_card_to_deck(card, from_global)
 
 
 func play_deck_gain_card_visual_with_pick(picked: CardMenuUI, from_global: Vector2) -> void:
@@ -220,8 +242,13 @@ func _on_treasure_room_exited(relic: Relic) -> void:
 
 
 func _on_campfire_entered() -> void:
-	var campfire := _change_view(CAMPFIRE_SCENE) as Campfire
-	campfire.char_stats = character
+	_change_view(
+		CAMPFIRE_SCENE,
+		func(n: Node) -> void:
+			var cf := n as Campfire
+			cf.char_stats = character
+			cf.begin_fresh_campfire_visit(self)
+	)
 
 
 func _on_shop_entered() -> void:
@@ -286,6 +313,17 @@ func _on_battle_won() -> void:
 		SaveGame.delete_data()
 	else:
 		_show_regular_battle_rewards()
+
+
+func _on_pause_save_and_quit() -> void:
+	if save_data:
+		_save_run(map.visible)
+	get_tree().change_scene_to_file(MAIN_MENU_PATH)
+
+
+func _on_window_close_requested() -> void:
+	if save_data:
+		_save_run(map.visible)
 
 
 func _on_map_exited(room: Room) -> void:

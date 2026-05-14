@@ -2,7 +2,7 @@ extends CardState
 
 
 func enter() -> void:
-	if not card_ui.char_stats.can_play_card(card_ui.card):
+	if not card_ui.char_stats.can_play_card(card_ui.card, card_ui.get_effective_mana_cost()):
 		return
 	if card_ui.targets.is_empty():
 		return

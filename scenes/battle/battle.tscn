@@ -64,7 +64,7 @@ stats = ExtResource("5_5flmk")
 position = Vector2(1053, 279)
 stats = ExtResource("8_d4c2d")
 
-[node name="Player" parent="." unique_id=1017222038 instance=ExtResource("3_dpj45")]
+[node name="Player" parent="." unique_id=1017222038 groups=["battle_player"] instance=ExtResource("3_dpj45")]
 position = Vector2(202.5, 340)
 stats = ExtResource("4_fwb8a")
 
@@ -233,16 +233,19 @@ layer = 4
 unique_name_in_owner = true
 visible = false
 display_scale = 0.9
+number_bbcode_style = 0
 
 [node name="DiscardPileView" parent="CardPileViews" unique_id=64174999 instance=ExtResource("21_rnul2")]
 unique_name_in_owner = true
 visible = false
 display_scale = 0.9
+number_bbcode_style = 0
 
 [node name="ExhaustPileView" parent="CardPileViews" unique_id=64175000 instance=ExtResource("21_rnul2")]
 unique_name_in_owner = true
 visible = false
 display_scale = 0.9
+number_bbcode_style = 0
 
 [node name="StatusViewLayer" type="CanvasLayer" parent="." unique_id=935546875]
 layer = 4

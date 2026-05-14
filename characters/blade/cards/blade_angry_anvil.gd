@@ -8,7 +8,9 @@ func get_default_tooltip() -> String:
 	return tooltip_text % base_block
 
 
-func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler) -> String:
+func get_updated_tooltip(
+	_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null
+) -> String:
 	return tooltip_text % bbcode_for_modified_number(base_block, base_block)
 
 

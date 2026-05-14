@@ -24,6 +24,9 @@ func _ready() -> void:
 	draw_pile_button.pressed.connect(draw_pile_view.show_current_view.bind("抽牌堆", true))
 	discard_pile_button.pressed.connect(discard_pile_view.show_current_view.bind("弃牌堆"))
 	exhaust_pile_button.pressed.connect(exhaust_pile_view.show_current_view.bind("消耗牌堆"))
+	draw_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
+	discard_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
+	exhaust_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
 	if char_stats:
 		_apply_char_stats_to_ui_nodes()
 
@@ -90,6 +93,21 @@ func _apply_char_stats_to_ui_nodes() -> void:
 
 func _on_player_hand_drawn() -> void:
 	end_turn_button.disabled = false
+
+
+## 任一堆视图打开时禁用手牌；关闭后仅在「我方回合」（结束回合按钮可用）时恢复，避免敌回合误开手牌。
+func _sync_hand_input_for_open_pile_views() -> void:
+	if hand == null or not is_instance_valid(hand):
+		hand = _resolve_hand_node()
+	if hand == null:
+		return
+	var any_open := (
+		draw_pile_view.visible or discard_pile_view.visible or exhaust_pile_view.visible
+	)
+	if any_open:
+		hand.disable_hand()
+	elif not end_turn_button.disabled:
+		hand.enable_hand()
 
 
 func _on_end_turn_button_pressed() -> void:

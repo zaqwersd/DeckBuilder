@@ -1,6 +1,6 @@
-[gd_scene load_steps=15 format=3 uid="uid://dfrdaou640irp"]
+[gd_scene format=3 uid="uid://dfrdaou640irp"]
 
-[ext_resource type="Script" path="res://scenes/campfire/campfire.gd" id="1_i8fph"]
+[ext_resource type="Script" uid="uid://dxw2hrnjcr3vy" path="res://scenes/campfire/campfire.gd" id="1_i8fph"]
 [ext_resource type="Resource" uid="uid://sbkc4o401k4l" path="res://characters/blade/blade.tres" id="2_0gfpy"]
 [ext_resource type="Texture2D" uid="uid://djbldcvfo4swr" path="res://art/line.png" id="2_ykw02"]
 
@@ -120,25 +120,24 @@ tracks/2/keys = {
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_ikhwv"]
 _data = {
-"RESET": SubResource("Animation_em2db"),
-"fade_out": SubResource("Animation_wekwb")
+&"RESET": SubResource("Animation_em2db"),
+&"fade_out": SubResource("Animation_wekwb")
 }
 
-[node name="Campfire" type="Control"]
+[node name="Campfire" type="Control" unique_id=597056045]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 2
 script = ExtResource("1_i8fph")
 char_stats = ExtResource("2_0gfpy")
 
-[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+[node name="BackgroundLayer" type="CanvasLayer" parent="." unique_id=1149329800]
 layer = 0
 
-[node name="Background" type="TextureRect" parent="BackgroundLayer"]
+[node name="Background" type="TextureRect" parent="BackgroundLayer" unique_id=2110693875]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -146,54 +145,75 @@ grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_6orn2")
 
-[node name="ParticlesLayer" type="CanvasLayer" parent="."]
+[node name="ParticlesLayer" type="CanvasLayer" parent="." unique_id=7421737]
 
-[node name="GPUParticles2D" type="GPUParticles2D" parent="ParticlesLayer"]
-position = Vector2(405, 450)
+[node name="GPUParticles2D" type="GPUParticles2D" parent="ParticlesLayer" unique_id=163767791]
+position = Vector2(325, 360)
 amount = 128
-process_material = SubResource("ParticleProcessMaterial_1jtqt")
 texture = ExtResource("2_ykw02")
 lifetime = 1.5
+process_material = SubResource("ParticleProcessMaterial_1jtqt")
 
-[node name="UILayer" type="CanvasLayer" parent="."]
+[node name="UILayer" type="CanvasLayer" parent="." unique_id=802710459]
+layer = 2
 
-[node name="UI" type="VBoxContainer" parent="UILayer"]
+[node name="UI" type="VBoxContainer" parent="UILayer" unique_id=1619912034]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = 36
-offset_top = -99
-offset_right = 324
-offset_bottom = 99
+offset_left = 36.0
+offset_top = -160.0
+offset_right = 324.0
+offset_bottom = 160.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 12
 
-[node name="Title" type="Label" parent="UILayer/UI"]
+[node name="Title" type="Label" parent="UILayer/UI" unique_id=34101196]
 layout_mode = 2
 text = "营火"
 label_settings = SubResource("LabelSettings_k52g7")
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="UILayer/UI"]
+[node name="Spacer" type="Control" parent="UILayer/UI" unique_id=2112178937]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
 
-[node name="RestButton" type="Button" parent="UILayer/UI"]
+[node name="RestButton" type="Button" parent="UILayer/UI" unique_id=1730087357]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 63)
 layout_mode = 2
 size_flags_horizontal = 4
 text = "休息"
 
-[node name="Description" type="Label" parent="UILayer/UI"]
+[node name="UpgradeButton" type="Button" parent="UILayer/UI" unique_id=1930060001]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 63)
 layout_mode = 2
-text = "+30% 生命上限"
+size_flags_horizontal = 4
+text = "升级"
+
+[node name="HintLabel" type="Label" parent="UILayer/UI" unique_id=1172371167]
+unique_name_in_owner = true
+layout_mode = 2
+text = "将鼠标移到按钮上查看说明。"
 horizontal_alignment = 1
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-"": SubResource("AnimationLibrary_ikhwv")
-}
+[node name="LeaveButton" type="Button" parent="UILayer/UI" unique_id=1188400201]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(180, 63)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "离开"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=42225416]
+libraries/ = SubResource("AnimationLibrary_ikhwv")
 
 [connection signal="pressed" from="UILayer/UI/RestButton" to="." method="_on_rest_button_pressed"]
+[connection signal="pressed" from="UILayer/UI/UpgradeButton" to="." method="_on_upgrade_button_pressed"]
+[connection signal="pressed" from="UILayer/UI/LeaveButton" to="." method="_on_leave_button_pressed"]

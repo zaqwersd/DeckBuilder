@@ -44,7 +44,7 @@ func get_tooltip() -> String:
 ## 状态说明里嵌入的整数（层数、回合等）；为负时用红色 BBCode，供 RichTextLabel 使用。
 static func format_tooltip_integer(n: int) -> String:
 	if n < 0:
-		return "[color=#ff0000]%d[/color]" % n
+		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, n]
 	return str(n)
 
 
