@@ -19,7 +19,7 @@ var _selected_cards: Array[Card] = []
 var _required_count: int = 1
 var _filter_condition: Callable = Callable()
 var _card_ui_map: Dictionary = {}  # Card -> CardMenuUI
-var _original_positions: Dictionary = {}  # CardMenuUI -> Vector2
+var _original_positions: Dictionary[Control, Vector2] = {}  # CardMenuUI -> Vector2
 
 var _pointer_exclusive_registered := false
 
