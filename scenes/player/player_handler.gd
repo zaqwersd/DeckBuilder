@@ -43,9 +43,11 @@ func start_battle_prep(char_stats: CharacterStats) -> void:
 	var rest: Array[Card] = []
 	for c: Card in raw_pile.cards:
 		if c.intrinsic:
+			print("[PlayerHandler] 固有卡牌: %s (intrinsic=%s)" % [c.card_name, c.intrinsic])
 			intr.append(c)
 		else:
 			rest.append(c)
+	print("[PlayerHandler] 固有卡牌数量: %d, 普通卡牌: %d" % [intr.size(), rest.size()])
 	RNG.array_shuffle(intr)
 	RNG.array_shuffle(rest)
 	character.draw_pile = CardPile.new()
