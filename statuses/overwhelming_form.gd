@@ -9,8 +9,8 @@ func get_tooltip() -> String:
 	var s := stacks
 	var add_cost := s
 	var mult := damage_multiplier + s
-	## 使用BBCode上下标分别显示：上标=耗能增加量，下标=翻倍倍率
-	return "攻击牌耗能[sup]%s[/sup]；攻击牌伤害[sub]%s倍[/sub]。" % [
+	## 正常显示数字，不在tooltip中使用上下标
+	return "攻击牌耗能+%s；攻击牌伤害%s倍。" % [
 		Status.format_tooltip_integer(add_cost),
 		Status.format_tooltip_integer(mult),
 	]
