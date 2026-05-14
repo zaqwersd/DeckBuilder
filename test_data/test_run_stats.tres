@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RunStats" format=3 uid="uid://c05cbhxh1h1wo"]
+[gd_resource type="Resource" script_class="RunStats" format=3 uid="uid://mefuivaymmnh"]
 
 [ext_resource type="Script" uid="uid://d13eyabiguipc" path="res://custom_resources/run_stats.gd" id="1_wjw4p"]
 

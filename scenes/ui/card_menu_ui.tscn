@@ -1,8 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://trmdo65td4t7"]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/card_menu_ui.gd" id="1_0f0jo"]
-[ext_resource type="Resource" uid="uid://d4c8yfl4f4sat" path="res://characters/blade/cards/blade_block.tres" id="2_1ngm1"]
-[ext_resource type="PackedScene" uid="uid://b362c35jf6fmy" path="res://scenes/ui/card_visuals.tscn" id="3_vpo1j"]
+[ext_resource type="Resource" path="res://characters/blade/cards/blade_block.tres" id="2_1ngm1"]
+[ext_resource type="PackedScene" path="res://scenes/ui/listing_card_visuals.tscn" id="3_vpo1j"]
 
 [node name="CardMenuUI" type="CenterContainer"]
 offset_right = 268.0

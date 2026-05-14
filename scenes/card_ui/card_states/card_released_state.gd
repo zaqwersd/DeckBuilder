@@ -13,7 +13,7 @@ func enter() -> void:
 	if single_targeted and not first_target_is_enemy:
 		return
 
-	card_ui.play()
+	await card_ui.play()
 
 
 func post_enter() -> void:

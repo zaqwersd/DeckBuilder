@@ -1,6 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://eii7srnfcnt0"]
+[gd_scene load_steps=3 format=3]
 
-[ext_resource type="Texture2D" uid="uid://d0edy7thj8ce6" path="res://art/heart.png" id="1_6oevu"]
+[ext_resource type="Texture2D" path="res://art/heart.png" id="1_6oevu"]
 [ext_resource type="Script" path="res://scenes/status_handler/status_ui.gd" id="1_qqi3t"]
 
 [node name="StatusUI" type="Control"]

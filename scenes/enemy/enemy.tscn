@@ -1,12 +1,12 @@
-[gd_scene load_steps=8 format=3 uid="uid://d0efyathkfg74"]
+[gd_scene load_steps=8 format=3]
 
-[ext_resource type="Texture2D" uid="uid://1u3b3hwqd8yh" path="res://art/tile_0110.png" id="1_exhc0"]
+[ext_resource type="Texture2D" path="res://art/tile_0110.png" id="1_exhc0"]
 [ext_resource type="Script" path="res://scenes/enemy/enemy.gd" id="1_ogp3w"]
-[ext_resource type="Texture2D" uid="uid://bb3rcs5nqntir" path="res://art/arrow.png" id="2_x2iwj"]
-[ext_resource type="PackedScene" uid="uid://c8statusbar01" path="res://scenes/ui/status_bar.tscn" id="3_status_bar"]
-[ext_resource type="PackedScene" uid="uid://b6p08ajglydq8" path="res://scenes/ui/intent_ui.tscn" id="5_xytk4"]
-[ext_resource type="PackedScene" uid="uid://ctvxie3ni1ik4" path="res://scenes/modifier_handler/modifier_handler.tscn" id="7_xbm7w"]
-[ext_resource type="PackedScene" uid="uid://bqefj5q31b84i" path="res://scenes/modifier_handler/modifier.tscn" id="8_akusk"]
+[ext_resource type="Texture2D" path="res://art/arrow.png" id="2_x2iwj"]
+[ext_resource type="PackedScene" path="res://scenes/ui/status_bar.tscn" id="3_status_bar"]
+[ext_resource type="PackedScene" path="res://scenes/ui/intent_ui.tscn" id="5_xytk4"]
+[ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier_handler.tscn" id="7_xbm7w"]
+[ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier.tscn" id="8_akusk"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_3gsft"]
 

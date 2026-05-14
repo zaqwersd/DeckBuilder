@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="MuscleStatus" format=3 uid="uid://c42kh5n15gn2r"]
+[gd_resource type="Resource" script_class="MuscleStatus" format=3 uid="uid://djiucj3lh5dy8"]
 
 [ext_resource type="Texture2D" uid="uid://bho3bya1v7e6o" path="res://art/muscle.png" id="1_jqcf5"]
 [ext_resource type="Script" uid="uid://c7786wwgk52p4" path="res://statuses/strength.gd" id="2_5lqvq"]

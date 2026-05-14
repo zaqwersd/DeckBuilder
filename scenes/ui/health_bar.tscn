@@ -1,7 +1,7 @@
-[gd_scene format=3 uid="uid://d1jm3t35rq40h"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://b0aq27nde38r4" path="res://scenes/ui/health_bar.gd" id="1_health_bar"]
-[ext_resource type="Texture2D" uid="uid://d1rkmai7lo2mo" path="res://art/BlockImage.png" id="2_qi2ti"]
+[ext_resource type="Script" path="res://scenes/ui/health_bar.gd" id="1_health_bar"]
+[ext_resource type="Texture2D" path="res://art/BlockImage.png" id="2_qi2ti"]
 
 [node name="HealthBar" type="HBoxContainer" unique_id=779721695]
 offset_right = 200.0

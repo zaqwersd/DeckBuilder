@@ -1,7 +1,7 @@
-[gd_scene format=3 uid="uid://d2jq2r5hb1ajk"]
+[gd_scene format=3 uid="uid://bgn8y81i37h5j"]
 
-[ext_resource type="Script" uid="uid://bqdmfscl6uywh" path="res://scenes/ui/card_pile_view.gd" id="1_b4itw"]
-[ext_resource type="PackedScene" uid="uid://trmdo65td4t7" path="res://scenes/ui/card_menu_ui.tscn" id="1_yhny2"]
+[ext_resource type="Script" uid="uid://bjs7kpvsd5qt4" path="res://scenes/ui/card_pile_view.gd" id="1_b4itw"]
+[ext_resource type="PackedScene" path="res://scenes/ui/card_menu_ui.tscn" id="1_yhny2"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_tpixj"]
 font_size = 54

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DefectMachineRelic" format=3 uid="uid://ltn4uyahmmid"]
+[gd_resource type="Resource" script_class="DefectMachineRelic" format=3 uid="uid://37248vu5lkl0"]
 
 [ext_resource type="Texture2D" uid="uid://bpriu88tns73x" path="res://art/defect_machine.png" id="1_kmaln"]
 [ext_resource type="Script" uid="uid://ckryi25jumiav" path="res://relics/defect_machine.gd" id="2_scr"]

@@ -28,8 +28,18 @@ const TOOLTIP_BODY_STRENGTH_WITH_LINKS := "[color=#ffdd33][b]力量[/b][/color]\
 const TOOLTIP_BODY_STRENGTH_PLAIN := TOOLTIP_BODY_STRENGTH_WITH_LINKS
 
 const TOOLTIP_BODY_INTRINSIC := (
-	"[color=%s][b]固有。[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
-	% CardUpgradeUiColors.BB_INACTIVE_KEYWORD
+	"[color=#ffdd33][b]固有[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
+)
+
+## 颜色说明 tooltip
+const TOOLTIP_BODY_COLOR_YELLOW := (
+	"[color=#ffee58][b]黄色[/b][/color]\n这个属性可以通过升级来增强。"
+)
+const TOOLTIP_BODY_COLOR_RED := (
+	"[color=#f36c60][b]红色[/b][/color]\n这个负面属性可以通过升级来减少或消除。"
+)
+const TOOLTIP_BODY_COLOR_GRAY := (
+	"[color=#b0bec5][b]灰色[/b][/color]\n这个属性现在还未激活。通过升级以激活。"
 )
 
 ## 自动为中文词包 `[url=kw:id]`；顺序靠前者先包，避免子串冲突。
@@ -142,6 +152,12 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_STRENGTH_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_STRENGTH_PLAIN
 		"intrinsic":
 			return TOOLTIP_BODY_INTRINSIC
+		"color_yellow":
+			return TOOLTIP_BODY_COLOR_YELLOW
+		"color_red":
+			return TOOLTIP_BODY_COLOR_RED
+		"color_gray":
+			return TOOLTIP_BODY_COLOR_GRAY
 		_:
 			return ""
 

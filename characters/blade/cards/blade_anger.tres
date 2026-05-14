@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://b21jvrf408f33"]
+[gd_resource type="Resource" format=3 uid="uid://coii74difhs5s"]
 
 [ext_resource type="Texture2D" uid="uid://yh1kln5t8lt" path="res://art/anger.png" id="1_anger"]
 [ext_resource type="Script" uid="uid://b6p2k8n4wr7qx" path="res://characters/blade/cards/blade_anger.gd" id="2_anger"]
@@ -8,7 +8,7 @@
 script = ExtResource("2_anger")
 id = "blade_anger"
 type = 2
-rarity = 1
+rarity = 2
 cost = 1
 card_name = "怒火"
 icon = ExtResource("1_anger")

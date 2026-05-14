@@ -1,4 +1,4 @@
-[gd_scene load_steps=3 format=3 uid="uid://cintent_slot01"]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/intent_slot.gd" id="1_slot"]
 [ext_resource type="Texture2D" path="res://art/tile_0106.png" id="2_ph"]

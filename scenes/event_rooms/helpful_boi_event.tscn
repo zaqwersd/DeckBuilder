@@ -1,10 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://qd2lt374xj2l"]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/event_rooms/helpful_boi_event.gd" id="1_7infd"]
-[ext_resource type="PackedScene" uid="uid://br2rpgkb7gbxr" path="res://scenes/event_rooms/event_room_button.tscn" id="1_850a0"]
+[ext_resource type="PackedScene" path="res://scenes/event_rooms/event_room_button.tscn" id="1_850a0"]
 [ext_resource type="Script" path="res://scenes/event_rooms/event_room_button_await_exit.gd" id="3_awex"]
-[ext_resource type="Texture2D" uid="uid://b1nj6u7dxl3mh" path="res://art/tile_0085.png" id="2_0pbu5"]
-[ext_resource type="Resource" uid="uid://sbkc4o401k4l" path="res://characters/blade/blade.tres" id="2_f8c4o"]
+[ext_resource type="Texture2D" path="res://art/tile_0085.png" id="2_0pbu5"]
+[ext_resource type="Resource" path="res://characters/blade/blade.tres" id="2_f8c4o"]
 
 [node name="HelpfulBoiEvent" type="Control"]
 layout_mode = 3

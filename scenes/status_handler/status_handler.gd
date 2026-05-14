@@ -107,16 +107,16 @@ func _on_status_applied(status: Status) -> void:
 
 func _on_status_ui_mouse_entered(ui: StatusUI) -> void:
 	if ui.status:
+		# 显示状态 tooltip 前，先关闭卡牌关键词 tooltip
+		Events.card_keyword_tooltip_hide.emit()
 		Events.status_tooltip_hover_show.emit(ui.status, ui, tooltips_open_to_right)
 
 
 func _on_status_ui_mouse_exited() -> void:
-	call_deferred("_maybe_hide_status_tooltip")
-
-
-func _maybe_hide_status_tooltip() -> void:
+	# 立即检查鼠标是否仍在其他状态图标上，不要延迟
 	var mp := get_global_mouse_position()
 	for c in get_children():
 		if c is StatusUI and (c as StatusUI).get_global_rect().has_point(mp):
 			return
+	# 如果鼠标不在任何状态图标上，立即隐藏 tooltip
 	Events.status_tooltip_hover_hide.emit()

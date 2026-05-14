@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3 uid="uid://bnbwu7pkbrwox"]
 
-[ext_resource type="Theme" uid="uid://c8cqncsqlplyu" path="res://main_theme.tres" id="1_g26dn"]
+[ext_resource type="Theme" path="res://main_theme.tres" id="1_g26dn"]
 [ext_resource type="Script" path="res://scenes/ui/mana_ui.gd" id="2_wmp1w"]
 
 [node name="ManaUI" type="Panel"]

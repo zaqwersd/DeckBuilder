@@ -113,7 +113,7 @@ func _refresh_compendium_grid() -> void:
 	for card: Card in list:
 		var new_card := create_listing_card_menu()
 		cards.add_child(new_card)
-		new_card.visuals.number_bbcode_style = number_bbcode_style
+		# 图鉴使用默认的 LISTING_UPGRADE 样式，由 ListingCardVisuals 自动处理
 		new_card.card = card
 		var menu_ref := new_card
 		new_card.card_pick_pressed.connect(func(_picked: Card) -> void: _on_deck_card_pick_for_preview(menu_ref))
@@ -150,8 +150,13 @@ static func _list_card_tres_paths(folder: String) -> Array[String]:
 
 
 static func _sort_rarity_then_id(a: Card, b: Card) -> bool:
+	# 先按稀有度排序（STARTER=0 排在最前面）
 	if a.rarity != b.rarity:
 		return a.rarity < b.rarity
+	# 同一稀有度：按类型排序（攻击-技能-能力-状态）
+	if a.type != b.type:
+		return a.type < b.type
+	# 同一类型：按ID字母顺序
 	return String(a.id) < String(b.id)
 
 

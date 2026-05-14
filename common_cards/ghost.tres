@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="Card" format=3 uid="uid://cv2mtki5tc0vu"]
+[gd_resource type="Resource" script_class="Card" format=3 uid="uid://b3momk1q6scju"]
 
 [ext_resource type="Texture2D" uid="uid://2g7qsvicgglt" path="res://art/ghost.png" id="1_yysvn"]
-[ext_resource type="Script" uid="uid://bg8nmus47b34h" path="res://custom_resources/card.gd" id="2_y0n2h"]
+[ext_resource type="Script" uid="uid://r8kv1fwsks31" path="res://custom_resources/card.gd" id="2_y0n2h"]
 [ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_md06n"]
 
 [resource]

@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cb7nievw0mm25"]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/status_hover_tooltip.gd" id="1_script"]
 

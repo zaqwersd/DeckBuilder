@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyStats" format=3 uid="uid://crmyty52i10xd"]
+[gd_resource type="Resource" script_class="EnemyStats" format=3 uid="uid://bp6ha20wlb8h0"]
 
-[ext_resource type="PackedScene" uid="uid://bwmjwro6b5mvs" path="res://enemies/evil_spirit/evil_spirit_boss_ai.tscn" id="1_3lheq"]
+[ext_resource type="PackedScene" path="res://enemies/evil_spirit/evil_spirit_boss_ai.tscn" id="1_3lheq"]
 [ext_resource type="Script" uid="uid://cqw6nj5nsigxl" path="res://custom_resources/enemy_stats.gd" id="1_dyv27"]
 [ext_resource type="Texture2D" uid="uid://w2vieohcc6sp" path="res://art/evil_spirit.png" id="2_t82oi"]
 

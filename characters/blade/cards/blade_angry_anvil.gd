@@ -22,5 +22,5 @@ func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
 
 	var exhaust_random_effect := ExhaustRandomEffect.new()
 	exhaust_random_effect.amount = exhaust_amount
-	exhaust_random_effect.execute(targets)
+	await exhaust_random_effect.execute(targets)
 	

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://cjmd5p8y455xc"]
+[gd_resource type="Resource" format=3 uid="uid://bkm1v3lqlom3o"]
 
 [ext_resource type="Texture2D" uid="uid://c2p6rp205c07u" path="res://art/dodge.png" id="1_vmecn"]
 [ext_resource type="Script" uid="uid://b8mccvjthyyyx" path="res://characters/blade/cards/blade_dodge.gd" id="2_prob4"]
@@ -8,6 +8,7 @@
 script = ExtResource("2_prob4")
 id = "blade_dodge"
 type = 1
+rarity = 1
 cost = 1
 card_name = "闪躲"
 icon = ExtResource("1_vmecn")

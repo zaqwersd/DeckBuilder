@@ -2,7 +2,7 @@ class_name Card
 extends Resource
 
 enum Type {ATTACK, SKILL, POWER, STATUS}
-enum Rarity {COMMON, UNCOMMON, RARE, SPECIAL}
+enum Rarity {STARTER, COMMON, UNCOMMON, RARE, SPECIAL}
 enum Target {SELF, SINGLE_ENEMY, ALL_ENEMIES, EVERYONE}
 
 ## 卡面数值 BBCode：战斗手牌/战斗牌堆为白底 + 仅按实际与基准比红/绿；局外列表/升级/奖励等为黄/灰/红词条色。
@@ -35,6 +35,7 @@ static func is_visual_number_bbcode_combat() -> bool:
 	return get_current_visual_number_bbcode_style() == NumberBbcodeStyle.COMBAT_PILES_AND_HAND
 
 const RARITY_COLORS := {
+	Card.Rarity.STARTER: Color(0.9, 0.9, 0.9),  # 初始：浅灰白色
 	Card.Rarity.COMMON: Color.GRAY,
 	Card.Rarity.UNCOMMON: Color(129.0 / 255.0, 212.0 / 255.0, 250.0 / 255.0),
 	Card.Rarity.RARE: Color.GOLD,
@@ -228,9 +229,9 @@ func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierH
 	if wrap_attack:
 		Events.begin_attack_card_effects()
 	if is_single_targeted():
-		apply_effects(targets, modifiers)
+		await apply_effects(targets, modifiers)
 	else:
-		apply_effects(_get_targets(targets), modifiers)
+		await apply_effects(_get_targets(targets), modifiers)
 	if wrap_attack:
 		Events.end_attack_card_effects()
 

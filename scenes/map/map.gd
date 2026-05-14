@@ -104,6 +104,8 @@ func unlock_floor(which_floor: int = floors_climbed) -> void:
 
 
 func unlock_next_rooms() -> void:
+	if last_room == null:
+		return
 	for map_room: MapRoom in rooms.get_children():
 		if last_room.next_rooms.has(map_room.room):
 			map_room.available = true

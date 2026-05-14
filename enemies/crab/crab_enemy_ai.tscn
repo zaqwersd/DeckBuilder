@@ -1,12 +1,12 @@
-[gd_scene format=3 uid="uid://dbk6y12yqgre"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://barodhbbtiqbj" path="res://scenes/enemy/enemy_action_picker.gd" id="1_pubwu"]
-[ext_resource type="Script" uid="uid://cn4e386s1su5h" path="res://enemies/crab/crab_attack_action.gd" id="2_dvmrv"]
-[ext_resource type="Script" uid="uid://b5lha1g7vw3rs" path="res://enemies/crab/crab_block_action.gd" id="3_mwt7u"]
-[ext_resource type="Script" uid="uid://b50ad54gu634d" path="res://enemies/crab/crab_mega_block_action.gd" id="4_5v028"]
-[ext_resource type="Script" uid="uid://dxgwh7ui04omh" path="res://custom_resources/intent.gd" id="4_vcx3h"]
-[ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="5_fbtni"]
-[ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="8_jkno0"]
+[ext_resource type="Script" path="res://scenes/enemy/enemy_action_picker.gd" id="1_pubwu"]
+[ext_resource type="Script" path="res://enemies/crab/crab_attack_action.gd" id="2_dvmrv"]
+[ext_resource type="Script" path="res://enemies/crab/crab_block_action.gd" id="3_mwt7u"]
+[ext_resource type="Script" path="res://enemies/crab/crab_mega_block_action.gd" id="4_5v028"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_vcx3h"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_fbtni"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_jkno0"]
 
 [sub_resource type="Resource" id="Resource_t5j5y"]
 script = ExtResource("4_vcx3h")

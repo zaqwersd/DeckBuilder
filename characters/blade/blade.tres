@@ -1,11 +1,11 @@
-[gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://sbkc4o401k4l"]
+[gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://lnoqv7f5850h"]
 
 [ext_resource type="Texture2D" uid="uid://dnxrlwlvue6v5" path="res://art/Blade.png" id="1_4dwfv"]
 [ext_resource type="Texture2D" uid="uid://cpydvk8mq66o5" path="res://art/tile_0087.png" id="1_8jkdb"]
 [ext_resource type="Script" uid="uid://cqu424271vmxm" path="res://custom_resources/character_stats.gd" id="1_d8ou5"]
-[ext_resource type="Resource" uid="uid://cno2mmhf4bjci" path="res://characters/blade/blade_draftable_cards.tres" id="2_jojs0"]
+[ext_resource type="Resource" uid="uid://bxypytwk7opd3" path="res://characters/blade/blade_draftable_cards.tres" id="2_jojs0"]
 [ext_resource type="Resource" uid="uid://dyyfi3rcfxyug" path="res://characters/blade/blade_starting_deck.tres" id="3_d68oj"]
-[ext_resource type="Resource" uid="uid://dgsppvwlatlhw" path="res://relics/healing_potion.tres" id="5_wfusn"]
+[ext_resource type="Resource" uid="uid://do16ma68ji60o" path="res://relics/healing_potion.tres" id="5_wfusn"]
 
 [resource]
 script = ExtResource("1_d8ou5")

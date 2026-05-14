@@ -1,11 +1,11 @@
-[gd_scene format=3 uid="uid://d2f6dhxp12xvl"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://b8rhmqknnk6m7" path="res://scenes/ui/character_selector.gd" id="1_lqh53"]
-[ext_resource type="Resource" uid="uid://bd874b0h1q8n1" path="res://scenes/run/run_startup.tres" id="2_rlyfg"]
-[ext_resource type="Texture2D" uid="uid://cqcal03735mv8" path="res://art/tile_0118.png" id="3_pty20"]
-[ext_resource type="Texture2D" uid="uid://pgj8vfpj6tc5" path="res://art/tile_0130.png" id="4_20uvy"]
-[ext_resource type="Texture2D" uid="uid://cpydvk8mq66o5" path="res://art/tile_0087.png" id="4_bt743"]
-[ext_resource type="Texture2D" uid="uid://bfvi02kojsa00" path="res://art/tile_0103.png" id="5_56ldk"]
+[ext_resource type="Script" path="res://scenes/ui/character_selector.gd" id="1_lqh53"]
+[ext_resource type="Resource" path="res://scenes/run/run_startup.tres" id="2_rlyfg"]
+[ext_resource type="Texture2D" path="res://art/tile_0118.png" id="3_pty20"]
+[ext_resource type="Texture2D" path="res://art/tile_0130.png" id="4_20uvy"]
+[ext_resource type="Texture2D" path="res://art/tile_0087.png" id="4_bt743"]
+[ext_resource type="Texture2D" path="res://art/tile_0103.png" id="5_56ldk"]
 
 [sub_resource type="Gradient" id="Gradient_7af3e"]
 colors = PackedColorArray(0.2, 0.117647, 0.0509804, 1, 0.054902, 0, 0.0588235, 1)

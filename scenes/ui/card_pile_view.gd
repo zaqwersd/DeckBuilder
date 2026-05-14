@@ -2,6 +2,7 @@ class_name CardPileView
 extends CardGridListing
 
 const CARD_UPGRADE_FLOW := preload("res://scenes/ui/card_upgrade_flow.tscn")
+const COMBAT_CARD_MENU_UI_SCENE := preload("res://scenes/ui/combat_card_menu_ui.tscn")
 
 @export var card_pile: CardPile
 ## 战斗中略小于 1；跑图牌库界面可保持 1。与 CardMenuUI 设计尺寸配套的中心缩放。
@@ -40,6 +41,20 @@ func _on_visibility_changed_pointer_exclusive() -> void:
 		if _pointer_exclusive_registered:
 			Events.end_pointer_exclusive_ui(self)
 			_pointer_exclusive_registered = false
+
+
+## 覆盖父类方法：根据 number_bbcode_style 创建不同的 CardMenuUI
+func create_listing_card_menu() -> CardMenuUI:
+	if number_bbcode_style == Card.NumberBbcodeStyle.COMBAT_PILES_AND_HAND:
+		# 战斗牌堆：使用 CombatCardVisuals（白底 + 红绿变化）
+		var menu := COMBAT_CARD_MENU_UI_SCENE.instantiate() as CardMenuUI
+		menu.use_listing_hover_zoom = true
+		menu.mouse_filter = Control.MOUSE_FILTER_STOP
+		menu.call_deferred("refresh_listing_hover_pivot")
+		return menu
+	else:
+		# 列表模式：使用默认的 ListingCardVisuals（黄/灰/红）
+		return super.create_listing_card_menu()
 
 
 func _input(event: InputEvent) -> void:
@@ -133,7 +148,7 @@ func _is_deck_upgrade_input_blocker_active() -> bool:
 
 
 func _apply_pile_card_transform(menu: CardMenuUI) -> void:
-	menu.visuals.number_bbcode_style = number_bbcode_style
+	# number_bbcode_style 由创建时的场景选择自动处理
 	menu.scale = Vector2.ONE
 	menu.pivot_offset = Vector2.ZERO
 	if not is_equal_approx(display_scale, 1.0):

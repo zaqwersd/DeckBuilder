@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CouponsRelic" format=3 uid="uid://cy5rtyb7a4hpp"]
+[gd_resource type="Resource" script_class="CouponsRelic" format=3 uid="uid://b7y5dryfyac6r"]
 
 [ext_resource type="Texture2D" uid="uid://cjclq485fhfjv" path="res://art/coupons.png" id="1_xmg3w"]
 [ext_resource type="Script" uid="uid://dbw4wpfqa7yps" path="res://relics/coupons.gd" id="2_0p0pg"]

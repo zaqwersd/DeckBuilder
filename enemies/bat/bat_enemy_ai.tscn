@@ -1,11 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://d3b23v3dpsd60"]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scenes/enemy/enemy_action_picker.gd" id="1_ideu7"]
 [ext_resource type="Script" path="res://enemies/bat/bat_attack_action.gd" id="2_ki6rs"]
 [ext_resource type="Script" path="res://enemies/bat/bat_block_action.gd" id="3_lasj1"]
 [ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_a486a"]
-[ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="5_r8rjx"]
-[ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="8_8hq17"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_r8rjx"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_8hq17"]
 
 [sub_resource type="Resource" id="Resource_5y0u8"]
 script = ExtResource("4_a486a")

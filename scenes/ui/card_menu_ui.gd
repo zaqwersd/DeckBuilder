@@ -10,7 +10,7 @@ const LISTING_HOVER_SCALE := 1.1
 
 @export var card: Card : set = set_card
 
-@onready var visuals: CardVisuals = $Visuals
+@onready var visuals: CardVisualsBase = $Visuals
 
 var _listing_hover_tween: Tween
 var _deck_pick_selected := false

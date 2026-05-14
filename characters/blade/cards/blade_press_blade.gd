@@ -22,7 +22,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 func get_upgrade_pick_description_bbcode() -> String:
 	var d2 := get_upgrade_value_at("damage")
 	var ex := get_upgrade_value_at("exposed_duration")
-	return "[center]造成%s点伤害，给予%s层易伤。[/center]" % [
+	return "[center]造成%s点伤害。[br]给予%s层易伤。[/center]" % [
 		bbcode_upgrade_pick_digit("damage", d2),
 		bbcode_upgrade_pick_digit("exposed_duration", ex),
 	]
@@ -75,7 +75,7 @@ func _body_bbcode(
 		ed, ed, is_upgrade_track_maxed("exposed_duration")
 	)
 
-	return "[center]造成%s点伤害，给予%s层易伤。[/center]" % [dbb, ebb]
+	return "[center]造成%s点伤害。[br]给予%s层易伤。[/center]" % [dbb, ebb]
 
 
 func get_default_tooltip() -> String:

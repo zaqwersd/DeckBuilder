@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://cedsow628sq3y"]
+[gd_resource type="Resource" format=3 uid="uid://2rae3wgfdx6e"]
 
 [ext_resource type="Texture2D" uid="uid://b6ohh00uawyya" path="res://art/shatter.png" id="1_shatter"]
 [ext_resource type="Script" uid="uid://dj4cauibhec7m" path="res://characters/blade/cards/blade_shatter.gd" id="2_rjcfh"]
@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("2_rjcfh")
 id = "blade_shatter"
-rarity = 2
+rarity = 3
 target = 2
 cost = 2
 card_name = "崩碎"

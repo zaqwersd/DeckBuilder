@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://b11jhsqqh7kfe"]
+[gd_resource type="Resource" format=3 uid="uid://dmbla41hi0ftk"]
 
 [ext_resource type="Texture2D" uid="uid://bxa8pkakcodgw" path="res://art/tile_0082.png" id="1_813wr"]
 [ext_resource type="Script" uid="uid://bna12prx63wpq" path="res://relics/explosive_barrel.gd" id="2_snyc5"]

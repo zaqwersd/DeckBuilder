@@ -124,6 +124,8 @@ signal intent_tooltip_hover_hide
 ## 卡面描述中「虚无」「消耗」「易伤」「力量」等词条悬停（可多段垂直排列）
 signal card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control)
 signal card_keyword_tooltip_hide
+## 词条链接悬停时请求刷新 tooltip（由 Hand 统一显示所有词条）
+signal card_keyword_tooltip_refresh_requested(from_visuals: Control)
 
 # Map-related events
 signal map_exited(room: Room)

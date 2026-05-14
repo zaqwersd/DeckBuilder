@@ -163,14 +163,18 @@ func _on_option_strike_block() -> void:
 		option_two_pick.disabled = not _can_roll_attack_and_skill()
 		return
 	indices.sort()
-	var desc: Array[int] = []
+	# 先移除两张牌（从后往前移除以避免索引变化问题）
+	var cards_to_remove: Array[Card] = []
 	for j in range(indices.size() - 1, -1, -1):
-		desc.append(int(indices[j]))
-	var run := get_tree().get_first_node_in_group("run") as Run
-	for deck_index: int in desc:
+		var deck_index: int = int(indices[j])
 		var removed: Card = character_stats.deck.remove_card_at(deck_index)
-		if run:
-			await run.play_deck_remove_card_shrink_remove_and_wait(removed)
+		cards_to_remove.append(removed)
+	
+	# 同时播放两张牌的淡出动画
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run and cards_to_remove.size() >= 2:
+		await run.play_deck_remove_two_cards_fade_and_wait(cards_to_remove[0], cards_to_remove[1])
+	
 	var gained: Card = IRON_WAVE.duplicate(true) as Card
 	character_stats.deck.add_card(gained)
 	if run:

@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://bwtke8nmynqt2"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://dujfvn5rjpaem" path="res://scenes/relic_handler/relic_tooltip.gd" id="1_qps86"]
+[ext_resource type="Script" path="res://scenes/relic_handler/relic_tooltip.gd" id="1_qps86"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 4.0

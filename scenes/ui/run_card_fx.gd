@@ -50,6 +50,9 @@ func _deferred_animate_picked_to_deck(picked: CardMenuUI, from_global: Vector2) 
 
 
 const SHRINK_REMOVE_DURATION := 0.38
+const TWO_CARD_REMOVE_DURATION := 0.38
+const TWO_CARD_HORIZONTAL_GAP := 80.0  # 两张牌之间的水平间距（靠近一点）
+const TWO_CARD_HOLD_DURATION := 0.5  # 两张牌暂留时间
 
 
 func animate_card_center_shrink_remove(card: Card) -> void:
@@ -84,6 +87,99 @@ func animate_card_center_shrink_remove(card: Card) -> void:
 	await tw.finished
 	if is_instance_valid(ghost):
 		ghost.queue_free()
+
+
+func animate_two_cards_center_fade_remove(card1: Card, card2: Card) -> void:
+	if not card1 or not card2:
+		return
+	
+	# 创建两个 ghost 卡牌
+	var ghost1 := CARD_MENU_UI.instantiate() as CardMenuUI
+	var ghost2 := CARD_MENU_UI.instantiate() as CardMenuUI
+	
+	var layer := get_parent()
+	if layer:
+		layer.add_child(ghost1)
+		layer.add_child(ghost2)
+	else:
+		add_child(ghost1)
+		add_child(ghost2)
+	
+	# 设置 ghost1
+	ghost1.top_level = true
+	ghost1.z_index = 200
+	ghost1.z_as_relative = false
+	ghost1.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost1.card = card1
+	if ghost1.visuals:
+		ghost1.visuals.freeze_font_sync_for_fly_phantom = true
+	ghost1.visible = false
+	
+	# 设置 ghost2
+	ghost2.top_level = true
+	ghost2.z_index = 200
+	ghost2.z_as_relative = false
+	ghost2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost2.card = card2
+	if ghost2.visuals:
+		ghost2.visuals.freeze_font_sync_for_fly_phantom = true
+	ghost2.visible = false
+	
+	# 等待准备完成
+	await _prepare_card_menu_pivot(ghost1)
+	await _prepare_card_menu_pivot(ghost2)
+	
+	if not is_instance_valid(ghost1) or not is_instance_valid(ghost2):
+		if is_instance_valid(ghost1):
+			ghost1.queue_free()
+		if is_instance_valid(ghost2):
+			ghost2.queue_free()
+		return
+	
+	# 计算位置：屏幕中央，两张牌水平排列
+	var vp_center := get_viewport().get_visible_rect().get_center()
+	var card_width := 268.0  # CardMenuUI 默认宽度
+	var gap := TWO_CARD_HORIZONTAL_GAP
+	var total_width := card_width * 2 + gap
+	
+	var left_pos := vp_center - Vector2(total_width * 0.5 - card_width * 0.5, 0)
+	var right_pos := vp_center + Vector2(total_width * 0.5 - card_width * 0.5, 0)
+	
+	# 放置卡牌
+	_place_visual_center_at(ghost1, left_pos)
+	_place_visual_center_at(ghost2, right_pos)
+	
+	ghost1.rotation = 0.0
+	ghost1.scale = Vector2.ONE
+	ghost1.visible = true
+	
+	ghost2.rotation = 0.0
+	ghost2.scale = Vector2.ONE
+	ghost2.visible = true
+	
+	# 暂留效果
+	await get_tree().create_timer(TWO_CARD_HOLD_DURATION).timeout
+	
+	# 同时执行淡出动画
+	var tw1 := create_tween()
+	tw1.set_trans(Tween.TRANS_QUAD)
+	tw1.set_ease(Tween.EASE_OUT)
+	tw1.tween_property(ghost1, "modulate:a", 0.0, TWO_CARD_REMOVE_DURATION)
+	
+	var tw2 := create_tween()
+	tw2.set_trans(Tween.TRANS_QUAD)
+	tw2.set_ease(Tween.EASE_OUT)
+	tw2.tween_property(ghost2, "modulate:a", 0.0, TWO_CARD_REMOVE_DURATION)
+	
+	# 等待两个动画都完成
+	await tw1.finished
+	await tw2.finished
+	
+	# 清理
+	if is_instance_valid(ghost1):
+		ghost1.queue_free()
+	if is_instance_valid(ghost2):
+		ghost2.queue_free()
 
 
 func animate_picked_menu_to_deck(picked: CardMenuUI, from_global: Vector2) -> void:

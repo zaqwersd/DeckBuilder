@@ -287,6 +287,11 @@ func play_deck_remove_card_shrink_remove_and_wait(card: Card) -> void:
 		await run_card_fx.animate_card_center_shrink_remove(card)
 
 
+func play_deck_remove_two_cards_fade_and_wait(card1: Card, card2: Card) -> void:
+	if run_card_fx:
+		await run_card_fx.animate_two_cards_center_fade_remove(card1, card2)
+
+
 func _show_regular_battle_rewards() -> void:
 	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
 	reward_scene.run_stats = stats

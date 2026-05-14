@@ -1,9 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://dlt6561ywjx8m"]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/shop/shop_relic.gd" id="1_b84y1"]
-[ext_resource type="PackedScene" uid="uid://nqvpogmvfn3t" path="res://scenes/relic_handler/relic_ui.tscn" id="1_h34vc"]
-[ext_resource type="Resource" uid="uid://dn6frpxqh1o7" path="res://relics/mana_potion.tres" id="2_uujtg"]
-[ext_resource type="Texture2D" uid="uid://dhmtctwb5ymhc" path="res://art/gold.png" id="4_0iw0f"]
+[ext_resource type="PackedScene" path="res://scenes/relic_handler/relic_ui.tscn" id="1_h34vc"]
+[ext_resource type="Resource" path="res://relics/mana_potion.tres" id="2_uujtg"]
+[ext_resource type="Texture2D" path="res://art/gold.png" id="4_0iw0f"]
 
 [node name="ShopRelic" type="VBoxContainer"]
 custom_minimum_size = Vector2(180, 135)

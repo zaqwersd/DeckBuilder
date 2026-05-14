@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://c8c1y85x2h5l"]
+[gd_resource type="Resource" format=3 uid="uid://b3s8hlkpfqnpr"]
 
 [ext_resource type="Texture2D" uid="uid://dytq0eumwvky6" path="res://art/tile_0074.png" id="1_af34x"]
 [ext_resource type="Script" uid="uid://bfdjuxoh8rpmf" path="res://relics/reinforced_armor.gd" id="2_w3vb2"]

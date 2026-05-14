@@ -1,7 +1,7 @@
-[gd_resource type="Theme" format=3 uid="uid://c8cqncsqlplyu"]
+[gd_resource type="Theme" format=3 uid="uid://dq4qrshfstoha"]
 
-[ext_resource type="StyleBox" uid="uid://b4b3e0d14kvmi" path="res://scenes/card_ui/card_base_stylebox.tres" id="1_cof14"]
-[ext_resource type="StyleBox" uid="uid://15046auw6h2r" path="res://scenes/card_ui/card_hover_stylebox.tres" id="1_lro6f"]
+[ext_resource type="StyleBox" uid="uid://cqdg4q8yisvsm" path="res://scenes/card_ui/card_base_stylebox.tres" id="1_cof14"]
+[ext_resource type="StyleBox" uid="uid://ckekdoebsn0h8" path="res://scenes/card_ui/card_hover_stylebox.tres" id="1_lro6f"]
 [ext_resource type="FontFile" uid="uid://c30fkeil6tur2" path="res://art/Unifont点阵黑.ttf" id="3_0omi4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r8u4k"]

@@ -1,11 +1,11 @@
-[gd_scene format=3 uid="uid://dary1vew8ju42"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://drguylavrikvn" path="res://scenes/ui/card_rewards.gd" id="1_okwb6"]
-[ext_resource type="PackedScene" uid="uid://trmdo65td4t7" path="res://scenes/ui/card_menu_ui.tscn" id="1_spfg3"]
-[ext_resource type="Script" uid="uid://bg8nmus47b34h" path="res://custom_resources/card.gd" id="2_drxgv"]
-[ext_resource type="Resource" uid="uid://n3va254ct6b3" path="res://characters/blade/cards/blade_slash.tres" id="2_o7v21"]
-[ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/blade/cards/blade_press_blade.tres" id="3_k78il"]
-[ext_resource type="Resource" uid="uid://b2bladeoverwhelming" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_iwxg7"]
+[ext_resource type="Script" path="res://scenes/ui/card_rewards.gd" id="1_okwb6"]
+[ext_resource type="PackedScene" path="res://scenes/ui/card_menu_ui.tscn" id="1_spfg3"]
+[ext_resource type="Script" path="res://custom_resources/card.gd" id="2_drxgv"]
+[ext_resource type="Resource" path="res://characters/blade/cards/blade_slash.tres" id="2_o7v21"]
+[ext_resource type="Resource" path="res://characters/blade/cards/blade_press_blade.tres" id="3_k78il"]
+[ext_resource type="Resource" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_iwxg7"]
 
 [node name="CardRewards" type="Control" unique_id=1145581924]
 layout_mode = 3

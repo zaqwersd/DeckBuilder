@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://dn6frpxqh1o7"]
+[gd_resource type="Resource" format=3 uid="uid://cvjdpokiigaml"]
 
 [ext_resource type="Texture2D" uid="uid://c2xhttrclo1r7" path="res://art/tile_0116.png" id="1_di0fn"]
 [ext_resource type="Script" uid="uid://bidabky4nsxvu" path="res://relics/mana_potion.gd" id="2_nmepq"]

@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://b77qc4ublkknd"]
 
 [ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_5xd0f"]
-[ext_resource type="PackedScene" uid="uid://b8i1rhsqbv4yh" path="res://battles/tier_2_evil_spirit.tscn" id="1_6fxuh"]
+[ext_resource type="PackedScene" path="res://battles/tier_2_evil_spirit.tscn" id="1_6fxuh"]
 
 [resource]
 script = ExtResource("1_5xd0f")

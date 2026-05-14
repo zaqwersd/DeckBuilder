@@ -1,12 +1,12 @@
-[gd_resource type="Resource" script_class="BattleStatsPool" format=3 uid="uid://by8ka073e8sah"]
+[gd_resource type="Resource" script_class="BattleStatsPool" format=3 uid="uid://bifqwv5s7lidm"]
 
 [ext_resource type="Script" uid="uid://ekxf7q3x2vru" path="res://custom_resources/battle_stats_pool.gd" id="1_c0dve"]
 [ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_k3ygp"]
 [ext_resource type="Resource" uid="uid://b8n7n2ldcvb0c" path="res://battles/tier_0_bats2.tres" id="1_udfgr"]
-[ext_resource type="Resource" uid="uid://btgxo6ksfx835" path="res://battles/tier_0_crab.tres" id="2_7sd42"]
-[ext_resource type="Resource" uid="uid://rscs8yna3uyj" path="res://battles/tier_1_bats3.tres" id="3_p408a"]
-[ext_resource type="Resource" uid="uid://d0rjtrdkgl628" path="res://battles/tier_1_bat_crab.tres" id="4_yjlu3"]
-[ext_resource type="Resource" uid="uid://42lmyg17cgbo" path="res://battles/tier_1_igneous_burster.tres" id="5_ign"]
+[ext_resource type="Resource" uid="uid://cqruiasjesoro" path="res://battles/tier_0_crab.tres" id="2_7sd42"]
+[ext_resource type="Resource" uid="uid://c7wjl4n63052m" path="res://battles/tier_1_bats3.tres" id="3_p408a"]
+[ext_resource type="Resource" uid="uid://db7ehci5ojgnv" path="res://battles/tier_1_bat_crab.tres" id="4_yjlu3"]
+[ext_resource type="Resource" uid="uid://d0xdqm83o71ek" path="res://battles/tier_1_igneous_burster.tres" id="5_ign"]
 [ext_resource type="Resource" uid="uid://b77qc4ublkknd" path="res://battles/tier_2_evil_spirit.tres" id="6_sb1gi"]
 
 [resource]

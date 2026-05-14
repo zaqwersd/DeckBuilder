@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://bwmjwro6b5mvs"]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_ai.gd" id="1_ai"]
 [ext_resource type="Script" path="res://enemies/evil_spirit/boss/evil_spirit_boss_insert_three.gd" id="2_ins"]

@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://n3va254ct6b3"]
+[gd_resource type="Resource" format=3 uid="uid://byi0cfoedmlm0"]
 
 [ext_resource type="Texture2D" uid="uid://d2w1qkqhq530u" path="res://art/slash.png" id="1_4ufwx"]
 [ext_resource type="Script" uid="uid://pl0j2p2fhamc" path="res://characters/blade/cards/blade_slash.gd" id="2_hvnm7"]
@@ -7,6 +7,7 @@
 [resource]
 script = ExtResource("2_hvnm7")
 id = "blade_slash"
+rarity = 1
 target = 2
 cost = 1
 card_name = "横扫"

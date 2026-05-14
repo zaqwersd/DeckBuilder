@@ -15,7 +15,7 @@ const HOVER_STYLEBOX := preload("res://scenes/card_ui/card_hover_stylebox.tres")
 @export var card: Card : set = _set_card
 @export var char_stats: CharacterStats : set = _set_char_stats
 
-@onready var card_visuals: CardVisuals = $CardVisuals
+@onready var card_visuals: CardVisualsBase = $CardVisuals
 @onready var drop_point_detector: Area2D = $DropPointDetector
 @onready var card_state_machine: CardStateMachine = $CardStateMachine
 @onready var targets: Array[Node] = []
@@ -198,20 +198,56 @@ func _set_hand_hover_visual_active(active: bool) -> void:
 	_tween_hand_hover_offset(target_y, 0.1)
 
 
-## 重叠时仅「主目标」牌接收点击，其余牌 CardVisuals 设为 IGNORE 让事件穿透到下层牌。
+## 重叠时仅「主目标」牌接收点击，其余牌设为 IGNORE 让事件穿透到下层牌。
+## 注意：card_visuals 为 IGNORE 时子控件不会接收事件，所以我们单独设置各子控件，
+## 保持 description_label 始终为 STOP 以便接收词条链接悬停事件。
 func _apply_hand_visual_mouse_pick_filter() -> void:
 	if not is_instance_valid(card_visuals) or not is_instance_valid(hand_slot):
 		return
 	var hp := hand_slot.get_parent()
 	if not (hp is Hand):
-		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		# 不在手牌中：允许所有交互
+		_set_card_visuals_mouse_filter_recursive(true)
 		return
 	var fo := (hp as Hand).get_mouse_foremost_hand_card()
 	var overlapping := is_hand_hover_hit_overlapping()
-	if overlapping and fo != null and fo != self:
-		card_visuals.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var is_foremost := (fo == self)
+	if overlapping and fo != null and not is_foremost:
+		# 非主目标：设为 IGNORE，但保持 description_label 可接收事件
+		_set_card_visuals_mouse_filter_recursive(false, true)
 	else:
-		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		# 主目标：允许所有交互
+		_set_card_visuals_mouse_filter_recursive(true, true)
+
+
+## 递归设置 card_visuals 及其子控件的 mouse_filter
+## @param enabled: true 表示主目标（STOP），false 表示非主目标（IGNORE）
+## @param keep_description_active: true 时保持 description_label 为 STOP
+func _set_card_visuals_mouse_filter_recursive(enabled: bool, keep_description_active: bool = false) -> void:
+	if not is_instance_valid(card_visuals):
+		return
+	
+	# 始终将 card_visuals 设为 STOP，以便子控件可以接收事件
+	card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	# 单独设置各个子控件
+	if is_instance_valid(card_visuals.description_label):
+		# 描述区需要始终接收事件以便词条链接悬停
+		card_visuals.description_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	
+	# 其他子控件根据是否主目标设置
+	var child_filter := Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	
+	if is_instance_valid(card_visuals.get_node_or_null("%MainPanel")):
+		card_visuals.get_node_or_null("%MainPanel").mouse_filter = child_filter
+	if is_instance_valid(card_visuals.get_node_or_null("%FramePanel")):
+		card_visuals.get_node_or_null("%FramePanel").mouse_filter = child_filter
+	if is_instance_valid(card_visuals.get_node_or_null("%CostPanel")):
+		card_visuals.get_node_or_null("%CostPanel").mouse_filter = child_filter
+	if is_instance_valid(card_visuals.get_node_or_null("%TitlePanel")):
+		card_visuals.get_node_or_null("%TitlePanel").mouse_filter = child_filter
+	if is_instance_valid(card_visuals.get_node_or_null("%TypePanel")):
+		card_visuals.get_node_or_null("%TypePanel").mouse_filter = child_filter
 
 
 ## 回手等时机补一帧同步（Hand 也会在 `_process` 里持续刷新）。
@@ -248,7 +284,7 @@ func _play_resolved() -> void:
 	var start_center := get_global_rect().get_center()
 
 	visible = false
-	played_card.play(played_targets, stats, mods, get_effective_mana_cost())
+	await played_card.play(played_targets, stats, mods, get_effective_mana_cost())
 
 	var relic_h: RelicHandler = null
 	var do_defect_echo := false
@@ -313,17 +349,18 @@ func is_hovered() -> bool:
 
 
 ## 手牌悬停抬起后视觉在控件矩形上方，与 tooltip 一致：用「扩展矩形」判断是否仍算指着这张牌。
-## 使用 CardVisuals 的当前 position.y 来计算实际的视觉位置。
+## 使用 CardVisuals 的全局矩形作为命中区（精确匹配卡牌视觉区域，不过度扩展）
 func get_hand_hover_hit_global_rect() -> Rect2:
-	var gr := get_global_rect()
-	var lift_y := 0.0
-	if is_instance_valid(card_visuals):
-		lift_y = card_visuals.position.y
-	## 扩展命中区以包含抬起区域（从当前视觉位置到正常位置）
-	var top_extension := minf(lift_y, -HAND_HOVER_LIFT_PX)
+	if not is_instance_valid(card_visuals):
+		return get_global_rect()
+	
+	## 直接使用 card_visuals 的全局矩形作为命中区
+	## 不再向上过度扩展，只添加少量缓冲（20像素）用于边缘容错
+	var visuals_rect := card_visuals.get_global_rect()
+	var buffer := 20.0
 	return Rect2(
-		gr.position + Vector2(0, top_extension),
-		gr.size + Vector2(0, absf(top_extension))
+		visuals_rect.position - Vector2(buffer * 0.5, buffer * 0.5),
+		visuals_rect.size + Vector2(buffer, buffer)
 	)
 
 

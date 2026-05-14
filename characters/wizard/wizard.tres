@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://bpmg71wyxiavh"]
+[gd_resource type="Resource" script_class="CharacterStats" format=3 uid="uid://dg4lxmm3reftg"]
 
 [ext_resource type="Script" uid="uid://cqu424271vmxm" path="res://custom_resources/character_stats.gd" id="1_6upmd"]
 [ext_resource type="Texture2D" uid="uid://dpfqok8tuy4r7" path="res://art/tile_0084.png" id="1_ghe8y"]

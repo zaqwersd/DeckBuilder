@@ -59,8 +59,11 @@ func pick_weighted_distinct_cards(
 					uncommons.append(c)
 				Card.Rarity.RARE:
 					rares.append(c)
-				_:
+				Card.Rarity.COMMON:
 					commons.append(c)
+				_:
+					# STARTER (0) 和 SPECIAL (4) 等不参与权重抽选
+					pass
 		var wc := weight_common if not commons.is_empty() else 0.0
 		var wu := weight_uncommon if not uncommons.is_empty() else 0.0
 		var wr := weight_rare if not rares.is_empty() else 0.0

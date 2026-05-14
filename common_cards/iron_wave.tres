@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://chtjf8ths361"]
+[gd_resource type="Resource" format=3 uid="uid://o2hby0vtakv4"]
 
 [ext_resource type="Texture2D" uid="uid://cgbcbid2kuvlp" path="res://art/iron_wave.png" id="1_v1hk4"]
 [ext_resource type="Script" uid="uid://b8n5itednlkf2" path="res://common_cards/iron_wave.gd" id="2_script"]
@@ -7,7 +7,7 @@
 [resource]
 script = ExtResource("2_script")
 id = "iron_wave"
-rarity = 3
+rarity = 4
 target = 1
 cost = 1
 card_name = "铁斩波"

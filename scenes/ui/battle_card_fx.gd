@@ -153,13 +153,17 @@ func animate_played_card(card: Card, start_center: Vector2, kind: PlayedKind) ->
 		return
 
 	if kind == PlayedKind.EXHAUST:
-		var dest_ex: Vector2
-		if exhaust_pile_button:
-			dest_ex = _control_global_center(exhaust_pile_button)
-		else:
-			dest_ex = vp_center
-		var mid_ex := _bezier_control_draw_bulge_up(vp_center, dest_ex)
-		await _tween_ghost_curve_scale(ghost, vp_center, dest_ex, PLAY_TO_PILE, false, mid_ex, SK_SCALE_SHRINK)
+		# 打出就消耗的牌：在屏幕中央暂留然后淡出
+		await get_tree().create_timer(0.5).timeout  # 0.5s暂留效果
+		if Events.is_combat_ended():
+			if is_instance_valid(ghost):
+				ghost.queue_free()
+			return
+		var tw := create_tween()
+		tw.set_trans(Tween.TRANS_QUAD)
+		tw.set_ease(Tween.EASE_OUT)
+		tw.tween_property(ghost, "modulate:a", 0.0, PLAY_TO_PILE)
+		await tw.finished
 		if Events.is_combat_ended():
 			if is_instance_valid(ghost):
 				ghost.queue_free()
@@ -220,7 +224,7 @@ func animate_defect_machine_echo(
 		return
 	var eff_targets: Array[Node] = card.get_effect_targets(played_targets)
 	Events.card_played.emit(card)
-	card.apply_effects(eff_targets, player_modifiers)
+	await card.apply_effects(eff_targets, player_modifiers)
 	if card.sound:
 		SFXPlayer.play(card.sound)
 	if Events.is_combat_ended():
@@ -521,35 +525,105 @@ func animate_ethereal_vanish(hand: Hand, card_ui: CardUI) -> void:
 		if is_instance_valid(hand):
 			hand.discard_card(card_ui)
 		return
-	var from := card_ui.get_global_rect().get_center()
-	card_ui.visible = false
+	
+	# 记录 card_ui 的精确全局变换
+	var card_rect := card_ui.get_global_rect()
+	var card_pos := card_rect.position
+	var card_size := card_rect.size
+	var card_scale := card_ui.scale
+	var card_rotation := card_ui.rotation
+	
+	# 使用透明占位，保持手牌布局不变（其他牌不会靠拢）
+	card_ui.modulate.a = 0.0
+	
 	var ghost := _make_ghost(c)
 	await _prepare_ghost_for_motion(ghost)
 	if Events.is_combat_ended():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
-		_ethereal_add_exhaust_if_possible(c)
 		if is_instance_valid(hand):
 			hand.discard_card(card_ui)
 		return
-	_place_visual_center_at(ghost, from)
-	ghost.scale = Vector2.ONE
+	
+	# 精确复制原卡牌的全局位置和尺寸（其他手牌保持原位）
+	ghost.global_position = card_pos
+	ghost.size = card_size
+	ghost.scale = card_scale
+	ghost.rotation = card_rotation
 	ghost.modulate = Color(0.9, 0.88, 1.0, 1.0)
 	ghost.visible = true
-	await _tween_ghost_fade_out(ghost)
+	
+	# 直接淡出（不缩小）
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD)
+	tw.set_ease(Tween.EASE_OUT)
+	tw.tween_property(ghost, "modulate:a", 0.0, GHOST_FADE_DURATION)
+	await tw.finished
+	if is_instance_valid(ghost):
+		ghost.queue_free()
+	
+	_ethereal_add_exhaust_if_possible(c)
+	_notify_haunted_if_ghost(c)
+	
+	# 动画完成后才移除卡牌，其他手牌此时才靠拢
+	if is_instance_valid(hand):
+		hand.discard_card(card_ui)
+		# 等待两帧让布局系统处理，然后强制重新居中
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if is_instance_valid(hand) and hand.has_method("_request_reflow_hand_bar"):
+			hand._request_reflow_hand_bar()
+
+
+## 通用：手牌中的卡牌被消耗（用于坚毅等效果），在原位置淡出
+func animate_hand_card_exhaust(hand: Hand, card_ui: CardUI) -> void:
+	if not is_instance_valid(card_ui) or not card_ui.card:
+		return
+	var c := card_ui.card
+	
+	# 记录 card_ui 的精确全局变换
+	var card_rect := card_ui.get_global_rect()
+	var card_pos := card_rect.position
+	var card_size := card_rect.size
+	var card_scale := card_ui.scale
+	var card_rotation := card_ui.rotation
+	
+	# 使用透明占位，保持手牌布局不变（其他牌不会靠拢）
+	card_ui.modulate.a = 0.0
+	
+	var ghost := _make_ghost(c)
+	await _prepare_ghost_for_motion(ghost)
 	if Events.is_combat_ended():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
-		_ethereal_add_exhaust_if_possible(c)
 		if is_instance_valid(hand):
 			hand.discard_card(card_ui)
 		return
+	
+	# 精确复制原卡牌的全局位置和尺寸（其他手牌保持原位）
+	ghost.global_position = card_pos
+	ghost.size = card_size
+	ghost.scale = card_scale
+	ghost.rotation = card_rotation
+	ghost.visible = true
+	
+	# 直接淡出（不缩小）
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_QUAD)
+	tw.set_ease(Tween.EASE_OUT)
+	tw.tween_property(ghost, "modulate:a", 0.0, GHOST_FADE_DURATION)
+	await tw.finished
 	if is_instance_valid(ghost):
 		ghost.queue_free()
-	_ethereal_add_exhaust_if_possible(c)
-	_notify_haunted_if_ghost(c)
+	
+	# 动画完成后才移除卡牌，其他手牌此时才靠拢
 	if is_instance_valid(hand):
 		hand.discard_card(card_ui)
+		# 等待两帧让布局系统处理，然后强制重新居中
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if is_instance_valid(hand) and hand.has_method("_request_reflow_hand_bar"):
+			hand._request_reflow_hand_bar()
 
 
 func _ethereal_add_exhaust_if_possible(c: Card) -> void:
@@ -665,9 +739,10 @@ func _tween_ghost_fade_out(ghost: Control) -> void:
 		return
 	var dur := GHOST_FADE_DURATION
 	var tw := create_tween()
-	# 先明显缩小再淡出，避免与 modulate 并行时肉眼只看到「变透明」
-	tw.tween_property(ghost, "scale", Vector2.ZERO, dur * 0.58).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.chain().tween_property(ghost, "modulate:a", 0.0, dur * 0.42)
+	# 虚无牌：在原位置淡出（不缩小）
+	tw.set_trans(Tween.TRANS_QUAD)
+	tw.set_ease(Tween.EASE_OUT)
+	tw.tween_property(ghost, "modulate:a", 0.0, dur)
 	await tw.finished
 
 

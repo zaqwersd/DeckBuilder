@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://dgsppvwlatlhw"]
+[gd_resource type="Resource" format=3 uid="uid://do16ma68ji60o"]
 
 [ext_resource type="Texture2D" uid="uid://boklhiqs1414d" path="res://art/tile_0115.png" id="1_xg7m0"]
 [ext_resource type="Script" uid="uid://cg74ajb6efm15" path="res://relics/healing_potion.gd" id="2_yauxr"]

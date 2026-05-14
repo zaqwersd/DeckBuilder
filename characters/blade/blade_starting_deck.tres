@@ -1,10 +1,10 @@
 [gd_resource type="Resource" script_class="CardPile" format=3 uid="uid://dyyfi3rcfxyug"]
 
 [ext_resource type="Script" uid="uid://cx7pv6t0wf8e" path="res://custom_resources/card_pile.gd" id="1_ncslu"]
-[ext_resource type="Script" uid="uid://bg8nmus47b34h" path="res://custom_resources/card.gd" id="1_tnkis"]
-[ext_resource type="Resource" uid="uid://d4c8yfl4f4sat" path="res://characters/blade/cards/blade_block.tres" id="2_1cndr"]
-[ext_resource type="Resource" uid="uid://btxc1odh1jmst" path="res://characters/blade/cards/blade_strike.tres" id="2_83yh3"]
-[ext_resource type="Resource" uid="uid://d20gx8xpmgpdi" path="res://characters/blade/cards/blade_press_blade.tres" id="4_u4di5"]
+[ext_resource type="Script" uid="uid://r8kv1fwsks31" path="res://custom_resources/card.gd" id="1_tnkis"]
+[ext_resource type="Resource" uid="uid://ba35pjyho8l01" path="res://characters/blade/cards/blade_block.tres" id="2_1cndr"]
+[ext_resource type="Resource" uid="uid://dq6prq37016tk" path="res://characters/blade/cards/blade_strike.tres" id="2_83yh3"]
+[ext_resource type="Resource" path="res://characters/blade/cards/blade_press_blade.tres" id="4_u4di5"]
 
 [resource]
 script = ExtResource("1_ncslu")

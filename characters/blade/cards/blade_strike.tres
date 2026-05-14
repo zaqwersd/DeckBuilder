@@ -1,4 +1,4 @@
-[gd_resource type="Resource" format=3 uid="uid://btxc1odh1jmst"]
+[gd_resource type="Resource" format=3 uid="uid://dq6prq37016tk"]
 
 [ext_resource type="Texture2D" uid="uid://ct6lcoqj7o645" path="res://art/strike.png" id="1_el4p5"]
 [ext_resource type="Script" uid="uid://cqv08ekkasvej" path="res://characters/blade/cards/blade_strike.gd" id="2_yatct"]

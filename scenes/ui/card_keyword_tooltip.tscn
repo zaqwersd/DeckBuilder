@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://ckeywordtip01"]
+[gd_scene format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/card_keyword_tooltip.gd" id="1_script"]
 

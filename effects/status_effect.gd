@@ -9,4 +9,5 @@ func execute(targets: Array[Node]) -> void:
 		if not target:
 			continue
 		if target is Enemy or target is Player:
-			target.status_handler.add_status(status.duplicate())
+			## 直接添加 status（卡牌脚本中已调用 duplicate 并配置了属性）
+			target.status_handler.add_status(status)
