@@ -7,10 +7,9 @@
 [resource]
 script = ExtResource("2_rxtl4")
 id = "blade_iaijutsu"
-type = 0
 rarity = 2
-cost = 1
 target = 1
+cost = 1
 exhausts = true
 card_name = "居合斩"
 icon = ExtResource("1_p73bd")

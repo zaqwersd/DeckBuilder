@@ -6,7 +6,7 @@
 [ext_resource type="Resource" uid="uid://bkm1v3lqlom3o" path="res://characters/blade/cards/blade_dodge.tres" id="4_7uxu8"]
 [ext_resource type="Resource" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_jteol"]
 [ext_resource type="Resource" uid="uid://2rae3wgfdx6e" path="res://characters/blade/cards/blade_shatter.tres" id="5_sfk5u"]
-[ext_resource type="Resource" uid="uid://cojg2pjac8k4t" path="res://characters/blade/cards/blade_angry_anvil.tres" id="6_mdr4n"]
+[ext_resource type="Resource" uid="uid://cojg2pjac8k4t" path="res://characters/blade/cards/blade_detachment.tres" id="6_mdr4n"]
 [ext_resource type="Resource" uid="uid://bu5t6pggn2enx" path="res://characters/blade/cards/blade_iaijutsu.tres" id="7_iaiju"]
 [ext_resource type="Resource" uid="uid://coii74difhs5s" path="res://characters/blade/cards/blade_anger.tres" id="8_anger"]
 
