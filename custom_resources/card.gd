@@ -117,6 +117,29 @@ func should_show_intrinsic_keyword_in_combat_description() -> bool:
 @export_multiline var tooltip_text: String
 @export var sound: AudioStream
 
+## 打出时由 CardUI 写入、效果协程读取；未设置时为 Vector2.INF。
+var _play_visual_start_center: Vector2 = Vector2.INF
+
+
+func set_play_visual_start_center(center: Vector2) -> void:
+	_play_visual_start_center = center
+
+
+func consume_play_visual_start_center(fallback: Vector2) -> Vector2:
+	var out := _play_visual_start_center if _play_visual_start_center != Vector2.INF else fallback
+	_play_visual_start_center = Vector2.INF
+	return out
+
+
+## 为 true 时 CardUI 不在 play() 结束后播默认打出动画，由 apply_effects 自行安排顺序。
+func defers_played_card_animation_to_effects() -> bool:
+	return false
+
+
+## 为 true 且 exhausts 时：不在 card_played 时入消耗堆，而在 play() 里 await apply_effects 全部结束后再入堆（先结算印牌等效果，再触发 card_exhausted / 心流抽牌）。
+func defers_exhaust_to_end_of_play() -> bool:
+	return false
+
 
 func get_upgrade_steps_applied(track_id: String) -> int:
 	return int(upgrade_track_steps.get(track_id, 0))
@@ -179,6 +202,12 @@ func increment_upgrade_track(track_id: String) -> void:
 		return
 	var s := get_upgrade_steps_applied(track_id)
 	upgrade_track_steps[track_id] = s + 1
+	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+
+
+## 子类：由「解锁固有」类升级轨推导 `intrinsic`；战斗开局分堆前、恢复快照后也会调用。
+func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
+	pass
 
 
 func get_total_upgrade_count() -> int:
@@ -215,15 +244,24 @@ func _get_targets(targets: Array[Node]) -> Array[Node]:
 			return []
 
 
+## 是否在 Card.play() 时播放卡面 @export sound。攻击牌、格挡技能等由 Damage/Block 效果播放。
+func plays_card_sound_on_play() -> bool:
+	return type == Type.POWER
+
+
+func _play_card_sound() -> void:
+	if sound:
+		SFXPlayer.play(sound)
+
+
 func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierHandler, mana_to_spend: int = -1) -> void:
 	if cost < 0:
 		return
 	var spend := mana_to_spend if mana_to_spend >= 0 else cost
 	Events.card_played.emit(self)
 	char_stats.mana -= spend
-	# 能力牌不经过 Damage/Block 效果里的 SFXPlayer.play，需在打出时单独播卡面 sound
-	if sound and type == Type.POWER:
-		SFXPlayer.play(sound)
+	if plays_card_sound_on_play():
+		_play_card_sound()
 
 	var wrap_attack := type == Type.ATTACK
 	if wrap_attack:
@@ -234,6 +272,8 @@ func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierH
 		await apply_effects(_get_targets(targets), modifiers)
 	if wrap_attack:
 		Events.end_attack_card_effects()
+	if exhausts and defers_exhaust_to_end_of_play():
+		char_stats.add_card_to_exhaust(self)
 
 
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:

@@ -15,7 +15,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 
 func get_upgrade_pick_description_bbcode() -> String:
 	var st := get_upgrade_value_at("strength")
-	return "[center]获得 %s 点力量。[/center]" % bbcode_upgrade_pick_digit("strength", st)
+	return "[center]获得%s点力量。[/center]" % bbcode_upgrade_pick_digit("strength", st)
 
 
 func _intrinsic_strength() -> int:

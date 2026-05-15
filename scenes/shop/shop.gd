@@ -42,14 +42,67 @@ func _ready() -> void:
 	blink_timer.timeout.connect(_on_blink_timer_timeout)
 
 
-func populate_shop() -> void:
+func populate_shop(is_reload: bool = false) -> void:
 	for col: Node in shop_columns.get_children():
 		col.queue_free()
 	reset_listing_keyword_tooltip_state()
 
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if is_reload and run != null and run.can_restore_shop_pending():
+		_build_shop_from_pending(run.get_shop_pending_data())
+		return
+
 	var shop_card_array := _pick_shop_cards()
 	var shop_relics_array := _pick_shop_relics()
+	_build_shop_slots(shop_card_array, shop_relics_array, PackedInt32Array(), PackedInt32Array(), true)
+	if run != null:
+		run.persist_shop_pending(
+			_card_ids_from(shop_card_array),
+			_relic_ids_from(shop_relics_array),
+			_collect_card_costs(),
+			_collect_relic_costs(),
+			PackedInt32Array([0, 0, 0]),
+			PackedInt32Array([0, 0, 0])
+		)
 
+
+func _build_shop_from_pending(data: Dictionary) -> void:
+	var cards: Array[Card] = GameContent.load_cards_by_ids(data.get("card_ids", PackedStringArray()))
+	var relics: Array[Relic] = []
+	for rid: String in data.get("relic_ids", PackedStringArray()):
+		var r := GameContent.load_relic_template(rid)
+		if r != null:
+			relics.append(r)
+	_build_shop_slots(
+		cards,
+		relics,
+		data.get("card_costs", PackedInt32Array()),
+		data.get("relic_costs", PackedInt32Array()),
+		false
+	)
+	var card_sold: PackedInt32Array = data.get("card_sold", PackedInt32Array())
+	var relic_sold: PackedInt32Array = data.get("relic_sold", PackedInt32Array())
+	var card_i := 0
+	var relic_i := 0
+	for col: Node in shop_columns.get_children():
+		for node: Node in col.get_children():
+			if node is ShopCard:
+				if card_i < card_sold.size() and int(card_sold[card_i]) == 1:
+					(node as ShopCard).mark_as_sold()
+				card_i += 1
+			elif node is ShopRelic:
+				if relic_i < relic_sold.size() and int(relic_sold[relic_i]) == 1:
+					(node as ShopRelic).mark_as_sold()
+				relic_i += 1
+
+
+func _build_shop_slots(
+	shop_card_array: Array[Card],
+	shop_relics_array: Array[Relic],
+	card_costs: PackedInt32Array,
+	relic_costs: PackedInt32Array,
+	apply_price_modifiers: bool
+) -> void:
 	for i in range(3):
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -59,19 +112,25 @@ func populate_shop() -> void:
 
 		if i < shop_card_array.size():
 			var new_shop_card := SHOP_CARD.instantiate() as ShopCard
+			if i < card_costs.size():
+				new_shop_card.configure_cost(int(card_costs[i]))
 			col.add_child(new_shop_card)
 			new_shop_card.card = shop_card_array[i]
 			new_shop_card.call_deferred("set_modifier_context", modifier_handler)
-			new_shop_card.gold_cost = _get_updated_shop_cost(new_shop_card.gold_cost)
+			if apply_price_modifiers:
+				new_shop_card.gold_cost = _get_updated_shop_cost(new_shop_card.gold_cost)
 			new_shop_card.update(run_stats)
 		else:
 			col.add_child(_make_spacer(ShopCard.SLOT_SIZE))
 
 		if i < shop_relics_array.size():
 			var new_shop_relic := SHOP_RELIC.instantiate() as ShopRelic
+			if i < relic_costs.size():
+				new_shop_relic.configure_cost(int(relic_costs[i]))
 			col.add_child(new_shop_relic)
 			new_shop_relic.relic = shop_relics_array[i]
-			new_shop_relic.gold_cost = _get_updated_shop_cost(new_shop_relic.gold_cost)
+			if apply_price_modifiers:
+				new_shop_relic.gold_cost = _get_updated_shop_cost(new_shop_relic.gold_cost)
 			new_shop_relic.update(run_stats)
 		else:
 			col.add_child(_make_spacer(ShopRelic.SLOT_SIZE))
@@ -107,6 +166,73 @@ func _pick_shop_relics() -> Array[Relic]:
 	)
 	RNG.array_shuffle(available_relics)
 	return available_relics.slice(0, 3)
+
+
+func _card_ids_from(cards: Array[Card]) -> PackedStringArray:
+	var out := PackedStringArray()
+	for c: Card in cards:
+		out.append(c.id)
+	return out
+
+
+func _relic_ids_from(relics: Array[Relic]) -> PackedStringArray:
+	var out := PackedStringArray()
+	for r: Relic in relics:
+		out.append(r.id)
+	return out
+
+
+func _collect_card_costs() -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for col: Node in shop_columns.get_children():
+		for node: Node in col.get_children():
+			if node is ShopCard:
+				out.append((node as ShopCard).gold_cost)
+	return out
+
+
+func _collect_relic_costs() -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for col: Node in shop_columns.get_children():
+		for node: Node in col.get_children():
+			if node is ShopRelic:
+				out.append((node as ShopRelic).gold_cost)
+	return out
+
+
+func _collect_sold_flags() -> Dictionary:
+	var card_sold := PackedInt32Array()
+	var relic_sold := PackedInt32Array()
+	for col: Node in shop_columns.get_children():
+		var card_slot := 0
+		var relic_slot := 0
+		for node: Node in col.get_children():
+			if node is ShopCard:
+				card_sold.append(1 if (node as ShopCard).is_sold() else 0)
+				card_slot += 1
+			elif node is ShopRelic:
+				relic_sold.append(1 if (node as ShopRelic).is_sold() else 0)
+				relic_slot += 1
+	while card_sold.size() < 3:
+		card_sold.append(0)
+	while relic_sold.size() < 3:
+		relic_sold.append(0)
+	return {"card_sold": card_sold, "relic_sold": relic_sold}
+
+
+func _sync_shop_pending() -> void:
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null or run.save_data == null:
+		return
+	var sold := _collect_sold_flags()
+	run.persist_shop_pending(
+		run.save_data.pending_card_template_ids,
+		run.save_data.pending_relic_ids,
+		_collect_card_costs(),
+		_collect_relic_costs(),
+		sold["card_sold"],
+		sold["relic_sold"]
+	)
 
 
 func _blink_timer_setup() -> void:
@@ -146,6 +272,7 @@ func _on_back_button_pressed() -> void:
 
 func _on_shop_card_bought(_card: Card, _gold_cost: int, _from: Control) -> void:
 	_shop_card_purchase_flow(_card, _gold_cost, _from)
+	_sync_shop_pending()
 
 
 func _shop_card_purchase_flow(_card: Card, _gold_cost: int, _from: Control) -> void:
@@ -161,6 +288,7 @@ func _shop_card_purchase_flow(_card: Card, _gold_cost: int, _from: Control) -> v
 func _on_shop_relic_bought(relic: Relic, gold_cost: int) -> void:
 	relic_handler.add_relic(relic)
 	run_stats.gold -= gold_cost
+	_sync_shop_pending()
 
 	if relic is CouponsRelic:
 		var coupons_relic := relic as CouponsRelic

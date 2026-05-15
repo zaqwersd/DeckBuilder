@@ -28,6 +28,12 @@ var character: CharacterStats
 ## 本场战斗中，弃牌堆尚未洗回抽牌堆时：每次抽牌优先抽到「固有」牌；洗牌后与普通牌无异。
 var _intrinsic_draw_priority: bool = true
 
+## 回合末弃牌流程中：心流不立刻结算，在弃牌末尾统一抽牌；能量记到下一回合 `start_turn`。
+var _defer_flow_for_eot_discard: bool = false
+var _eot_flow_accum_draws: int = 0
+var _eot_flow_accum_mana: int = 0
+var _carry_mana_to_next_turn_start: int = 0
+
 
 func _ready() -> void:
 	Events.card_played.connect(_on_card_played)
@@ -39,6 +45,8 @@ func start_battle_prep(char_stats: CharacterStats) -> void:
 	character = char_stats
 	_intrinsic_draw_priority = true
 	var raw_pile := character.deck.custom_duplicate()
+	for c: Card in raw_pile.cards:
+		c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 	var intr: Array[Card] = []
 	var rest: Array[Card] = []
 	for c: Card in raw_pile.cards:
@@ -74,6 +82,9 @@ func start_turn() -> void:
 		return
 	character.block = 0
 	character.reset_mana()
+	if _carry_mana_to_next_turn_start != 0:
+		character.mana += _carry_mana_to_next_turn_start
+		_carry_mana_to_next_turn_start = 0
 	relics.activate_relics_by_type(Relic.Type.START_OF_TURN)
 
 
@@ -103,8 +114,7 @@ func _sync_discard_entire_hand() -> void:
 			continue
 		var c: Card = cui.card
 		if c.ethereal:
-			if character.exhaust:
-				character.exhaust.add_card(c)
+			character.add_card_to_exhaust(c)
 			hand.discard_card(cui)
 		else:
 			character.discard.add_card(c)
@@ -132,7 +142,20 @@ func _pop_draw_card() -> Card:
 	return character.draw_pile.draw_card()
 
 
-func draw_cards(amount: int, is_start_of_turn_draw: bool = false) -> void:
+func is_deferring_flow_for_end_turn_discard() -> bool:
+	return _defer_flow_for_eot_discard
+
+
+func accumulate_end_turn_flow_from_exhaust(draws: int, mana: int) -> void:
+	_eot_flow_accum_draws += draws
+	_eot_flow_accum_mana += mana
+
+
+func _finish_discard_cards_defer() -> void:
+	_defer_flow_for_eot_discard = false
+
+
+func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_enable: bool = false) -> void:
 	if Events.is_combat_ended():
 		return
 	var space := HAND_CARDS_MAX - _count_cards_in_hand()
@@ -170,7 +193,7 @@ func draw_cards(amount: int, is_start_of_turn_draw: bool = false) -> void:
 
 	if not is_instance_valid(hand):
 		return
-	if not Events.is_combat_ended():
+	if not suppress_hand_enable and not Events.is_combat_ended():
 		hand.enable_hand()
 	if is_start_of_turn_draw and not Events.is_combat_ended():
 		Events.player_hand_drawn.emit()
@@ -182,14 +205,61 @@ func discard_cards() -> void:
 		Events.player_hand_discarded.emit()
 		return
 
-	if hand.get_child_count() == 0:
+	if not is_instance_valid(hand) or hand.get_child_count() == 0:
 		Events.player_hand_discarded.emit()
 		return
 
-	# 先结算虚无（ethereal）：全部移出手牌且不进入弃牌堆，再处理其余牌的弃牌动画与入堆
+	_defer_flow_for_eot_discard = true
+	_eot_flow_accum_draws = 0
+	_eot_flow_accum_mana = 0
+
+	# 阶段 A：先弃光非虚无（入弃牌堆），再阶段 B 处理虚无（入消耗，触发心流累计）
+	var pending_non: Array[Dictionary] = []
+	for slot in hand.get_children():
+		var card_ui_a := hand.get_card_ui_in_slot(slot)
+		if card_ui_a and card_ui_a.card and not card_ui_a.card.ethereal:
+			pending_non.append({
+				"ui": card_ui_a,
+				"card": card_ui_a.card,
+				"from": card_ui_a.get_global_rect().get_center(),
+			})
+
+	if not pending_non.is_empty():
+		if battle_card_fx and is_instance_valid(battle_card_fx) and is_instance_valid(player) and player.is_inside_tree():
+			for i in range(pending_non.size()):
+				var d0: Dictionary = pending_non[i]
+				battle_card_fx.animate_discard_hand_end_turn(
+					d0["ui"] as CardUI,
+					HAND_SEQUENCE_STAGGER * float(i),
+					true,
+					d0["from"] as Vector2,
+				)
+			var max_discard_t := HAND_SEQUENCE_STAGGER * float(maxi(0, pending_non.size() - 1)) + BATTLE_DISCARD_ANIM_DURATION + 0.05
+			if not Events.is_combat_ended():
+				await get_tree().create_timer(max_discard_t).timeout
+
+		if Events.is_combat_ended():
+			_sync_discard_entire_hand()
+			_eot_flow_accum_draws = 0
+			_eot_flow_accum_mana = 0
+			_finish_discard_cards_defer()
+			Events.player_hand_discarded.emit()
+			return
+
+		for d1 in pending_non:
+			var cui1 := d1["ui"] as CardUI
+			var c1 := d1["card"] as Card
+			if not is_instance_valid(cui1) or not c1:
+				continue
+			character.discard.add_card(c1)
+			hand.discard_card(cui1)
+
 	while true:
 		if Events.is_combat_ended():
 			_sync_discard_entire_hand()
+			_eot_flow_accum_draws = 0
+			_eot_flow_accum_mana = 0
+			_finish_discard_cards_defer()
 			Events.player_hand_discarded.emit()
 			return
 		var found_ethereal := false
@@ -200,9 +270,13 @@ func discard_cards() -> void:
 				if battle_card_fx and is_instance_valid(battle_card_fx) and battle_card_fx.has_method("animate_ethereal_vanish"):
 					await battle_card_fx.animate_ethereal_vanish(hand, card_ui)
 				else:
+					character.add_card_to_exhaust(card_ui.card)
 					hand.discard_card(card_ui)
 				if Events.is_combat_ended():
 					_sync_discard_entire_hand()
+					_eot_flow_accum_draws = 0
+					_eot_flow_accum_mana = 0
+					_finish_discard_cards_defer()
 					Events.player_hand_discarded.emit()
 					return
 				await get_tree().create_timer(HAND_ETH_DISCARD_INTERVAL).timeout
@@ -210,59 +284,34 @@ func discard_cards() -> void:
 		if not found_ethereal:
 			break
 
-	var pending: Array[Dictionary] = []
+	var has_any_card := false
 	for slot in hand.get_children():
-		var card_ui := hand.get_card_ui_in_slot(slot)
-		if card_ui and card_ui.card:
-			pending.append({
-				"ui": card_ui,
-				"card": card_ui.card,
-				"from": card_ui.get_global_rect().get_center(),
-			})
-
-	if pending.is_empty():
+		if hand.get_card_ui_in_slot(slot):
+			has_any_card = true
+	if not has_any_card:
 		for slot in hand.get_children():
 			if is_instance_valid(slot):
 				slot.queue_free()
-		Events.player_hand_discarded.emit()
-		return
 
-	if Events.is_combat_ended():
-		for d in pending:
-			var cui := d["ui"] as CardUI
-			var c := d["card"] as Card
-			if not is_instance_valid(cui) or not c:
-				continue
-			if c.ethereal:
-				if character.exhaust:
-					character.exhaust.add_card(c)
-				hand.discard_card(cui)
-			else:
-				character.discard.add_card(c)
-				hand.discard_card(cui)
-		Events.player_hand_discarded.emit()
-		return
+	var pull := _eot_flow_accum_draws
+	var mana_accum := _eot_flow_accum_mana
+	_eot_flow_accum_draws = 0
+	_eot_flow_accum_mana = 0
+	_carry_mana_to_next_turn_start += mana_accum
+	_finish_discard_cards_defer()
 
-	if battle_card_fx and is_instance_valid(battle_card_fx) and is_instance_valid(player) and player.is_inside_tree():
-		for i in range(pending.size()):
-			var d: Dictionary = pending[i]
-			battle_card_fx.animate_discard_hand_end_turn(
-				d["ui"] as CardUI,
-				HAND_SEQUENCE_STAGGER * float(i),
-				true,
-				d["from"] as Vector2,
-			)
-		var max_discard_t := HAND_SEQUENCE_STAGGER * float(maxi(0, pending.size() - 1)) + BATTLE_DISCARD_ANIM_DURATION + 0.05
-		if not Events.is_combat_ended():
-			await get_tree().create_timer(max_discard_t).timeout
+	if pull > 0 and not Events.is_combat_ended():
+		await draw_cards(pull, false, true)
 
-	for d in pending:
-		var cui2 := d["ui"] as CardUI
-		var c2 := d["card"] as Card
-		if not is_instance_valid(cui2) or not c2:
-			continue
-		character.discard.add_card(c2)
-		hand.discard_card(cui2)
+	if not Events.is_combat_ended():
+		has_any_card = false
+		for slot in hand.get_children():
+			if hand.get_card_ui_in_slot(slot):
+				has_any_card = true
+		if not has_any_card:
+			for slot in hand.get_children():
+				if is_instance_valid(slot):
+					slot.queue_free()
 
 	Events.player_hand_discarded.emit()
 
@@ -281,8 +330,8 @@ func reshuffle_deck_from_discard() -> void:
 
 func _on_card_played(card: Card) -> void:
 	if card.exhausts:
-		if character.exhaust:
-			character.exhaust.add_card(card)
+		if not card.defers_exhaust_to_end_of_play():
+			character.add_card_to_exhaust(card)
 		return
 	if card.type == Card.Type.POWER:
 		return

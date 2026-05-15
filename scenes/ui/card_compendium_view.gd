@@ -115,8 +115,7 @@ func _refresh_compendium_grid() -> void:
 		cards.add_child(new_card)
 		# 图鉴使用默认的 LISTING_UPGRADE 样式，由 ListingCardVisuals 自动处理
 		new_card.card = card
-		var menu_ref := new_card
-		new_card.card_pick_pressed.connect(func(_picked: Card) -> void: _on_deck_card_pick_for_preview(menu_ref))
+		_connect_listing_card_pick(new_card)
 		_apply_pile_card_transform(new_card)
 	if not is_equal_approx(display_scale, 1.0):
 		cards.add_theme_constant_override("v_separation", int(round(36.0 * display_scale)))
@@ -149,17 +148,6 @@ static func _list_card_tres_paths(folder: String) -> Array[String]:
 	return out
 
 
-static func _sort_rarity_then_id(a: Card, b: Card) -> bool:
-	# 先按稀有度排序（STARTER=0 排在最前面）
-	if a.rarity != b.rarity:
-		return a.rarity < b.rarity
-	# 同一稀有度：按类型排序（攻击-技能-能力-状态）
-	if a.type != b.type:
-		return a.type < b.type
-	# 同一类型：按ID字母顺序
-	return String(a.id) < String(b.id)
-
-
 func _cards_for_category(cat: Category) -> Array[Card]:
 	var folder := ""
 	match cat:
@@ -180,7 +168,7 @@ func _cards_for_category(cat: Category) -> Array[Card]:
 	var out: Array[Card] = []
 	for k: Variant in by_id.keys():
 		out.append(by_id[k] as Card)
-	out.sort_custom(_sort_rarity_then_id)
+	out.sort_custom(CardGridListing.sort_rarity_then_id)
 	return out
 
 
@@ -199,10 +187,14 @@ func _run_deck_upgrade_preview(card: Card) -> void:
 		layer.layer = 85
 		host.add_child(layer)
 	set_deck_upgrade_preview_blocks_pile_input(true)
+	## 打开预览前隐藏 tooltip
+	Events.card_keyword_tooltip_hide.emit()
 	var flow := CARD_UPGRADE_FLOW.instantiate() as CardUpgradeFlow
 	layer.add_child(flow)
 	flow.begin_preview(card)
 	await flow.finished
 	set_deck_upgrade_preview_blocks_pile_input(false)
+	## 重置 tooltip 状态
+	Events.card_keyword_tooltip_render_pending = false
 	if is_instance_valid(flow):
 		flow.queue_free()

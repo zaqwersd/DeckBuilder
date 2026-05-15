@@ -26,17 +26,33 @@ func _ready() -> void:
 
 
 func _enter_tree() -> void:
+	super._enter_tree()
 	Events.begin_pointer_exclusive_ui(self)
 
 
 func _exit_tree() -> void:
 	Events.end_pointer_exclusive_ui(self)
+	super._exit_tree()
 
 
 func _clear_rewards() -> void:
 	reset_listing_keyword_tooltip_state()
 	for card: Node in cards.get_children():
 		card.queue_free()
+
+
+func _on_reward_card_pick_pressed(menu: Variant, _card: Variant) -> void:
+	if not is_inside_tree():
+		return
+	## bind 把 menu 插在第1位，信号原参数 card 在第2位
+	var m := menu as CardMenuUI
+	var c := _card as Card
+	if m == null:
+		m = _card as CardMenuUI
+		c = menu as Card
+	if m == null:
+		return
+	_on_reward_tile_pressed(m, c)
 
 
 func _on_reward_tile_pressed(menu: CardMenuUI, _card: Card) -> void:
@@ -59,4 +75,4 @@ func set_rewards(new_cards: Array[Card]) -> void:
 		var new_card := create_listing_card_menu()
 		cards.add_child(new_card)
 		new_card.card = card
-		new_card.card_pick_pressed.connect(func(c: Card) -> void: _on_reward_tile_pressed(new_card, c))
+		new_card.card_pick_pressed.connect(_on_reward_card_pick_pressed.bind(new_card))

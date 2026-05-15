@@ -14,7 +14,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 func get_upgrade_pick_description_bbcode() -> String:
 	var b := get_upgrade_value_at("block")
 	var d := get_upgrade_value_at("damage")
-	return "[center]获得 %s 点格挡。[br]造成 %s 点伤害。[/center]" % [
+	return "[center]获得%s点格挡。[br]造成%s点伤害。[/center]" % [
 		bbcode_upgrade_pick_digit("block", b),
 		bbcode_upgrade_pick_digit("damage", d),
 	]

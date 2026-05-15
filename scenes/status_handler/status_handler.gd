@@ -34,7 +34,13 @@ func apply_statuses_by_type(type: Status.Type) -> void:
 		tween.tween_callback(status.apply_status.bind(status_owner))
 		tween.tween_interval(STATUS_APPLY_INTERVAL)
 	
-	tween.finished.connect(func(): statuses_applied.emit(type))
+	tween.finished.connect(_on_status_apply_tween_finished.bind(type), CONNECT_ONE_SHOT)
+
+
+func _on_status_apply_tween_finished(type: Status.Type) -> void:
+	if not is_inside_tree():
+		return
+	statuses_applied.emit(type)
 
 
 func add_status(status: Status) -> void:
@@ -49,6 +55,17 @@ func add_status(status: Status) -> void:
 		new_status_ui.status = status
 		new_status_ui.status.status_applied.connect(_on_status_applied)
 		new_status_ui.status.initialize_status(status_owner)
+		_emit_player_hand_cost_context_if_needed()
+		return
+
+	if status.id == "flow_state" and _has_status("flow_state"):
+		var existing := _get_status("flow_state") as FlowStateStatus
+		var incoming := status as FlowStateStatus
+		if existing and incoming:
+			## 多张心流牌：抽牌/能量轨叠加，而非用后一张覆盖前一张。
+			existing.draw_on_exhaust += incoming.draw_on_exhaust
+			existing.mana_on_exhaust += incoming.mana_on_exhaust
+			existing.status_changed.emit()
 		_emit_player_hand_cost_context_if_needed()
 		return
 
@@ -113,10 +130,15 @@ func _on_status_ui_mouse_entered(ui: StatusUI) -> void:
 
 
 func _on_status_ui_mouse_exited() -> void:
-	# 立即检查鼠标是否仍在其他状态图标上，不要延迟
+	# 延迟一帧再判：相邻图标间移动时 exit 可能早于 enter
+	call_deferred("_deferred_status_ui_mouse_hide_check")
+
+
+func _deferred_status_ui_mouse_hide_check() -> void:
+	if not is_inside_tree():
+		return
 	var mp := get_global_mouse_position()
 	for c in get_children():
 		if c is StatusUI and (c as StatusUI).get_global_rect().has_point(mp):
 			return
-	# 如果鼠标不在任何状态图标上，立即隐藏 tooltip
 	Events.status_tooltip_hover_hide.emit()

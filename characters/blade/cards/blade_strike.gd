@@ -13,7 +13,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 
 func get_upgrade_pick_description_bbcode() -> String:
 	var v := get_upgrade_value_at("damage")
-	return "[center]造成 %s 点伤害。[/center]" % bbcode_upgrade_pick_digit("damage", v)
+	return "[center]造成%s点伤害。[/center]" % bbcode_upgrade_pick_digit("damage", v)
 
 
 func _intrinsic_damage() -> int:

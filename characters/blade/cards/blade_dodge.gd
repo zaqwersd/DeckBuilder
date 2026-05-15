@@ -18,7 +18,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 func get_upgrade_pick_description_bbcode() -> String:
 	var b := get_upgrade_value_at("block")
 	var dr := get_upgrade_value_at("draw")
-	return "[center]获得 %s 点格挡。[br]抽 %s 张牌。[/center]" % [
+	return "[center]获得%s点格挡。[br]抽%s张牌。[/center]" % [
 		bbcode_upgrade_pick_digit("block", b),
 		bbcode_upgrade_pick_digit("draw", dr),
 	]

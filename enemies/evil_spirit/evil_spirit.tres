@@ -9,6 +9,6 @@ script = ExtResource("1_dyv27")
 ai = ExtResource("1_3lheq")
 health_bar_width = 320
 status_bar_offset = Vector2(0, 90)
-intent_ui_offset = Vector2(0, 100)
+intent_ui_offset = Vector2(0, 80)
 max_health = 258
 art = ExtResource("2_t82oi")

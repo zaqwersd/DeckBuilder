@@ -78,8 +78,15 @@ func setup() -> void:
 	option_two_pick.disabled = not _can_roll_attack_and_skill()
 	if option_strike_block.disabled and is_instance_valid(_iron_preview_menu):
 		_iron_preview_menu.hide()
-	option_strike_block.pressed.connect(_on_option_strike_block)
-	option_two_pick.pressed.connect(_on_option_two_pick)
+	if not option_strike_block.pressed.is_connected(_on_option_strike_block):
+		option_strike_block.pressed.connect(_on_option_strike_block)
+	if not option_two_pick.pressed.is_connected(_on_option_two_pick):
+		option_two_pick.pressed.connect(_on_option_two_pick)
+	var run := get_tree().get_first_node_in_group("run") as Run
+	var scene_path := scene_file_path
+	if run != null and run.matches_pending_event(scene_path, "option_two"):
+		_restore_option_two_rewards(run.get_pending_card_templates())
+		return
 
 
 func _deck_has_strike_and_block() -> bool:
@@ -188,16 +195,34 @@ func _on_option_two_pick() -> void:
 	var pair := _pick_attack_and_skill_templates()
 	if pair.is_empty():
 		return
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		var ids := PackedStringArray([pair[0].id, pair[1].id])
+		run.persist_event_card_reward_pending(scene_file_path, "option_two", ids)
+	_show_option_two_rewards(pair)
+
+
+func _restore_option_two_rewards(pair: Array[Card]) -> void:
+	if pair.is_empty():
+		return
+	_show_option_two_rewards(pair)
+
+
+func _show_option_two_rewards(pair: Array[Card]) -> void:
 	option_two_pick.disabled = true
 	option_strike_block.disabled = true
 	var rewards := CARD_REWARDS.instantiate() as CardRewards
 	add_child(rewards)
 	rewards.rewards = pair
-	rewards.card_reward_selected.connect(
-		func(menu: Variant, from_global: Vector2) -> void:
-			_on_pair_reward_selected(menu, from_global)
-			call_deferred("_finish_event_and_leave")
-	)
+	rewards.card_reward_selected.connect(_on_option_two_reward_picked, CONNECT_ONE_SHOT)
+
+
+func _on_option_two_reward_picked(menu: Variant, from_global: Vector2) -> void:
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.clear_room_pending_and_save()
+	_on_pair_reward_selected(menu, from_global)
+	call_deferred("_finish_event_and_leave")
 
 
 func _on_pair_reward_selected(picked_menu: Variant, from_global: Vector2) -> void:

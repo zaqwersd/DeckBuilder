@@ -283,10 +283,18 @@ func animate_discard_hand_end_turn(
 		ghost.queue_free()
 
 
-func animate_insert_into_draw_pile(card: Card, _from_global: Vector2, char_stats: CharacterStats) -> void:
+func animate_insert_into_draw_pile(
+	card: Card,
+	_from_global: Vector2,
+	char_stats: CharacterStats,
+	insert_at: int = -1
+) -> void:
 	if not char_stats:
 		return
-	char_stats.draw_pile.add_card(card)
+	if insert_at >= 0:
+		char_stats.draw_pile.insert_card_at(insert_at, card)
+	else:
+		char_stats.draw_pile.add_card(card)
 	if Events.is_combat_ended():
 		return
 	if not draw_pile_button:
@@ -630,8 +638,8 @@ func _ethereal_add_exhaust_if_possible(c: Card) -> void:
 	if c == null:
 		return
 	var pl := get_tree().get_first_node_in_group("player") as Player
-	if pl and pl.stats and pl.stats.exhaust:
-		pl.stats.exhaust.add_card(c)
+	if pl and pl.stats:
+		pl.stats.add_card_to_exhaust(c)
 
 
 func _notify_haunted_if_ghost(card: Card) -> void:
@@ -674,6 +682,10 @@ func _prepare_ghost_for_motion(ghost: Control) -> void:
 		sz = Vector2(268.0, 348.0)
 	ghost.pivot_offset = sz * 0.5
 	_place_visual_center_at(ghost, preserved_center)
+	if ghost is CardMenuUI:
+		var cmu := ghost as CardMenuUI
+		if cmu.visuals:
+			cmu.visuals.apply_minimum_fonts_once_then_freeze_for_phantom()
 
 
 func _bezier_control(from: Vector2, to: Vector2) -> Vector2:
@@ -731,6 +743,7 @@ func _make_ghost(card: Card) -> CardMenuUI:
 	if mh != null:
 		ghost.set_modifier_preview(mh, null)
 	ghost.visible = false
+	ghost.custom_minimum_size = Vector2(268.0, 348.0)
 	return ghost
 
 

@@ -8,26 +8,20 @@ signal save_and_quit
 
 
 func _ready() -> void:
-	back_to_game_button.pressed.connect(_unpause)
+	back_to_game_button.pressed.connect(close)
 	save_and_quit_button.pressed.connect(_on_save_and_quit_button_pressed)
 
 
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause"):
-		if visible:
-			_unpause()
-		else:
-			_pause()
-			
-		get_viewport().set_input_as_handled()
-
-
-func _pause() -> void:
+func open() -> void:
+	if visible:
+		return
 	show()
 	get_tree().paused = true
 
 
-func _unpause() -> void:
+func close() -> void:
+	if not visible:
+		return
 	hide()
 	get_tree().paused = false
 

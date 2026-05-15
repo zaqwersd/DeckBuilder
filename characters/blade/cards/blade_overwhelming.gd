@@ -49,14 +49,14 @@ func increment_upgrade_track(track_id: String) -> void:
 	super.increment_upgrade_track(track_id)
 	if track_id == "cost":
 		cost = _intrinsic_cost()
-	# 当 intrinsic_line 升级满后，卡牌变成固有的
-	if track_id == "intrinsic_line" and is_upgrade_track_maxed("intrinsic_line"):
-		intrinsic = true
 
 
-func should_show_intrinsic_keyword_in_combat_description() -> bool:
-	# 只有当 intrinsic_line 升级满后才显示固有
-	return is_upgrade_track_maxed("intrinsic_line")
+func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
+	## 仅当 intrinsic_line 升满轨后才为固有；与营火是否点过该轨一致，避免脏 `intrinsic` 与轨脱节。
+	var ch := get_upgrade_chain("intrinsic_line")
+	if ch.is_empty():
+		return
+	intrinsic = is_upgrade_track_maxed("intrinsic_line")
 
 
 func get_visual_description_bbcode() -> String:

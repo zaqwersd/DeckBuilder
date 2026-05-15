@@ -1,0 +1,16 @@
+[gd_resource type="Resource" format=3 uid="uid://wgxrnoc1mcdu"]
+
+[ext_resource type="Texture2D" uid="uid://ddf31pw0ahc8h" path="res://art/opening_stance.png" id="1_kt0tw"]
+[ext_resource type="Script" uid="uid://c1yrhexlq2fho" path="res://characters/blade/cards/blade_opening_stance.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_snd"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_opening_stance"
+type = 1
+rarity = 2
+cost = 3
+card_name = "起手式"
+icon = ExtResource("1_kt0tw")
+tooltip_text = "[center]获得%s点能量。[/center]"
+sound = ExtResource("3_snd")

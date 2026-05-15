@@ -37,6 +37,8 @@ func enter() -> void:
 
 
 func on_gui_input(event: InputEvent) -> void:
+	if card_ui.has_meta(CardUI.HAND_PICK_DELEGATE_META):
+		return
 	if not _hand_drag_start_enabled():
 		return
 

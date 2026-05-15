@@ -1,6 +1,9 @@
 class_name CardUpgradeFlow
 extends CardGridListing
 
+## 战斗内模态升级层：高于 DeckPickerOverlay(6)
+const BATTLE_MODAL_CANVAS_LAYER := 7
+
 ## 本次流程结束；参数为 true 表示已在营火中确认升级一张牌（预览模式恒为 false）。
 signal finished(did_upgrade: bool)
 
@@ -30,6 +33,8 @@ var _menu_left: CardMenuUI
 var _menu_right: CardMenuUI
 ## 与 call_deferred 的升级选词条 UI 配套：阶段切换后丢弃过期回调。
 var _pick_ui_stamp: int = 0
+## 防止重复 push pointer_exclusive
+var _pointer_exclusive_pushed := false
 
 
 func _ready() -> void:
@@ -73,7 +78,9 @@ func begin(deck: CardPile, card_index: int) -> void:
 		await ready
 	_apply_mode_ui()
 	_show_phase1()
-	Events.begin_pointer_exclusive_ui(self)
+	if not _pointer_exclusive_pushed:
+		Events.begin_pointer_exclusive_ui(self)
+		_pointer_exclusive_pushed = true
 
 
 ## 牌库观看：仅预览升级链，不写回卡组；取消/返回 为「返回」，无确定键；右侧预览可继续点词条看多层强化。
@@ -90,7 +97,9 @@ func begin_preview(for_card: Card) -> void:
 		await ready
 	_apply_mode_ui()
 	_show_phase1()
-	Events.begin_pointer_exclusive_ui(self)
+	if not _pointer_exclusive_pushed:
+		Events.begin_pointer_exclusive_ui(self)
+		_pointer_exclusive_pushed = true
 
 
 func _apply_mode_ui() -> void:
@@ -201,7 +210,9 @@ func _configure_cost_upgrade_pick_for_menu(menu: CardMenuUI, for_card: Card) -> 
 	if ch.is_empty() or for_card.is_upgrade_track_maxed("cost"):
 		menu.visuals.configure_cost_upgrade_for_flow(Callable())
 		return
-	menu.visuals.configure_cost_upgrade_for_flow(func(): _on_upgrade_pick_meta_clicked("ugp:cost"))
+	menu.visuals.configure_cost_upgrade_for_flow(
+		Callable(self, "_on_upgrade_pick_meta_clicked").bind("ugp:cost")
+	)
 
 
 func _configure_cost_upgrade_pick_for_menu_right(preview_card: Card) -> void:
@@ -211,7 +222,9 @@ func _configure_cost_upgrade_pick_for_menu_right(preview_card: Card) -> void:
 	if ch.is_empty() or preview_card.is_upgrade_track_maxed("cost"):
 		_menu_right.visuals.configure_cost_upgrade_for_flow(Callable())
 		return
-	_menu_right.visuals.configure_cost_upgrade_for_flow(func(): _on_right_preview_meta_clicked("ugp:cost"))
+	_menu_right.visuals.configure_cost_upgrade_for_flow(
+		Callable(self, "_on_right_preview_meta_clicked").bind("ugp:cost")
+	)
 
 
 func _disconnect_menu_upgrade_pick(menu: CardMenuUI) -> void:
@@ -351,4 +364,23 @@ func _on_cancel_all() -> void:
 
 
 func _exit_tree() -> void:
-	Events.end_pointer_exclusive_ui(self)
+	if _pointer_exclusive_pushed:
+		Events.end_pointer_exclusive_ui(self)
+		_pointer_exclusive_pushed = false
+
+
+static func open_on_tree(tree: SceneTree) -> CardUpgradeFlow:
+	var layer := CanvasLayer.new()
+	layer.layer = BATTLE_MODAL_CANVAS_LAYER
+	tree.root.add_child(layer)
+	var scene: PackedScene = preload("res://scenes/ui/card_upgrade_flow.tscn")
+	var inst := scene.instantiate() as CardUpgradeFlow
+	inst.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inst.set_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(inst)
+	inst.tree_exiting.connect(
+		func() -> void:
+			if is_instance_valid(layer):
+				layer.queue_free()
+	, CONNECT_ONE_SHOT)
+	return inst

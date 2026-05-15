@@ -17,6 +17,25 @@ func configure_listing_grid_defaults(grid: GridContainer) -> void:
 	grid.columns = LISTING_GRID_COLUMNS
 
 
+## 与卡牌图鉴一致：稀有度 → 类型（攻/技/能/态）→ id。
+static func sort_rarity_then_id(a: Card, b: Card) -> bool:
+	if a.rarity != b.rarity:
+		return a.rarity < b.rarity
+	if a.type != b.type:
+		return a.type < b.type
+	return String(a.id) < String(b.id)
+
+
+static func sorted_card_entries(cards: Array[Card]) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for i in range(cards.size()):
+		out.append({"card": cards[i], "index": i})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return sort_rarity_then_id(a["card"] as Card, b["card"] as Card)
+	)
+	return out
+
+
 static func make_listing_card_menu() -> CardMenuUI:
 	var menu := CARD_MENU_UI_SCENE.instantiate() as CardMenuUI
 	menu.use_listing_hover_zoom = true

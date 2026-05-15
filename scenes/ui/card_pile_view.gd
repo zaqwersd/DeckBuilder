@@ -85,8 +85,7 @@ func _update_view(randomized: bool) -> void:
 		cards.add_child(new_card)
 		new_card.visuals.number_bbcode_style = number_bbcode_style
 		new_card.card = card
-		var menu_ref := new_card
-		new_card.card_pick_pressed.connect(func(_picked: Card) -> void: _on_deck_card_pick_for_preview(menu_ref))
+		_connect_listing_card_pick(new_card)
 		_apply_pile_card_transform(new_card)
 
 	if is_equal_approx(display_scale, 1.0):
@@ -97,7 +96,25 @@ func _update_view(randomized: bool) -> void:
 	show()
 
 
-func _on_deck_card_pick_for_preview(menu: CardMenuUI) -> void:
+func _connect_listing_card_pick(menu: CardMenuUI) -> void:
+	menu.card_pick_pressed.connect(_on_listing_card_pick_pressed.bind(menu))
+
+
+func _on_listing_card_pick_pressed(menu: Variant, _picked: Variant) -> void:
+	## bind 把 menu 插在第1位，信号原参数 card 在第2位
+	## 所以：第1个参数是 CardMenuUI，第2个参数是 Card
+	var m := menu as CardMenuUI
+	var c := _picked as Card
+	if m == null:
+		## 万一顺序反了，尝试交换
+		m = _picked as CardMenuUI
+		c = menu as Card
+	if m == null:
+		return
+	_on_deck_card_pick_for_preview(m, c)
+
+
+func _on_deck_card_pick_for_preview(menu: CardMenuUI, _picked: Card) -> void:
 	if menu == null or menu.card == null:
 		return
 	_run_deck_upgrade_preview(menu.card)
@@ -115,11 +132,15 @@ func _run_deck_upgrade_preview(card: Card) -> void:
 		run.add_child(layer)
 	## 不 hide 牌堆：保持可见，仅挡住与牌堆的交互（避免与升级层抢输入）。
 	set_deck_upgrade_preview_blocks_pile_input(true)
+	## 打开预览前隐藏 tooltip
+	Events.card_keyword_tooltip_hide.emit()
 	var flow := CARD_UPGRADE_FLOW.instantiate() as CardUpgradeFlow
 	layer.add_child(flow)
 	flow.begin_preview(card)
 	await flow.finished
 	set_deck_upgrade_preview_blocks_pile_input(false)
+	## 重置 tooltip 状态
+	Events.card_keyword_tooltip_render_pending = false
 	if is_instance_valid(flow):
 		flow.queue_free()
 
@@ -133,6 +154,7 @@ func _ensure_deck_upgrade_input_blocker() -> Control:
 	b.mouse_filter = Control.MOUSE_FILTER_STOP
 	b.z_index = 2000
 	b.z_as_relative = false
+	b.visible = false
 	add_child(b)
 	_deck_upgrade_input_blocker = b
 	return _deck_upgrade_input_blocker

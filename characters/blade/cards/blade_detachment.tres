@@ -1,7 +1,7 @@
 [gd_resource type="Resource" format=3 uid="uid://cojg2pjac8k4t"]
 
 [ext_resource type="Texture2D" uid="uid://vva60ckoolu2" path="res://art/detachment.png" id="1_mpx0i"]
-[ext_resource type="Script" uid="uid://cmsn064ey6cvi" path="res://characters/blade/cards/blade_detachment.gd" id="2_npntm"]
+[ext_resource type="Script" uid="uid://1laofnh8mnpb" path="res://characters/blade/cards/blade_detachment.gd" id="2_npntm"]
 [ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_oo1yl"]
 
 [resource]
@@ -12,5 +12,6 @@ rarity = 1
 cost = 1
 card_name = "取舍"
 icon = ExtResource("1_mpx0i")
-tooltip_text = "[center]获得 %s 点格挡。\n[color=%s]随机[/color]消耗 1 张手牌。[/center]"
+tooltip_text = "[center]获得%s点格挡。
+[color=#f36c60]随机[/color]消耗1张手牌。[/center]"
 sound = ExtResource("3_oo1yl")

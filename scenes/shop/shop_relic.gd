@@ -10,10 +10,19 @@ const SLOT_SIZE := Vector2(180, 135)
 @onready var relic_container: CenterContainer = %RelicContainer
 @onready var price: HBoxContainer = %Price
 @onready var price_label: Label = %PriceLabel
-@onready var gold_cost := RNG.instance.randi_range(100, 300)
+var gold_cost: int = -1
 
 var _run_stats: RunStats
 var _sold := false
+
+
+func _ready() -> void:
+	if gold_cost < 0:
+		gold_cost = RNG.instance.randi_range(100, 300)
+
+
+func configure_cost(cost: int) -> void:
+	gold_cost = cost
 
 
 func update(run_stats: RunStats) -> void:

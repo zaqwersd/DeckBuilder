@@ -48,6 +48,8 @@ func apply_to(character: CharacterStats, relic_handler: RelicHandler, fallback_r
 		character.deck.cards = []
 		for card in deck_cards:
 			character.deck.cards.append(card.duplicate(true) as Card)
+		for c: Card in character.deck.cards:
+			c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 	if relic_handler != null:
 		relic_handler.clear_relics()
 		var relics_to_use: Array[Relic] = []

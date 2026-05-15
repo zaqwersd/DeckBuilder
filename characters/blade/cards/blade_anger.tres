@@ -12,5 +12,5 @@ rarity = 2
 cost = 1
 card_name = "怒火"
 icon = ExtResource("1_anger")
-tooltip_text = "[center]获得 %s 点力量。[/center]"
+tooltip_text = "[center]获得%s点力量。[/center]"
 sound = ExtResource("3_3oscx")

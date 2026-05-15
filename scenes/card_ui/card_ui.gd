@@ -1,6 +1,9 @@
 class_name CardUI
 extends Control
 
+## 手牌自选层：存在时优先消费点击，阻止进入拖拽/打出状态机
+const HAND_PICK_DELEGATE_META := &"hand_pick_delegate"
+
 ## 手牌内鼠标悬停时卡牌上移的像素
 const HAND_HOVER_LIFT_PX := 80.0
 const HAND_HOVER_Z := 10
@@ -32,6 +35,7 @@ var playable := true : set = _set_playable
 var disabled := true
 ## 由 `sync_hand_hover_presentation` 维护
 var _hand_hover_visual_active := false
+var _hover_lift_target_y := 0.0
 
 
 func _ready() -> void:
@@ -52,6 +56,31 @@ func _on_card_visuals_gui_input(event: InputEvent) -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		return
 	_on_gui_input(event)
+
+
+## Area2D 鼠标进入回调（由 CardVisualsBase 调用）
+func _on_card_visuals_mouse_entered() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	card_state_machine.on_mouse_entered()
+
+
+## Area2D 鼠标离开回调（由 CardVisualsBase 调用）
+func _on_card_visuals_mouse_exited() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	card_state_machine.on_mouse_exited()
+
+
+## Area2D 点击回调（由 CardVisualsBase 调用）
+func _on_card_visuals_clicked() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	# 创建一个模拟的鼠标点击事件
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = true
+	_on_gui_input(ev)
 
 
 func _input(event: InputEvent) -> void:
@@ -125,13 +154,24 @@ func _tween_hand_hover_offset(target_y: float, duration: float = 0.1) -> void:
 		.set_trans(Tween.TRANS_QUAD)
 		.set_ease(Tween.EASE_OUT)
 	)
+	_hover_lift_target_y = target_y
 	_hover_lift_tween.tween_property(card_visuals, "position:y", target_y, duration)
-	## 动画完成回调：确保最终值精确到位
-	_hover_lift_tween.finished.connect(
-		func() -> void:
-			if is_instance_valid(card_visuals):
-				card_visuals.position.y = target_y
-	, CONNECT_ONE_SHOT)
+	_hover_lift_tween.finished.connect(_on_hover_lift_tween_finished, CONNECT_ONE_SHOT)
+
+
+func _on_hover_lift_tween_finished() -> void:
+	if not is_instance_valid(card_visuals):
+		return
+	card_visuals.position.y = _hover_lift_target_y
+
+
+func _exit_tree() -> void:
+	if _hover_lift_tween and _hover_lift_tween.is_running():
+		_hover_lift_tween.kill()
+	_hover_lift_tween = null
+	if tween and tween.is_running():
+		tween.kill()
+	tween = null
 
 
 ## 由 Hand 每帧调用：仅当牌在手牌槽且处于 BASE 时，根据鼠标几何决定是否抬起。
@@ -221,33 +261,29 @@ func _apply_hand_visual_mouse_pick_filter() -> void:
 
 
 ## 递归设置 card_visuals 及其子控件的 mouse_filter
-## @param enabled: true 表示主目标（STOP），false 表示非主目标（IGNORE）
-## @param keep_description_active: true 时保持 description_label 为 STOP
-func _set_card_visuals_mouse_filter_recursive(enabled: bool, keep_description_active: bool = false) -> void:
+## 主目标牌：CardVisuals 用 STOP 接 gui_input；非主目标：IGNORE 让点击穿透到下层主目标。
+## 抬起扩展区仍由 Area2D 补发点击。
+func _set_card_visuals_mouse_filter_recursive(enabled: bool, _keep_description_active: bool = false) -> void:
 	if not is_instance_valid(card_visuals):
 		return
 	
-	# 始终将 card_visuals 设为 STOP，以便子控件可以接收事件
-	card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+	card_visuals.mouse_filter = (
+		Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	)
 	
-	# 单独设置各个子控件
+	# 所有子控件设为 IGNORE，让事件穿透到 Area2D
 	if is_instance_valid(card_visuals.description_label):
-		# 描述区需要始终接收事件以便词条链接悬停
-		card_visuals.description_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	
-	# 其他子控件根据是否主目标设置
-	var child_filter := Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
-	
+		card_visuals.description_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if is_instance_valid(card_visuals.get_node_or_null("%MainPanel")):
-		card_visuals.get_node_or_null("%MainPanel").mouse_filter = child_filter
+		card_visuals.get_node_or_null("%MainPanel").mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if is_instance_valid(card_visuals.get_node_or_null("%FramePanel")):
-		card_visuals.get_node_or_null("%FramePanel").mouse_filter = child_filter
+		card_visuals.get_node_or_null("%FramePanel").mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if is_instance_valid(card_visuals.get_node_or_null("%CostPanel")):
-		card_visuals.get_node_or_null("%CostPanel").mouse_filter = child_filter
+		card_visuals.get_node_or_null("%CostPanel").mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if is_instance_valid(card_visuals.get_node_or_null("%TitlePanel")):
-		card_visuals.get_node_or_null("%TitlePanel").mouse_filter = child_filter
+		card_visuals.get_node_or_null("%TitlePanel").mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if is_instance_valid(card_visuals.get_node_or_null("%TypePanel")):
-		card_visuals.get_node_or_null("%TypePanel").mouse_filter = child_filter
+		card_visuals.get_node_or_null("%TypePanel").mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 ## 回手等时机补一帧同步（Hand 也会在 `_process` 里持续刷新）。
@@ -282,6 +318,7 @@ func _play_resolved() -> void:
 			hp.remove_empty_slot_after_play(played_from_hand_slot)
 		hand_slot = null
 	var start_center := get_global_rect().get_center()
+	played_card.set_play_visual_start_center(start_center)
 
 	visible = false
 	await played_card.play(played_targets, stats, mods, get_effective_mana_cost())
@@ -302,7 +339,13 @@ func _play_resolved() -> void:
 
 	# 不用 class_name BattleCardFx，避免与 battle_card_fx.gd 的解析顺序/循环依赖导致 CardUI 无法加载
 	var fx: Node = get_tree().get_first_node_in_group("battle_card_fx")
-	if fx and fx.is_inside_tree() and fx.has_method("animate_played_card") and not Events.is_combat_ended():
+	if (
+		fx
+		and fx.is_inside_tree()
+		and fx.has_method("animate_played_card")
+		and not Events.is_combat_ended()
+		and not played_card.defers_played_card_animation_to_effects()
+	):
 		# 与 res://scenes/ui/battle_card_fx.gd 中 PlayedKind 顺序一致：DISCARD=0, EXHAUST=1, POWER=2
 		var kind: int = 0
 		if played_card.exhausts:
@@ -344,24 +387,18 @@ func _prune_invalid_targets() -> void:
 
 
 func is_hovered() -> bool:
-	var rect := Rect2(Vector2.ZERO, self.size)
-	return rect.has_point(get_local_mouse_position())
+	return get_hand_hover_hit_global_rect().has_point(get_global_mouse_position())
 
 
 ## 手牌悬停抬起后视觉在控件矩形上方，与 tooltip 一致：用「扩展矩形」判断是否仍算指着这张牌。
-## 使用 CardVisuals 的全局矩形作为命中区（精确匹配卡牌视觉区域，不过度扩展）
+## 命中区与 CardVisuals 内 Area2D/CollisionShape2D 一致（与卡图点击判定同源）。
 func get_hand_hover_hit_global_rect() -> Rect2:
 	if not is_instance_valid(card_visuals):
 		return get_global_rect()
-	
-	## 直接使用 card_visuals 的全局矩形作为命中区
-	## 不再向上过度扩展，只添加少量缓冲（20像素）用于边缘容错
-	var visuals_rect := card_visuals.get_global_rect()
-	var buffer := 20.0
-	return Rect2(
-		visuals_rect.position - Vector2(buffer * 0.5, buffer * 0.5),
-		visuals_rect.size + Vector2(buffer, buffer)
-	)
+	var r := card_visuals.get_pick_collision_global_rect()
+	if r.size.x > 0.001 and r.size.y > 0.001:
+		return r
+	return get_global_rect()
 
 
 func is_hand_hover_hit_overlapping() -> bool:
@@ -414,6 +451,12 @@ func refresh_mana_cost_display() -> void:
 func _on_gui_input(event: InputEvent) -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		return
+	if has_meta(HAND_PICK_DELEGATE_META):
+		var d: Variant = get_meta(HAND_PICK_DELEGATE_META)
+		if d is Callable and (d as Callable).call(event):
+			return
+		## 自选模式：不交给 BaseState（playable=false 时拖拽判定会整段短路）
+		return
 	card_state_machine.on_gui_input(event)
 
 
@@ -438,11 +481,50 @@ func _set_playable(value: bool) -> void:
 	if card and card.cost < 0:
 		card_visuals.icon.modulate = Color(1, 1, 1, 1)
 		return
+	## 手牌自选：仅禁止打出，卡图仍保持不透明
+	if has_meta(HAND_PICK_DELEGATE_META):
+		card_visuals.icon.modulate = Color(1, 1, 1, 1)
+		refresh_mana_cost_display()
+		return
 	if not playable:
 		card_visuals.icon.modulate = Color(1, 1, 1, 0.5)
 	else:
 		card_visuals.icon.modulate = Color(1, 1, 1, 1)
 	refresh_mana_cost_display()
+
+
+## 扩展 CardUI 的 Control 命中矩形，使其覆盖 CardVisuals 内 CollisionShape 区域（避免 gui_input 落在槽外「空白」）。
+## 仅在手牌自选层生效期间调用；回手后由 Hand 统一写 offset，不可在无 meta 时改尺寸，否则会把手牌撑高。
+## 与碰撞盒合并时保留完整纵向范围（自选结束会由 Hand 再次写回槽尺寸）。
+func sync_gui_rect_to_pick_collision() -> void:
+	if not has_meta(HAND_PICK_DELEGATE_META):
+		return
+	if not is_instance_valid(card_visuals):
+		return
+	var gr := card_visuals.get_pick_collision_global_rect()
+	if gr.size.x <= 0.001 or gr.size.y <= 0.001:
+		return
+	var inv := get_global_transform().affine_inverse()
+	var corners: Array[Vector2] = [
+		gr.position,
+		Vector2(gr.end.x, gr.position.y),
+		gr.end,
+		Vector2(gr.position.x, gr.end.y)
+	]
+	var mn := inv * corners[0]
+	var mx := mn
+	for i in range(1, 4):
+		var lp := inv * corners[i]
+		mn = mn.min(lp)
+		mx = mx.max(lp)
+	var pick_local := Rect2(mn, mx - mn)
+	var base := Rect2(offset_left, offset_top, offset_right - offset_left, offset_bottom - offset_top)
+	var merged := base.merge(pick_local)
+	offset_left = merged.position.x
+	offset_top = merged.position.y
+	offset_right = merged.end.x
+	offset_bottom = merged.end.y
+	custom_minimum_size = merged.size
 
 
 func _set_char_stats(value: CharacterStats) -> void:

@@ -6,5 +6,5 @@
 [node name="Tier2EvilSpirit" type="Node2D" unique_id=508004332]
 
 [node name="Enemy" parent="." unique_id=737189419 instance=ExtResource("1_1rrjk")]
-position = Vector2(881.5, 282)
+position = Vector2(881.5, 302)
 stats = ExtResource("2_nawdm")

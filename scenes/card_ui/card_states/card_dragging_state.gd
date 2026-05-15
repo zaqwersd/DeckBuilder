@@ -26,11 +26,17 @@ func enter() -> void:
 	
 	minimum_drag_time_elapsed = false
 	var threshold_timer := get_tree().create_timer(DRAG_MINIMUM_THRESHOLD, false)
-	threshold_timer.timeout.connect(func(): minimum_drag_time_elapsed = true)
+	threshold_timer.timeout.connect(_on_drag_threshold_elapsed, CONNECT_ONE_SHOT)
 
 
 func exit() -> void:
 	Events.card_drag_ended.emit(card_ui)
+
+
+func _on_drag_threshold_elapsed() -> void:
+	if not is_inside_tree() or not is_instance_valid(card_ui):
+		return
+	minimum_drag_time_elapsed = true
 
 
 func on_input(event: InputEvent) -> void:

@@ -11,6 +11,18 @@ const TREASURE_OPEN_SFX := preload("res://art/treasure.ogg")
 var found_relic: Relic
 
 
+func populate_from_run(is_reload: bool) -> void:
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if is_reload and run != null:
+		var restored := run.get_pending_treasure_relic()
+		if restored != null:
+			found_relic = restored
+			return
+	generate_relic()
+	if run != null and found_relic != null:
+		run.persist_treasure_pending(found_relic.id)
+
+
 func generate_relic() -> void:
 	var available_relics := treasure_relic_pool.filter(
 		func(relic: Relic):

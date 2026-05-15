@@ -34,6 +34,43 @@ const CAMPFIRE_PENDING_UPGRADE := 2
 ## 战斗快照：进入战斗时保存的初始状态，用于中途退出后重进时恢复
 @export var combat_snapshot: CombatSnapshot = null
 
+const PENDING_NONE := 0
+const PENDING_SHOP := 1
+const PENDING_TREASURE := 2
+const PENDING_EVENT := 3
+const PENDING_BATTLE_REWARD := 4
+
+## 房间 RNG 结果缓存：读档后恢复 UI，避免重复 roll 导致与已保存 RNG 流错位。
+@export var pending_room_kind: int = PENDING_NONE
+@export var pending_event_scene_path: String = ""
+@export var pending_event_key: String = ""
+@export var pending_card_template_ids: PackedStringArray = PackedStringArray()
+@export var pending_relic_ids: PackedStringArray = PackedStringArray()
+## 商店：前 3 项卡牌价、后 3 项遗物价、再 3 项卡牌售出(0/1)、再 3 项遗物售出(0/1)。
+@export var pending_shop_ints: PackedInt32Array = PackedInt32Array()
+
+## 战斗奖励画面状态：保存奖励初始状态，用于读档后恢复"什么都没拿"的状态
+@export var battle_reward_gold: int = 0
+@export var battle_reward_gold_taken: bool = false
+@export var battle_reward_relic_ids: PackedStringArray = PackedStringArray()
+@export var battle_reward_relics_taken: PackedInt32Array = PackedInt32Array()  ## 0/1 表示每个遗物是否已领取
+@export var battle_reward_cards_taken: bool = false  ## 卡牌奖励是否已领取
+
+
+func clear_room_pending() -> void:
+	pending_room_kind = PENDING_NONE
+	pending_event_scene_path = ""
+	pending_event_key = ""
+	pending_card_template_ids = PackedStringArray()
+	pending_relic_ids = PackedStringArray()
+	pending_shop_ints = PackedInt32Array()
+	## 同时清除战斗奖励状态
+	battle_reward_gold = 0
+	battle_reward_gold_taken = false
+	battle_reward_relic_ids = PackedStringArray()
+	battle_reward_relics_taken = PackedInt32Array()
+	battle_reward_cards_taken = false
+
 
 func clear_campfire_pending_staging() -> void:
 	campfire_leave_pending = false

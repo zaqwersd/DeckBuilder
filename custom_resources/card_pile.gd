@@ -21,6 +21,12 @@ func add_card(card: Card) -> void:
 	card_pile_size_changed.emit(cards.size())
 
 
+func insert_card_at(index: int, card: Card) -> void:
+	var i := clampi(index, 0, cards.size())
+	cards.insert(i, card)
+	card_pile_size_changed.emit(cards.size())
+
+
 func remove_card_at(index: int) -> Card:
 	var c := cards[index]
 	cards.remove_at(index)

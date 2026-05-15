@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scenes/ui/intent_ui.gd" id="1_aarbb"]
 
 [node name="IntentUI" type="HBoxContainer" groups=["intent"]]
+mouse_filter = 2
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5

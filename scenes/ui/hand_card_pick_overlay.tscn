@@ -1,0 +1,98 @@
+[gd_scene format=3 uid="uid://dpld3hfock6k1"]
+
+[ext_resource type="Script" uid="uid://c4mlx4eqs2uhi" path="res://scenes/ui/hand_card_pick_overlay.gd" id="1_script"]
+
+[node name="HandCardPickOverlay" type="CanvasLayer" unique_id=1473748640]
+layer = 5
+script = ExtResource("1_script")
+
+[node name="Root" type="Control" parent="." unique_id=1855008354]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Root" unique_id=948206973]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.65098)
+
+[node name="PickColumn" type="MarginContainer" parent="Root" unique_id=176203279]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = 100.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="MainVBox" type="VBoxContainer" parent="Root/PickColumn" unique_id=227456962]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="Root/PickColumn/MainVBox" unique_id=1928421344]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SelectionBand" type="Control" parent="Root/PickColumn/MainVBox" unique_id=1187002852]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="SelectionCenter" type="CenterContainer" parent="Root/PickColumn/MainVBox/SelectionBand" unique_id=1808749848]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SelectionRow" type="HBoxContainer" parent="Root/PickColumn/MainVBox/SelectionBand/SelectionCenter" unique_id=1168910419]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="ConfirmButton" type="Button" parent="Root/PickColumn/MainVBox" unique_id=1144511528]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "确定"
+
+[node name="HandBand" type="Control" parent="Root/PickColumn/MainVBox" unique_id=1388304673]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="HandHost" type="Control" parent="Root/PickColumn/MainVBox/HandBand" unique_id=1515264785]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

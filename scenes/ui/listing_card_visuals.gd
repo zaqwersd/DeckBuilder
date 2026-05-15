@@ -184,6 +184,12 @@ func _append_color_tooltip_ids(ids: PackedStringArray, raw_bbcode: String) -> Pa
 	var has_red := raw_bbcode.find("#f36c60") != -1 or raw_bbcode.find("color=%s" % CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE) != -1
 	var has_gray := raw_bbcode.find("#b0bec5") != -1 or raw_bbcode.find("color=%s" % CardUpgradeUiColors.BB_INACTIVE_KEYWORD) != -1
 	
+	# 检查费用是否可升级（黄色）- 通过检查费用标签的颜色
+	if is_instance_valid(cost) and card != null:
+		var cost_color := cost.get_theme_color("font_color")
+		if cost_color.is_equal_approx(CardUpgradeUiColors.color_bb_value()):
+			has_yellow = true
+	
 	# 先收集颜色说明 IDs（排在前面）
 	if has_yellow:
 		color_ids.append("color_yellow")

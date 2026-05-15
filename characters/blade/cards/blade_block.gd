@@ -13,7 +13,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 
 func get_upgrade_pick_description_bbcode() -> String:
 	var v := get_upgrade_value_at("block")
-	return "[center]获得 %s 点格挡。[/center]" % bbcode_upgrade_pick_digit("block", v)
+	return "[center]获得%s点格挡。[/center]" % bbcode_upgrade_pick_digit("block", v)
 
 
 func _intrinsic_block() -> int:

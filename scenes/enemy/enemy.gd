@@ -29,6 +29,9 @@ var enemy_action_picker: EnemyActionPicker
 
 var current_action: EnemyAction : set = set_current_action
 
+## 由本节点统一驱动意图 tooltip（悬停碰撞体或意图条矩形均可）。
+var _intent_hover_tooltip_active: bool = false
+
 
 func _ready() -> void:
 	status_handler.status_owner = self
@@ -36,10 +39,74 @@ func _ready() -> void:
 	if is_instance_valid(stats):
 		_connect_stats_combat_signals(stats)
 	call_deferred("_layout_status_bar")
+	call_deferred("_deferred_connect_intent_tooltip_handlers")
+	set_process(false)
 
 
 func _schedule_layout_status_bar() -> void:
 	call_deferred("_layout_status_bar")
+
+
+func _deferred_connect_intent_tooltip_handlers() -> void:
+	var tree := get_tree()
+	if tree:
+		IntentUI.ensure_intent_tooltip_handlers_connected(tree)
+
+
+func _process(_delta: float) -> void:
+	if not is_inside_tree():
+		return
+	if Events.is_combat_ended():
+		_hide_intent_hover_tooltip_if_active()
+		return
+	if not is_instance_valid(stats) or stats.health <= 0:
+		_hide_intent_hover_tooltip_if_active()
+		return
+	if not is_instance_valid(intent_ui):
+		return
+	if current_action == null:
+		_hide_intent_hover_tooltip_if_active()
+		return
+	var planned: Array[Intent] = current_action.get_planned_intents()
+	if planned.is_empty() or not intent_ui.visible:
+		_hide_intent_hover_tooltip_if_active()
+		return
+	var gp := get_global_mouse_position()
+	var over := _pointer_over_enemy_body(gp) or _pointer_over_intent_ui(gp)
+	var bb := Intent.build_intent_hover_bbcode(planned)
+	if bb.is_empty():
+		over = false
+	if over:
+		if not _intent_hover_tooltip_active:
+			IntentUI.ensure_intent_tooltip_handlers_connected(get_tree())
+			_intent_hover_tooltip_active = true
+			Events.intent_tooltip_hover_show.emit(bb, intent_ui, false)
+	elif _intent_hover_tooltip_active:
+		_hide_intent_hover_tooltip_if_active()
+
+
+func _pointer_over_intent_ui(screen_global: Vector2) -> bool:
+	if not intent_ui.visible:
+		return false
+	return intent_ui.get_global_rect().has_point(screen_global)
+
+
+func _pointer_over_enemy_body(screen_global: Vector2) -> bool:
+	if not is_instance_valid(collision_shape_2d) or collision_shape_2d.shape == null:
+		return false
+	var rect_shape := collision_shape_2d.shape as RectangleShape2D
+	if rect_shape == null:
+		return false
+	var inv := collision_shape_2d.global_transform.affine_inverse()
+	var local_p: Vector2 = inv * screen_global
+	return Rect2(-rect_shape.size * 0.5, rect_shape.size).has_point(local_p)
+
+
+func _hide_intent_hover_tooltip_if_active() -> void:
+	if not _intent_hover_tooltip_active:
+		return
+	_intent_hover_tooltip_active = false
+	Events.intent_tooltip_hover_hide.emit()
 
 
 func _apply_intent_ui_offset() -> void:
@@ -288,11 +355,16 @@ static func _map_texel_aabb_to_sprite_local(sprite: Sprite2D, opaque: Rect2i, re
 
 
 func update_intent() -> void:
+	var planned: Array[Intent] = []
 	if current_action:
 		current_action.update_planned_intents()
-		intent_ui.update_intents(current_action.get_planned_intents())
+		planned = current_action.get_planned_intents()
+	intent_ui.update_intents(planned)
+	if planned.is_empty():
+		set_process(false)
+		_hide_intent_hover_tooltip_if_active()
 	else:
-		intent_ui.update_intents([])
+		set_process(true)
 
 
 func do_turn() -> void:
@@ -335,6 +407,11 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 				Events.enemy_died.emit(self)
 				queue_free()
 	)
+
+
+func _exit_tree() -> void:
+	set_process(false)
+	_hide_intent_hover_tooltip_if_active()
 
 
 func _on_area_entered(_area: Area2D) -> void:

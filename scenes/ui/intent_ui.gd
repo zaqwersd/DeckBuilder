@@ -3,24 +3,32 @@ extends HBoxContainer
 
 const INTENT_SLOT := preload("res://scenes/ui/intent_slot.tscn")
 
-var _intents_for_hover: Array[Intent] = []
+
+## 将意图悬停 tooltip 接到 Run 顶栏（战斗内调用一次即可）。
+static func ensure_intent_tooltip_handlers_connected(tree: SceneTree) -> void:
+	if tree == null:
+		return
+	var run_node := tree.get_first_node_in_group("run")
+	if run_node == null or not (run_node is Run):
+		return
+	var tip := (run_node as Run).status_hover_tooltip
+	if not is_instance_valid(tip):
+		return
+	if not Events.intent_tooltip_hover_show.is_connected(tip.show_custom_bbcode):
+		Events.intent_tooltip_hover_show.connect(tip.show_custom_bbcode)
+	if not Events.intent_tooltip_hover_hide.is_connected(tip.hide):
+		Events.intent_tooltip_hover_hide.connect(tip.hide)
 
 
 func _ready() -> void:
-	mouse_filter = Control.MOUSE_FILTER_STOP
-	mouse_entered.connect(_on_mouse_entered_intent_area)
-	mouse_exited.connect(_on_mouse_exited_intent_area)
+	## 整条意图条对鼠标透明，由 Enemy 统一用全局指针检测（避免被 BattleUI 挡住）。
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
 func update_intents(intents: Array[Intent]) -> void:
-	_intents_for_hover.clear()
-	for it in intents:
-		if it != null:
-			_intents_for_hover.append(it)
 	for c in get_children():
 		c.queue_free()
 	if intents.is_empty():
-		Events.intent_tooltip_hover_hide.emit()
 		hide()
 		return
 	for intent: Intent in intents:
@@ -30,31 +38,6 @@ func update_intents(intents: Array[Intent]) -> void:
 		add_child(slot)
 		slot.setup(intent)
 	show()
-	call_deferred("_refresh_intent_tooltip_if_hovered")
-
-
-func _refresh_intent_tooltip_if_hovered() -> void:
-	if not is_inside_tree() or _intents_for_hover.is_empty():
-		return
-	if modulate.a < 0.05:
-		return
-	if get_global_rect().has_point(get_global_mouse_position()):
-		_on_mouse_entered_intent_area()
-
-
-func _on_mouse_entered_intent_area() -> void:
-	if _intents_for_hover.is_empty():
-		return
-	if modulate.a < 0.05:
-		return
-	var bbcode := Intent.build_intent_hover_bbcode(_intents_for_hover)
-	if bbcode.is_empty():
-		return
-	Events.intent_tooltip_hover_show.emit(bbcode, self, false)
-
-
-func _on_mouse_exited_intent_area() -> void:
-	Events.intent_tooltip_hover_hide.emit()
 
 
 ## 兼容旧调用：单意图

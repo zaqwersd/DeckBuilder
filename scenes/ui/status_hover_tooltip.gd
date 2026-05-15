@@ -21,6 +21,7 @@ var _active_custom_bbcode: String = ""
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process_input(false)
 	hide()
 	for c in panel_root.get_children():
@@ -107,7 +108,8 @@ func show_tooltip(status: Status, near_to: Control = null, open_to_right: bool =
 	if (
 		visible
 		and not _is_custom_tooltip
-		and _active_status == status
+		and _active_status != null
+		and _active_status.id == status.id
 		and _active_source == near_valid
 		and _open_to_right == open_to_right
 	):

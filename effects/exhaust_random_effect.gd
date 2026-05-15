@@ -35,8 +35,8 @@ func execute(targets: Array[Node]) -> void:
 		if not is_instance_valid(slot):
 			continue
 		var cui := player_handler.hand.get_card_ui_in_slot(slot as Control)
-		if cui and cui.card and ch and ch.exhaust:
-			ch.exhaust.add_card(cui.card)
+		if cui and cui.card and ch:
+			ch.add_card_to_exhaust(cui.card)
 			# 播放手牌消耗动画（淡出效果）
 			var bcf = player_handler.battle_card_fx
 			if is_instance_valid(bcf) and bcf.has_method("animate_hand_card_exhaust"):

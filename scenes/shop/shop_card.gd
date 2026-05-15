@@ -10,11 +10,20 @@ const SLOT_SIZE := Vector2(120, 170)
 @onready var card_container: Control = %CardContainer
 @onready var price: HBoxContainer = %Price
 @onready var price_label: Label = %PriceLabel
-@onready var gold_cost := RNG.instance.randi_range(100, 300)
+var gold_cost: int = -1
 
 var current_card_ui: CardMenuUI
 var _run_stats: RunStats
 var _sold := false
+
+
+func _ready() -> void:
+	if gold_cost < 0:
+		gold_cost = RNG.instance.randi_range(100, 300)
+
+
+func configure_cost(cost: int) -> void:
+	gold_cost = cost
 
 
 func is_sold() -> bool:

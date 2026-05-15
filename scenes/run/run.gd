@@ -21,6 +21,7 @@ const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
 @onready var status_hover_tooltip: StatusHoverTooltip = %StatusHoverTooltip
 @onready var card_keyword_tooltip: CardKeywordTooltip = %CardKeywordTooltip
 @onready var deck_button: CardPileOpener = %DeckButton
+@onready var pause_button: Button = %PauseButton
 @onready var deck_view: CardPileView = %DeckView
 @onready var pause_menu: PauseMenu = $PauseMenu
 @onready var run_card_fx: RunCardFx = $RunCardFxLayer/RunCardFx
@@ -127,6 +128,17 @@ func _load_run() -> void:
 					cf.char_stats = character
 					cf.restore_leave_pending_campfire_ui()
 			)
+		elif save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:
+			_load_relics_from_save_data()
+			_setup_top_bar()
+			RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+			var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
+			reward_scene.run_stats = stats
+			reward_scene.character_stats = character
+			reward_scene.relic_handler = relic_handler
+			reward_scene.setup_from_run(true)
+			## 关闭任何子界面，确保回到奖励栏主界面
+			reward_scene.restore_card_picker_if_pending()
 		else:
 			# 其他房间（战斗、商店等）
 			if save_data.combat_snapshot != null:
@@ -143,7 +155,7 @@ func _load_run() -> void:
 				_load_relics_from_save_data()
 				_setup_top_bar()
 				RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
-				_on_map_exited(save_data.last_room)
+				_on_map_exited(save_data.last_room, true)
 	else:
 		# 在地图上
 		_load_relics_from_save_data()
@@ -209,6 +221,7 @@ func _show_map() -> void:
 		if save_data.campfire_leave_pending:
 			save_data.commit_campfire_pending_to(character)
 		save_data.clear_campfire_pending_staging()
+		save_data.clear_room_pending()
 	_save_run(true)
 
 
@@ -229,7 +242,14 @@ func _setup_event_connections() -> void:
 	treasure_button.pressed.connect(_change_view.bind(TREASURE_SCENE))
 
 
-func _setup_top_bar():
+func _setup_top_bar() -> void:
+	var top_bar := get_node_or_null("TopBar") as CanvasLayer
+	if top_bar:
+		top_bar.process_mode = Node.PROCESS_MODE_ALWAYS
+	if status_hover_tooltip:
+		status_hover_tooltip.process_mode = Node.PROCESS_MODE_ALWAYS
+	if card_keyword_tooltip:
+		card_keyword_tooltip.process_mode = Node.PROCESS_MODE_ALWAYS
 	if not character.stats_changed.is_connected(health_ui.update_stats.bind(character)):
 		character.stats_changed.connect(health_ui.update_stats.bind(character))
 	health_ui.update_stats(character)
@@ -254,10 +274,10 @@ func _setup_top_bar():
 		Events.intent_tooltip_hover_show.connect(status_hover_tooltip.show_custom_bbcode)
 	if not Events.intent_tooltip_hover_hide.is_connected(status_hover_tooltip.hide):
 		Events.intent_tooltip_hover_hide.connect(status_hover_tooltip.hide)
-	if not Events.card_keyword_tooltip_show.is_connected(card_keyword_tooltip.show_keyword_blocks):
-		Events.card_keyword_tooltip_show.connect(card_keyword_tooltip.show_keyword_blocks)
-	if not Events.card_keyword_tooltip_hide.is_connected(card_keyword_tooltip.hide_tooltip):
-		Events.card_keyword_tooltip_hide.connect(card_keyword_tooltip.hide_tooltip)
+	if not Events.card_keyword_tooltip_show.is_connected(_on_card_keyword_tooltip_show):
+		Events.card_keyword_tooltip_show.connect(_on_card_keyword_tooltip_show)
+	if not Events.card_keyword_tooltip_hide.is_connected(_on_card_keyword_tooltip_hide):
+		Events.card_keyword_tooltip_hide.connect(_on_card_keyword_tooltip_hide)
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck
@@ -265,6 +285,186 @@ func _setup_top_bar():
 		deck_button.pressed.connect(deck_view.show_current_view.bind("牌库"))
 	if run_card_fx:
 		run_card_fx.setup(deck_button)
+	if pause_button and not pause_button.pressed.is_connected(_on_pause_button_pressed):
+		pause_button.pressed.connect(_on_pause_button_pressed)
+
+
+func _on_pause_button_pressed() -> void:
+	if pause_menu.visible:
+		pause_menu.close()
+	else:
+		pause_menu.open()
+
+
+func persist_event_card_reward_pending(scene_path: String, key: String, card_ids: PackedStringArray) -> void:
+	if save_data == null:
+		return
+	save_data.pending_room_kind = SaveGame.PENDING_EVENT
+	save_data.pending_event_scene_path = scene_path
+	save_data.pending_event_key = key
+	save_data.pending_card_template_ids = card_ids
+	_save_run(false)
+
+
+func matches_pending_event(scene_path: String, key: String) -> bool:
+	return (
+		save_data != null
+		and save_data.pending_room_kind == SaveGame.PENDING_EVENT
+		and save_data.pending_event_scene_path == scene_path
+		and save_data.pending_event_key == key
+	)
+
+
+func get_pending_card_templates() -> Array[Card]:
+	if save_data == null:
+		return []
+	return GameContent.load_cards_by_ids(save_data.pending_card_template_ids)
+
+
+func persist_treasure_pending(relic_id: String) -> void:
+	if save_data == null:
+		return
+	save_data.pending_room_kind = SaveGame.PENDING_TREASURE
+	save_data.pending_relic_ids = PackedStringArray([relic_id])
+	_save_run(false)
+
+
+func get_pending_treasure_relic() -> Relic:
+	if save_data == null or save_data.pending_room_kind != SaveGame.PENDING_TREASURE:
+		return null
+	if save_data.pending_relic_ids.is_empty():
+		return null
+	return GameContent.load_relic_template(save_data.pending_relic_ids[0])
+
+
+func can_restore_shop_pending() -> bool:
+	return save_data != null and save_data.pending_room_kind == SaveGame.PENDING_SHOP
+
+
+func persist_shop_pending(
+	card_ids: PackedStringArray,
+	relic_ids: PackedStringArray,
+	card_costs: PackedInt32Array,
+	relic_costs: PackedInt32Array,
+	card_sold: PackedInt32Array,
+	relic_sold: PackedInt32Array
+) -> void:
+	if save_data == null:
+		return
+	save_data.pending_room_kind = SaveGame.PENDING_SHOP
+	save_data.pending_card_template_ids = card_ids
+	save_data.pending_relic_ids = relic_ids
+	var packed := PackedInt32Array()
+	for v: int in card_costs:
+		packed.append(v)
+	for v: int in relic_costs:
+		packed.append(v)
+	for v: int in card_sold:
+		packed.append(v)
+	for v: int in relic_sold:
+		packed.append(v)
+	save_data.pending_shop_ints = packed
+	_save_run(false)
+
+
+func get_shop_pending_data() -> Dictionary:
+	if not can_restore_shop_pending():
+		return {}
+	var ints := save_data.pending_shop_ints
+	return {
+		"card_ids": save_data.pending_card_template_ids,
+		"relic_ids": save_data.pending_relic_ids,
+		"card_costs": ints.slice(0, 3),
+		"relic_costs": ints.slice(3, 6),
+		"card_sold": ints.slice(6, 9),
+		"relic_sold": ints.slice(9, 12),
+	}
+
+
+func persist_battle_reward_cards_pending(card_ids: PackedStringArray) -> void:
+	if save_data == null:
+		return
+	save_data.pending_room_kind = SaveGame.PENDING_BATTLE_REWARD
+	save_data.pending_card_template_ids = card_ids
+	_save_run(false)
+
+
+func can_restore_battle_reward_cards() -> bool:
+	return save_data != null and save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD
+
+
+## 保存完整的战斗奖励画面初始状态（金币、遗物、卡牌）
+func persist_battle_reward_full_state(gold: int, relics: Array[Relic]) -> void:
+	if save_data == null:
+		return
+	save_data.pending_room_kind = SaveGame.PENDING_BATTLE_REWARD
+	save_data.battle_reward_gold = gold
+	save_data.battle_reward_gold_taken = false
+	save_data.battle_reward_relic_ids = PackedStringArray()
+	for r: Relic in relics:
+		if r != null:
+			save_data.battle_reward_relic_ids.append(r.id)
+	save_data.battle_reward_relics_taken = PackedInt32Array()
+	for i: int in range(relics.size()):
+		save_data.battle_reward_relics_taken.append(0)
+	save_data.battle_reward_cards_taken = false
+	_save_run(false)
+
+
+## 更新奖励领取状态
+func take_battle_reward_gold() -> void:
+	if save_data == null:
+		return
+	save_data.battle_reward_gold_taken = true
+	_save_run(false)
+
+
+func take_battle_reward_relic(index: int) -> void:
+	if save_data == null or index < 0 or index >= save_data.battle_reward_relics_taken.size():
+		return
+	save_data.battle_reward_relics_taken[index] = 1
+	_save_run(false)
+
+
+func take_battle_reward_cards() -> void:
+	if save_data == null:
+		return
+	save_data.battle_reward_cards_taken = true
+	_save_run(false)
+
+
+## 获取战斗奖励状态
+func get_battle_reward_state() -> Dictionary:
+	if save_data == null:
+		return {}
+	return {
+		"gold": save_data.battle_reward_gold,
+		"gold_taken": save_data.battle_reward_gold_taken,
+		"relic_ids": save_data.battle_reward_relic_ids,
+		"relics_taken": save_data.battle_reward_relics_taken,
+		"card_ids": save_data.pending_card_template_ids,
+		"cards_taken": save_data.battle_reward_cards_taken,
+	}
+
+
+func clear_room_pending_and_save() -> void:
+	if save_data == null:
+		return
+	save_data.clear_room_pending()
+	_save_run(false)
+
+
+func _on_card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
+	## 战斗选牌/升级等高层模态自带 tooltip；全局 TopBar tooltip 勿画在幕布下层。
+	if Events.is_pointer_ui_obscured_for(card_keyword_tooltip):
+		return
+	card_keyword_tooltip.show_keyword_blocks(ids, near_to)
+
+
+func _on_card_keyword_tooltip_hide() -> void:
+	if Events.is_pointer_ui_obscured_for(card_keyword_tooltip):
+		return
+	card_keyword_tooltip.hide_tooltip()
 
 
 func play_deck_gain_card_visual(card: Card, from_global: Vector2) -> void:
@@ -296,9 +496,13 @@ func _show_regular_battle_rewards() -> void:
 	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
 	reward_scene.run_stats = stats
 	reward_scene.character_stats = character
+	reward_scene.relic_handler = relic_handler
+	reward_scene.setup_from_run(false)
 
 	reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward())
 	reward_scene.add_card_reward()
+	## 所有奖励添加完成后，保存初始状态
+	reward_scene.save_initial_state()
 
 
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
@@ -335,11 +539,11 @@ func _clear_combat_snapshot() -> void:
 	_save_run(false)
 
 
-func _on_treasure_room_entered() -> void:
+func _on_treasure_room_entered(is_reload: bool = false) -> void:
 	var treasure_scene := _change_view(TREASURE_SCENE) as Treasure
 	treasure_scene.relic_handler = relic_handler
 	treasure_scene.char_stats = character
-	treasure_scene.generate_relic()
+	treasure_scene.populate_from_run(is_reload)
 
 
 func _on_treasure_room_exited(relic: Relic) -> void:
@@ -347,10 +551,13 @@ func _on_treasure_room_exited(relic: Relic) -> void:
 	reward_scene.run_stats = stats
 	reward_scene.character_stats = character
 	reward_scene.relic_handler = relic_handler
+	reward_scene.setup_from_run(false)
 
 	var treasure_gold := RNG.instance.randi_range(25, 50)
 	reward_scene.add_gold_reward(treasure_gold)
 	reward_scene.add_relic_reward(relic)
+	## 所有奖励添加完成后，保存初始状态
+	reward_scene.save_initial_state()
 
 
 func _on_campfire_entered() -> void:
@@ -363,20 +570,21 @@ func _on_campfire_entered() -> void:
 	)
 
 
-func _on_shop_entered() -> void:
+func _on_shop_entered(is_reload: bool = false) -> void:
 	var shop := _change_view(SHOP_SCENE) as Shop
 	shop.char_stats = character
 	shop.run_stats = stats
 	shop.relic_handler = relic_handler
 	Events.shop_entered.emit(shop)
-	shop.populate_shop()
+	shop.populate_shop(is_reload)
 
 
-func _on_event_room_entered(room: Room) -> void:
+func _on_event_room_entered(room: Room, is_reload: bool = false) -> void:
 	var event_room: Node = _change_view(room.event_scene)
-	# 避免 `as EventRoom` 在部分环境下为 null（根节点 type=Control 时转型失败），导致对 nil 赋值 character_stats
 	event_room.set("character_stats", character)
 	event_room.set("run_stats", stats)
+	if event_room.has_method("set_run_reload"):
+		event_room.call("set_run_reload", is_reload)
 	if event_room.has_method("setup"):
 		event_room.call("setup")
 
@@ -447,12 +655,12 @@ func _on_map_exited(room: Room, is_reload: bool = false) -> void:
 		Room.Type.MONSTER:
 			_on_battle_room_entered(room, is_reload)
 		Room.Type.TREASURE:
-			_on_treasure_room_entered()
+			_on_treasure_room_entered(is_reload)
 		Room.Type.CAMPFIRE:
 			_on_campfire_entered()
 		Room.Type.SHOP:
-			_on_shop_entered()
+			_on_shop_entered(is_reload)
 		Room.Type.BOSS:
 			_on_battle_room_entered(room, is_reload)
 		Room.Type.EVENT:
-			_on_event_room_entered(room)
+			_on_event_room_entered(room, is_reload)

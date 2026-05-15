@@ -10,7 +10,7 @@ func get_upgrade_track_ids() -> PackedStringArray:
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
 		"damage":
-			return PackedInt32Array([27, 32])
+			return PackedInt32Array([29, 37])
 		"strength_loss":
 			return PackedInt32Array([2, 1])
 		_:
@@ -20,7 +20,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 func get_upgrade_pick_description_bbcode() -> String:
 	var d := get_upgrade_value_at("damage")
 	var sl := get_upgrade_value_at("strength_loss")
-	return "[center]对所有敌人造成 %s 点伤害。[br]失去 %s 点力量。[/center]" % [
+	return "[center]对所有敌人造成%s点伤害。[br]失去%s点力量。[/center]" % [
 		bbcode_upgrade_pick_digit("damage", d),
 		bbcode_upgrade_pick_negative_digit("strength_loss", sl),
 	]
@@ -38,7 +38,7 @@ func get_default_tooltip() -> String:
 	var d := _intrinsic_damage()
 	var sl := _intrinsic_strength_loss()
 	return (
-		"[center]对所有敌人造成 %s 点伤害。[br]失去 %s 点力量。[/center]"
+		"[center]对所有敌人造成%s点伤害。[br]失去%s点力量。[/center]"
 		% [str(d), _bbcode_strength_loss(sl)]
 	)
 
@@ -58,7 +58,7 @@ func get_updated_tooltip(
 	)
 	var sl := _intrinsic_strength_loss()
 	var sl_bb := _bbcode_strength_loss(sl)
-	return "[center]对所有敌人造成 %s 点伤害。[br]失去 %s 点力量。[/center]" % [dmg_bb, sl_bb]
+	return "[center]对所有敌人造成%s点伤害。[br]失去%s点力量。[/center]" % [dmg_bb, sl_bb]
 
 
 func _bbcode_strength_loss(amount: int) -> String:

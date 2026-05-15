@@ -40,6 +40,13 @@ func take_damage(damage: int) -> void:
 		Events.player_hit.emit()
 
 
+func add_card_to_exhaust(card: Card) -> void:
+	if card == null or exhaust == null:
+		return
+	exhaust.add_card(card)
+	Events.card_exhausted.emit(card)
+
+
 func can_play_card(card: Card, effective_mana_cost: int = -1) -> bool:
 	if card.cost < 0:
 		return false

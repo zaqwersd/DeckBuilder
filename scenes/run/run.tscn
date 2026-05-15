@@ -106,6 +106,13 @@ layout_mode = 2
 texture_normal = ExtResource("5_dw5bf")
 counter = NodePath("Counter")
 
+[node name="PauseButton" type="Button" parent="TopBar/BarRoot/BarItems"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 72)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "暂停"
+
 [node name="Counter" type="Label" parent="TopBar/BarRoot/BarItems/DeckButton" unique_id=37227574]
 layout_mode = 0
 offset_left = -22.5

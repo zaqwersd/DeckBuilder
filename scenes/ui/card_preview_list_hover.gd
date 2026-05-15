@@ -4,8 +4,14 @@ extends Control
 ## 非手牌场景的卡牌列表预览：依赖 CardMenuUI.use_listing_hover_zoom 做 1.1 倍放大；
 ## 悬停带词条的卡时通过 Events 显示词条说明；位置由 CardKeywordTooltip 处理（默认卡右侧，贴边则左侧）。
 
+const KEYWORD_TOOLTIP_SCENE := preload("res://scenes/ui/card_keyword_tooltip.tscn")
+## Run TopBar 上全局词条 tooltip 的 CanvasLayer.layer；≥ 此层的列表（含 TopBar 牌库 layer=3）用内嵌 tooltip，避免被 is_pointer_ui_obscured 挡住。
+const ELEVATED_KEYWORD_TOOLTIP_MIN_CANVAS_LAYER := 3
+const MODAL_KEYWORD_TOOLTIP_Z_INDEX := 256
+
 var _kw_tip_menu: CardMenuUI = null
 var _kw_tip_ids: PackedStringArray = PackedStringArray()
+var _elevated_keyword_tooltip: CardKeywordTooltip = null
 
 
 ## 子类复写：返回参与检测的 CardMenuUI（通常为列表/牌堆网格中的项）。
@@ -17,8 +23,55 @@ func _ready() -> void:
 	set_process(true)
 
 
+func _enter_tree() -> void:
+	if _wants_elevated_keyword_tooltip():
+		_bind_elevated_keyword_tooltip()
+
+
 func _exit_tree() -> void:
+	_unbind_elevated_keyword_tooltip()
 	reset_listing_keyword_tooltip_state()
+
+
+func _wants_elevated_keyword_tooltip() -> bool:
+	return Events.effective_canvas_layer_of(self) >= ELEVATED_KEYWORD_TOOLTIP_MIN_CANVAS_LAYER
+
+
+func _bind_elevated_keyword_tooltip() -> void:
+	if _elevated_keyword_tooltip != null:
+		return
+	_elevated_keyword_tooltip = KEYWORD_TOOLTIP_SCENE.instantiate() as CardKeywordTooltip
+	_elevated_keyword_tooltip.z_index = MODAL_KEYWORD_TOOLTIP_Z_INDEX
+	_elevated_keyword_tooltip.z_as_relative = false
+	_elevated_keyword_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_elevated_keyword_tooltip)
+	if not Events.card_keyword_tooltip_show.is_connected(_on_elevated_keyword_tooltip_show):
+		Events.card_keyword_tooltip_show.connect(_on_elevated_keyword_tooltip_show)
+	if not Events.card_keyword_tooltip_hide.is_connected(_on_elevated_keyword_tooltip_hide):
+		Events.card_keyword_tooltip_hide.connect(_on_elevated_keyword_tooltip_hide)
+
+
+func _unbind_elevated_keyword_tooltip() -> void:
+	if _elevated_keyword_tooltip == null:
+		return
+	if Events.card_keyword_tooltip_show.is_connected(_on_elevated_keyword_tooltip_show):
+		Events.card_keyword_tooltip_show.disconnect(_on_elevated_keyword_tooltip_show)
+	if Events.card_keyword_tooltip_hide.is_connected(_on_elevated_keyword_tooltip_hide):
+		Events.card_keyword_tooltip_hide.disconnect(_on_elevated_keyword_tooltip_hide)
+	_elevated_keyword_tooltip.hide_tooltip()
+	_elevated_keyword_tooltip.queue_free()
+	_elevated_keyword_tooltip = null
+
+
+func _on_elevated_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
+	if not is_inside_tree() or not is_visible_in_tree() or _elevated_keyword_tooltip == null:
+		return
+	_elevated_keyword_tooltip.show_keyword_blocks(ids, near_to)
+
+
+func _on_elevated_keyword_tooltip_hide() -> void:
+	if _elevated_keyword_tooltip != null:
+		_elevated_keyword_tooltip.hide_tooltip()
 
 
 func reset_listing_keyword_tooltip_state() -> void:

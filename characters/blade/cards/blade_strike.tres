@@ -11,5 +11,5 @@ target = 1
 cost = 1
 card_name = "打击"
 icon = ExtResource("1_el4p5")
-tooltip_text = "[center]造成 %s 点伤害。[/center]"
+tooltip_text = "[center]造成%s点伤害。[/center]"
 sound = ExtResource("3_812w0")

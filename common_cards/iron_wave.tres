@@ -13,5 +13,5 @@ cost = 1
 card_name = "铁斩波"
 icon = ExtResource("1_v1hk4")
 description = "[center]获得6点格挡。[br]造成6点伤害。[/center]"
-tooltip_text = "[center]获得 %s 点格挡。[br]造成 %s 点伤害。[/center]"
+tooltip_text = "[center]获得%s点格挡。[br]造成%s点伤害。[/center]"
 sound = ExtResource("3_snd")

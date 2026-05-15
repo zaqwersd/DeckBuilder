@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+引用资源时统一使用路径而非uid。

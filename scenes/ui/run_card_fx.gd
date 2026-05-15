@@ -69,8 +69,6 @@ func animate_card_center_shrink_remove(card: Card) -> void:
 	ghost.z_as_relative = false
 	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost.card = card
-	if ghost.visuals:
-		ghost.visuals.freeze_font_sync_for_fly_phantom = true
 	ghost.visible = false
 	await _prepare_card_menu_pivot(ghost)
 	if not is_instance_valid(ghost):
@@ -111,8 +109,6 @@ func animate_two_cards_center_fade_remove(card1: Card, card2: Card) -> void:
 	ghost1.z_as_relative = false
 	ghost1.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost1.card = card1
-	if ghost1.visuals:
-		ghost1.visuals.freeze_font_sync_for_fly_phantom = true
 	ghost1.visible = false
 	
 	# 设置 ghost2
@@ -121,8 +117,6 @@ func animate_two_cards_center_fade_remove(card1: Card, card2: Card) -> void:
 	ghost2.z_as_relative = false
 	ghost2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost2.card = card2
-	if ghost2.visuals:
-		ghost2.visuals.freeze_font_sync_for_fly_phantom = true
 	ghost2.visible = false
 	
 	# 等待准备完成
@@ -194,8 +188,6 @@ func animate_picked_menu_to_deck(picked: CardMenuUI, from_global: Vector2) -> vo
 	picked.z_index = 200
 	picked.z_as_relative = false
 	picked.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if picked.visuals:
-		picked.visuals.freeze_font_sync_for_fly_phantom = true
 	await _prepare_card_menu_pivot(picked)
 	if not is_instance_valid(picked):
 		return
@@ -234,8 +226,6 @@ func animate_card_to_deck(card: Card, from_global: Vector2) -> void:
 	ghost.z_as_relative = false
 	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ghost.card = card
-	if ghost.visuals:
-		ghost.visuals.freeze_font_sync_for_fly_phantom = true
 	ghost.visible = false
 	await _prepare_card_menu_pivot(ghost)
 	var from: Vector2
@@ -304,6 +294,8 @@ func _place_visual_center_at(ghost: Control, global_center: Vector2) -> void:
 
 
 func _prepare_card_menu_pivot(ghost: Control) -> void:
+	if ghost is CardMenuUI:
+		(ghost as CardMenuUI).custom_minimum_size = Vector2(268.0, 348.0)
 	await get_tree().process_frame
 	if not is_instance_valid(ghost):
 		return
@@ -319,6 +311,10 @@ func _prepare_card_menu_pivot(ghost: Control) -> void:
 		sz = Vector2(268.0, 348.0)
 	ghost.pivot_offset = sz * 0.5
 	_place_visual_center_at(ghost, preserved_center)
+	if ghost is CardMenuUI:
+		var cmu := ghost as CardMenuUI
+		if cmu.visuals:
+			cmu.visuals.apply_minimum_fonts_once_then_freeze_for_phantom()
 
 
 func _bezier_control_draw_bulge_up(from: Vector2, to: Vector2) -> Vector2:

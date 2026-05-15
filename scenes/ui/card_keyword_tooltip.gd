@@ -16,40 +16,33 @@ var _layout_generation := 0
 
 
 func _ready() -> void:
-	hide()
-	set_process_input(false)
+	## 根节点仅作容器（非全屏），必须 IGNORE，避免挡住手牌点击
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	visible = true
+	if is_instance_valid(panel_root):
+		panel_root.hide()
 	if is_instance_valid(vbox):
 		## 多块上下排布时整体靠左（VBox 横轴对齐）
 		vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_VISIBILITY_CHANGED and not visible:
-		set_process_input(false)
-		_layout_generation += 1
-
-
-func _input(event: InputEvent) -> void:
-	if not visible:
-		return
-	if event.is_action_pressed("ui_cancel"):
-		hide()
-		get_viewport().set_input_as_handled()
-		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		var mb := event as InputEventMouseButton
-		if is_instance_valid(panel_root) and not panel_root.get_global_rect().has_point(mb.global_position):
-			hide()
-
-
 func show_keyword_blocks(ids: PackedStringArray, near_to: Control) -> void:
 	if ids.is_empty():
 		return
+	## 确保 render_pending 重置（防死锁保险）
+	if Events.card_keyword_tooltip_render_pending:
+		Events.card_keyword_tooltip_render_pending = false
+	Events.card_keyword_tooltip_render_pending = true
 	await _render_keyword_blocks(ids, near_to)
+	Events.card_keyword_tooltip_render_pending = false
 
 
 func hide_tooltip() -> void:
-	hide()
+	_layout_generation += 1
+	Events.card_keyword_tooltip_visible = false
+	Events.card_keyword_tooltip_render_pending = false
+	if is_instance_valid(panel_root):
+		panel_root.hide()
 
 
 ## 按正文内 `[url=kw:…]` 做 DFS：先展示当前词条，再立刻接上链接指向的词条（无需悬停）。
@@ -76,9 +69,10 @@ func _dfs_append_tooltip_id(id: String, seen: Dictionary, out: Array[String]) ->
 
 func _render_keyword_blocks(seed_ids: PackedStringArray, near_to: Control) -> void:
 	_layout_generation += 1
+	if is_instance_valid(panel_root):
+		panel_root.hide()
+	Events.card_keyword_tooltip_visible = false
 	var gen := _layout_generation
-	hide()
-	set_process_input(false)
 	for c in vbox.get_children():
 		c.queue_free()
 
@@ -138,8 +132,9 @@ func _render_keyword_blocks(seed_ids: PackedStringArray, near_to: Control) -> vo
 	if not is_instance_valid(near_to):
 		return
 	_position_panel(near_to)
-	set_process_input(true)
-	show()
+	if is_instance_valid(panel_root):
+		panel_root.show()
+	Events.card_keyword_tooltip_visible = true
 
 
 func _shrink_tooltip_blocks_to_content() -> void:

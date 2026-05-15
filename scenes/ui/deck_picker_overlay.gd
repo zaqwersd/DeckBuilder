@@ -1,6 +1,9 @@
 class_name DeckPickerOverlay
 extends CardGridListing
 
+## 战斗内模态选牌层：高于 HandCardPickOverlay(5) 与 CardPileViews(4)
+const BATTLE_MODAL_CANVAS_LAYER := 6
+
 ## indices 为卡组真实下标，升序，元素为 int；取消时发空数组（用 Array 避免与 await 的 [] 类型冲突）
 signal pick_confirmed(indices: Array)
 
@@ -38,11 +41,13 @@ func _ready() -> void:
 
 
 func _enter_tree() -> void:
+	super._enter_tree()
 	Events.begin_pointer_exclusive_ui(self)
 
 
 func _exit_tree() -> void:
 	Events.end_pointer_exclusive_ui(self)
+	super._exit_tree()
 
 
 func setup(
@@ -88,8 +93,9 @@ func _populate() -> void:
 	_update_confirm_visibility()
 	if _deck == null:
 		return
-	for i: int in range(_deck.cards.size()):
-		var c: Card = _deck.cards[i]
+	for entry: Dictionary in CardGridListing.sorted_card_entries(_deck.cards):
+		var c: Card = entry["card"] as Card
+		var deck_index: int = int(entry["index"])
 		if not _id_is_allowed(c.id):
 			continue
 		if _picker_card_ok.is_valid() and not bool(_picker_card_ok.call(c)):
@@ -97,8 +103,8 @@ func _populate() -> void:
 		var menu := create_listing_card_menu()
 		grid.add_child(menu)
 		menu.card = c
-		_index_by_menu[menu] = i
-		menu.card_pick_pressed.connect(func(_c: Card) -> void: _toggle_pick(menu))
+		_index_by_menu[menu] = deck_index
+		menu.card_pick_pressed.connect(_on_picker_card_pressed.bind(menu))
 
 
 func _set_confirm_visible(on: bool) -> void:
@@ -118,6 +124,18 @@ func _update_confirm_visibility() -> void:
 	else:
 		ok = _selected_indices.size() == _picks_required
 	_set_confirm_visible(ok)
+
+
+func _on_picker_card_pressed(menu: Variant, _c: Variant) -> void:
+	if not is_inside_tree():
+		return
+	## bind 把 menu 插在第1位
+	var m := menu as CardMenuUI
+	if m == null:
+		m = _c as CardMenuUI
+	if m == null:
+		return
+	_toggle_pick(m)
 
 
 func _toggle_pick(menu: CardMenuUI) -> void:
@@ -178,3 +196,20 @@ func _on_confirm() -> void:
 func _on_cancel() -> void:
 	pick_confirmed.emit([])
 	queue_free()
+
+
+static func open_on_tree(tree: SceneTree) -> DeckPickerOverlay:
+	var layer := CanvasLayer.new()
+	layer.layer = BATTLE_MODAL_CANVAS_LAYER
+	tree.root.add_child(layer)
+	var scene: PackedScene = preload("res://scenes/ui/deck_picker_overlay.tscn")
+	var inst := scene.instantiate() as DeckPickerOverlay
+	inst.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inst.set_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(inst)
+	inst.tree_exiting.connect(
+		func() -> void:
+			if is_instance_valid(layer):
+				layer.queue_free()
+	, CONNECT_ONE_SHOT)
+	return inst

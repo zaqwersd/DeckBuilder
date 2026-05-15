@@ -4,12 +4,16 @@
 [ext_resource type="Script" uid="uid://cx7pv6t0wf8e" path="res://custom_resources/card_pile.gd" id="1_x06dg"]
 [ext_resource type="Resource" uid="uid://byi0cfoedmlm0" path="res://characters/blade/cards/blade_slash.tres" id="2_ur0lo"]
 [ext_resource type="Resource" uid="uid://bkm1v3lqlom3o" path="res://characters/blade/cards/blade_dodge.tres" id="4_7uxu8"]
-[ext_resource type="Resource" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_jteol"]
+[ext_resource type="Resource" uid="uid://b1yl5we8yv4oo" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_jteol"]
 [ext_resource type="Resource" uid="uid://2rae3wgfdx6e" path="res://characters/blade/cards/blade_shatter.tres" id="5_sfk5u"]
 [ext_resource type="Resource" uid="uid://cojg2pjac8k4t" path="res://characters/blade/cards/blade_detachment.tres" id="6_mdr4n"]
 [ext_resource type="Resource" uid="uid://bu5t6pggn2enx" path="res://characters/blade/cards/blade_iaijutsu.tres" id="7_iaiju"]
 [ext_resource type="Resource" uid="uid://coii74difhs5s" path="res://characters/blade/cards/blade_anger.tres" id="8_anger"]
+[ext_resource type="Resource" uid="uid://b65hsovl1becp" path="res://characters/blade/cards/blade_destiny.tres" id="9_destiny"]
+[ext_resource type="Resource" uid="uid://dj1cphcq3b502" path="res://characters/blade/cards/blade_flow.tres" id="10_flow"]
+[ext_resource type="Resource" uid="uid://wgxrnoc1mcdu" path="res://characters/blade/cards/blade_opening_stance.tres" id="11_opening"]
+[ext_resource type="Resource" uid="uid://54fkq46ghutb" path="res://characters/blade/cards/blade_sword_flash.tres" id="12_flash"]
 
 [resource]
 script = ExtResource("1_x06dg")
-cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("7_iaiju"), ExtResource("8_anger")])
+cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("7_iaiju"), ExtResource("8_anger"), ExtResource("9_destiny"), ExtResource("10_flow"), ExtResource("11_opening"), ExtResource("12_flash")])

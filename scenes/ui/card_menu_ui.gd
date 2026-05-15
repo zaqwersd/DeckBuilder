@@ -21,8 +21,7 @@ var _listing_hover_geom_active := false
 func _ready() -> void:
 	# CenterContainer 默认 PASS 会把点击交给父级，奖励/商店里父级是整屏遮罩时子卡永远点不到
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	if visuals:
-		visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+	_configure_listing_visuals_click()
 	if use_listing_hover_zoom:
 		_disconnect_listing_hover_signals()
 		set_process(true)
@@ -91,9 +90,59 @@ func set_modifier_preview(player_modifiers: ModifierHandler, enemy_modifiers: Mo
 		visuals.apply_modifier_context(player_modifiers, enemy_modifiers)
 
 
+func _configure_listing_visuals_click() -> void:
+	if not is_instance_valid(visuals):
+		return
+	visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+	## 列表卡面已用 Visuals.gui_input；关闭 Area2D 避免与 gui_input 同帧双触发 card_pick_pressed
+	if is_instance_valid(visuals.area_2d):
+		visuals.area_2d.input_pickable = false
+
+
+func _emit_card_pick_pressed() -> void:
+	if card == null:
+		return
+	card_pick_pressed.emit(card)
+
+
 func _on_visuals_gui_input(event: InputEvent) -> void:
-	if event.is_action_pressed("left_mouse") and card:
-		card_pick_pressed.emit(card)
+	if event.is_action_pressed("left_mouse"):
+		_emit_card_pick_pressed()
+
+
+## Area2D 鼠标进入回调（由 CardVisualsBase 调用）
+func _on_card_visuals_mouse_entered() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	if use_listing_hover_zoom:
+		return
+	if not _deck_pick_selected:
+		visuals.panel.set("theme_override_styles/panel", visuals.main_panel_style_hover)
+	_tween_listing_hover_scale(true)
+
+
+## Area2D 鼠标离开回调（由 CardVisualsBase 调用）
+func _on_card_visuals_mouse_exited() -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	if use_listing_hover_zoom:
+		return
+	_apply_deck_pick_panel_style()
+	_tween_listing_hover_scale(false)
+
+
+## Area2D 点击回调（由 CardVisualsBase 调用）
+func _on_card_visuals_clicked() -> void:
+	## 列表模式由 Visuals.gui_input 处理；Area2D 已关闭 input_pickable
+	if (
+		is_instance_valid(visuals)
+		and is_instance_valid(visuals.area_2d)
+		and not visuals.area_2d.input_pickable
+	):
+		return
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	_emit_card_pick_pressed()
 
 
 func refresh_listing_hover_pivot() -> void:
@@ -160,3 +209,5 @@ func set_card(value: Card) -> void:
 
 	card = value
 	visuals.card = card
+	## visuals 刷新会 _apply_pick_through 重新打开 Area2D，列表卡面只需 gui_input
+	_configure_listing_visuals_click()

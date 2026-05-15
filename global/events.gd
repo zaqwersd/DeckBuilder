@@ -72,8 +72,20 @@ func _effective_canvas_layer(n: Node) -> int:
 	return 0
 
 
+func effective_canvas_layer_of(node: Node) -> int:
+	return _effective_canvas_layer(node)
+
+
 ## 当存在独占层且 `control` 不在该层子树内时，应跳过悬停/缩放/tooltip（仍可用 gui 命中挡住点击）。
 func is_pointer_ui_obscured_for(control: Node) -> bool:
+	# 清理已失效的节点（保险机制）
+	while not _pointer_exclusive_stack.is_empty():
+		var top: Node = _pointer_exclusive_stack.back() as Node
+		if not is_instance_valid(top) or not top.is_inside_tree():
+			_pointer_exclusive_stack.pop_back()
+		else:
+			break
+
 	var leaf := get_pointer_exclusive_leaf()
 	if leaf == null or not is_instance_valid(leaf):
 		return false
@@ -95,6 +107,8 @@ signal card_drag_ended(card_ui: CardUI)
 signal card_aim_started(card_ui: CardUI)
 signal card_aim_ended(card_ui: CardUI)
 signal card_played(card: Card)
+## 牌进入消耗堆（打出消耗、虚无、被效果消耗等统一入口）。
+signal card_exhausted(card: Card)
 ## 玩家状态栏层数变化（如巨剑）：手牌需刷新攻击牌实际耗能显示。
 signal player_hand_cost_context_changed
 
@@ -126,6 +140,9 @@ signal card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control)
 signal card_keyword_tooltip_hide
 ## 词条链接悬停时请求刷新 tooltip（由 Hand 统一显示所有词条）
 signal card_keyword_tooltip_refresh_requested(from_visuals: Control)
+## 由 CardKeywordTooltip 在 show/hide 时同步，供 Hand 检测渲染 abort 后的自愈
+var card_keyword_tooltip_visible := false
+var card_keyword_tooltip_render_pending := false
 
 # Map-related events
 signal map_exited(room: Room)

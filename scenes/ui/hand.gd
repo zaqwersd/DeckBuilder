@@ -121,7 +121,7 @@ func _update_mouse_foremost_hand_card() -> void:
 			continue
 		if not c.is_hand_hover_hit_overlapping():
 			continue
-		var d2 := c.get_global_rect().get_center().distance_squared_to(mp)
+		var d2 := c.get_hand_hover_hit_global_rect().get_center().distance_squared_to(mp)
 		var si := slot.get_index()
 		candidates.append({"card": c, "dist_sq": d2, "slot_idx": si})
 		if d2 < best_d2 - 0.01:
@@ -190,52 +190,72 @@ func _process(_delta: float) -> void:
 	if foremost_changed and is_instance_valid(prev_foremost) and is_instance_valid(prev_foremost.card_visuals):
 		prev_foremost.card_visuals.force_description_kw_meta_reset()
 	
-	# 收集所有命中区域包含鼠标的卡牌
+	# 收集命中区内、且带词条 tooltip 的卡牌
 	var hovered_cards: Array[CardUI] = []
-	var all_tip_ids: PackedStringArray = PackedStringArray()
-	var mouse_over_any_card := false
 	for slot in get_children():
 		var card := get_card_ui_in_slot(slot)
 		if not card:
 			continue
 		card.sync_hand_hover_presentation()
-		# 检查鼠标是否在此卡牌的命中区域内
 		if card.is_hand_hover_hit_overlapping() and not card.disabled:
-			mouse_over_any_card = true
 			if is_instance_valid(card.card_visuals):
 				var ids := card.card_visuals.get_keyword_tooltip_ids()
 				if not ids.is_empty():
 					hovered_cards.append(card)
-					# 合并词条 ID，去重
-					for id in ids:
-						if not all_tip_ids.has(id):
-							all_tip_ids.append(id)
 	
-	# 选择主目标卡牌作为 tooltip 的锚定位置
-	var tip_card: CardUI = null
-	if hovered_cards.size() > 0:
-		for c in hovered_cards:
-			if c == _mouse_foremost_hand_card:
-				tip_card = c
-				break
-		if tip_card == null:
-			tip_card = hovered_cards[0]
+	var tip_card := _pick_tooltip_anchor_card(hovered_cards)
+	var tip_ids: PackedStringArray = PackedStringArray()
+	if tip_card != null and is_instance_valid(tip_card.card_visuals):
+		tip_ids = tip_card.card_visuals.get_keyword_tooltip_ids()
 	
-	# 如果鼠标在手牌上，关闭状态 tooltip
-	if mouse_over_any_card:
+	# 仅当将展示手牌词条 tooltip 时关闭状态 tooltip，避免手牌扩展命中区误杀状态栏悬停
+	if tip_card != null:
 		Events.status_tooltip_hover_hide.emit()
 	
-	# 显示 tooltip：当悬停卡牌变化或强制刷新标志设置时
 	var card_changed := tip_card != prev_tip_card
 	if tip_card != null:
-		if card_changed or foremost_changed or _force_tooltip_refresh:
-			_sync_hand_keyword_tooltip_force(tip_card, all_tip_ids)
+		if card_changed or _force_tooltip_refresh:
+			_sync_hand_keyword_tooltip_force(tip_card, tip_ids)
 			_force_tooltip_refresh = false
 		else:
-			_sync_hand_keyword_tooltip(tip_card, all_tip_ids)
+			_sync_hand_keyword_tooltip(tip_card, tip_ids)
 	else:
 		_sync_hand_keyword_tooltip(null, PackedStringArray())
 		_force_tooltip_refresh = false
+
+
+func _pick_tooltip_anchor_card(cards: Array[CardUI]) -> CardUI:
+	if cards.is_empty():
+		return null
+	if is_instance_valid(_mouse_foremost_hand_card):
+		for c in cards:
+			if c == _mouse_foremost_hand_card:
+				return c
+	return _pick_instant_foremost_hand_card(cards)
+
+
+func _pick_instant_foremost_hand_card(cards: Array[CardUI]) -> CardUI:
+	if cards.is_empty():
+		return null
+	var mouse_pos := get_global_mouse_position()
+	var best: CardUI = null
+	var best_d2 := INF
+	var best_slot := 999999
+	for c in cards:
+		if not is_instance_valid(c):
+			continue
+		var d2 := c.get_hand_hover_hit_global_rect().get_center().distance_squared_to(mouse_pos)
+		var slot_idx := 999999
+		if is_instance_valid(c.hand_slot):
+			slot_idx = c.hand_slot.get_index()
+		if d2 < best_d2 - 0.01:
+			best_d2 = d2
+			best_slot = slot_idx
+			best = c
+		elif is_equal_approx(d2, best_d2) and slot_idx < best_slot:
+			best_slot = slot_idx
+			best = c
+	return best
 
 
 func _kw_tip_ids_equal(a: PackedStringArray, b: PackedStringArray) -> bool:
@@ -252,6 +272,12 @@ func _sync_hand_keyword_tooltip(winner: CardUI, ids: PackedStringArray) -> void:
 	var same_card := winner == _kw_tip_card
 	var same_ids := _kw_tip_ids_equal(ids, _kw_tip_ids)
 	if same_card and same_ids:
+		if (
+			winner != null
+			and not Events.card_keyword_tooltip_visible
+			and not Events.card_keyword_tooltip_render_pending
+		):
+			_sync_hand_keyword_tooltip_force(winner, ids)
 		return
 	_kw_tip_card = winner
 	_kw_tip_ids = ids.duplicate() if winner != null else PackedStringArray()
@@ -518,6 +544,26 @@ func disable_hand() -> void:
 			continue
 		card.disabled = true
 		card.force_hand_hover_visuals_off()
+
+
+## 自选层等将 CardUI 挂回槽后调用：与拖拽回手同一套 deferred 对齐与 reflow。
+func sync_card_ui_after_reparent_to_slot(card_ui: CardUI) -> void:
+	if not is_instance_valid(card_ui):
+		return
+	var p := card_ui.get_parent()
+	if p == null or not is_instance_valid(p):
+		return
+	if p.get_parent() != self and p != self:
+		return
+	call_deferred("_deferred_sync_card_after_external_reparent", card_ui)
+
+
+func _deferred_sync_card_after_external_reparent(card_ui: CardUI) -> void:
+	if not is_instance_valid(card_ui):
+		return
+	_apply_hand_card_transform_and_sync(card_ui)
+	_request_reflow_hand_bar()
+	_schedule_deferred_hand_layout_resync()
 
 
 func _on_card_ui_reparent_requested(child: CardUI) -> void:
