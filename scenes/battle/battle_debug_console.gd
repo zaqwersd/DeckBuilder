@@ -1,7 +1,7 @@
 class_name BattleDebugConsole
 extends Control
 
-## 全局调试：反引号 ` 打开；Esc /「关闭」收起。战斗中可用 \\enemy \\card \\health；任意时刻 \\event。
+## 全局调试：反引号 ` 打开；Esc /「关闭」收起。战斗中可用 \\enemy \\card \\health \\win；任意时刻 \\event。
 ## 挂在 Run 的 CanvasLayer 上（全地图/商店/战斗均可输入）。
 
 const BATTLES_DIR := "res://battles"
@@ -135,7 +135,7 @@ func _build_ui() -> void:
 	top_bar.add_child(close_btn)
 
 	_hint = Label.new()
-	_hint.text = "隐藏时按 ` 打开 | Esc /「关闭」| \\enemy \\card … \\health（须战斗中）| \\event | \\relic add/delete id"
+	_hint.text = "隐藏时按 ` 打开 | Esc /「关闭」| \\enemy \\card … \\health \\win（须战斗中）| \\event | \\relic add/delete id"
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vb.add_child(_hint)
@@ -568,8 +568,10 @@ func _run_command(text: String) -> String:
 			return _cmd_event(arg)
 		"\\relic":
 			return _cmd_relic(arg)
+		"\\win":
+			return _cmd_win(arg)
 		_:
-			return "未知指令。使用 \\enemy / \\card <位置> <id> [数量] / \\health（战斗）| \\event | \\relic add/delete id"
+			return "未知指令。使用 \\enemy / \\card <位置> <id> [数量] / \\health \\win（战斗）| \\event | \\relic add/delete id"
 
 
 func _cmd_event(arg: String) -> String:
@@ -771,6 +773,22 @@ func _cmd_health(arg: String) -> String:
 	var v := int(arg)
 	cs.health = clampi(v, 0, cs.max_health)
 	return "生命值已设为 %d / %d" % [cs.health, cs.max_health]
+
+
+func _cmd_win(_arg: String) -> String:
+	## 检查是否在战斗中
+	var bt := _current_battle()
+	if bt == null:
+		return "\\win 只能在战斗中使用。"
+	
+	## 获取战斗场景并强制胜利
+	var battle := bt as Battle
+	if battle == null:
+		return "无法获取战斗场景。"
+	
+	## 触发战斗胜利
+	battle.debug_force_win()
+	return "已触发战斗胜利！"
 
 
 func _find_card_tres_path(card_id: String) -> String:

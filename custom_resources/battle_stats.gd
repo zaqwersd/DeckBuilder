@@ -7,6 +7,7 @@ extends Resource
 @export var gold_reward_min: int
 @export var gold_reward_max: int
 @export var enemies: PackedScene
+@export var background_texture: Texture2D  ## 战斗背景图，为空则使用层默认
 
 var accumulated_weight: float = 0.0
 

@@ -30,6 +30,9 @@ func start_battle() -> void:
 	get_tree().paused = false
 	MusicPlayer.play(music, true)
 	
+	## 设置战斗背景图（优先使用配置的，其次使用层默认）
+	_setup_background()
+	
 	battle_ui.char_stats = char_stats
 	player.stats = char_stats
 	player_handler.relics = relics
@@ -40,6 +43,60 @@ func start_battle() -> void:
 	
 	relics.relics_activated.connect(_on_relics_activated)
 	relics.activate_relics_by_type(Relic.Type.START_OF_COMBAT)
+
+
+## 设置战斗背景图
+func _setup_background() -> void:
+	var bg_sprite := $Background as Sprite2D
+	if bg_sprite == null:
+		return
+	
+	## 优先使用战斗配置的背景图
+	if battle_stats and battle_stats.background_texture:
+		bg_sprite.texture = battle_stats.background_texture
+		return
+	
+	## 其次使用层默认背景图
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		var act_bg := _get_default_background_for_act(run.current_act)
+		if act_bg != null:
+			bg_sprite.texture = act_bg
+
+
+## 获取对应层的默认背景图
+func _get_default_background_for_act(act: int) -> Texture2D:
+	match act:
+		1:
+			return preload("res://art/background.png")
+		2:
+			## 第2层使用相同的背景图（可替换为不同的）
+			return preload("res://art/background.png")
+		3:
+			## 第3层使用相同的背景图（可替换为不同的）
+			return preload("res://art/background.png")
+	return preload("res://art/background.png")
+
+
+## 控制台指令用：强制触发战斗胜利
+func debug_force_win() -> void:
+	if Events.is_combat_ended():
+		return
+	
+	## 清除所有敌人
+	for enemy in enemy_handler.get_children():
+		if enemy is Enemy:
+			enemy.queue_free()
+	
+	## 标记战斗结束并触发胜利
+	Events.mark_combat_ended()
+	
+	## 激活战斗结束时的遗物效果
+	if is_instance_valid(relics):
+		relics.activate_relics_by_type(Relic.Type.END_OF_COMBAT)
+	
+	## 发射战斗胜利信号（Run._on_battle_won会处理后续）
+	Events.battle_won.emit()
 
 
 ## 调试控制台：替换当前战斗的敌人布局（BattleStats），不重置牌库与遗物。
