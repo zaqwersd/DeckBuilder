@@ -4,8 +4,15 @@ extends CardGridListing
 ## 战斗内模态升级层：高于 DeckPickerOverlay(6)
 const BATTLE_MODAL_CANVAS_LAYER := 7
 
-## 本次流程结束；参数为 true 表示已在营火中确认升级一张牌（预览模式恒为 false）。
-signal finished(did_upgrade: bool)
+## 升级流程结束状态
+enum Result {
+	UPGRADED,      ## 成功升级
+	CANCELLED,     ## 彻底取消（关闭整个流程）
+	BACK_TO_PICK   ## 返回到选牌界面（仅在非预览模式下）
+}
+
+## 本次流程结束；参数为 Result 枚举值
+signal finished(result: Result)
 
 var _readonly := false
 var _deck: CardPile
@@ -102,6 +109,25 @@ func begin_preview(for_card: Card) -> void:
 		_pointer_exclusive_pushed = true
 
 
+## 无上宝石遗物专用：直接显示满级预览，跳过词条选择阶段
+func begin_max_out(deck: CardPile, card_index: int) -> void:
+	_readonly = false
+	_deck = deck
+	_card_index = card_index
+	if _deck == null or _card_index < 0 or _card_index >= _deck.cards.size():
+		queue_free()
+		finished.emit(Result.CANCELLED)
+		return
+	_card = _deck.cards[_card_index]
+	if not is_node_ready():
+		await ready
+	_apply_mode_ui()
+	_show_max_out_preview()
+	if not _pointer_exclusive_pushed:
+		Events.begin_pointer_exclusive_ui(self)
+		_pointer_exclusive_pushed = true
+
+
 func _apply_mode_ui() -> void:
 	if _pick_title:
 		_pick_title.text = "点击词条以显示升级。" if _readonly else "点击词条以升级。"
@@ -176,6 +202,37 @@ func _show_phase2(track_id: String) -> void:
 	_menu_right.use_listing_hover_zoom = false
 	if _readonly:
 		_setup_right_preview_meta_chain(preview)
+
+
+## 无上宝石遗物专用：显示满级预览（跳过词条选择）
+func _show_max_out_preview() -> void:
+	_pick_ui_stamp += 1
+	_picked_track = "max_out"  ## 特殊标记表示批量升级模式
+	_phase1.visible = false
+	_phase2.visible = true
+	for c: Node in _center_left.get_children():
+		var lm2 := c as CardMenuUI
+		if lm2 and lm2.visuals:
+			_disconnect_menu_upgrade_pick(lm2)
+		c.queue_free()
+	for c: Node in _center_right.get_children():
+		var rm2 := c as CardMenuUI
+		if rm2 and rm2.visuals:
+			_disconnect_right_desc_meta(rm2.visuals.description_label)
+			rm2.visuals.configure_cost_upgrade_for_flow(Callable())
+		c.queue_free()
+	_menu_left = create_listing_card_menu()
+	_menu_right = create_listing_card_menu()
+	_center_left.add_child(_menu_left)
+	_center_right.add_child(_menu_right)
+	_menu_left.card = _card
+	_apply_upgrade_pick_or_normal_description(_menu_left, _card)
+	## 生成满级预览卡牌
+	var preview: Card = _card.duplicate(true) as Card
+	preview.max_out_all_upgrade_tracks()
+	_menu_right.card = preview
+	_menu_left.use_listing_hover_zoom = false
+	_menu_right.use_listing_hover_zoom = false
 
 
 func _apply_upgrade_pick_or_normal_description(menu: CardMenuUI, for_card: Card) -> void:
@@ -346,12 +403,22 @@ func _on_confirm_upgrade() -> void:
 		return
 	if _picked_track.is_empty():
 		return
-	_card.increment_upgrade_track(_picked_track)
+	## 无上宝石遗物批量升级模式
+	if _picked_track == "max_out":
+		_card.max_out_all_upgrade_tracks()
+	else:
+		_card.increment_upgrade_track(_picked_track)
 	queue_free()
-	finished.emit(true)
+	finished.emit(Result.UPGRADED)
 
 
 func _on_cancel_all() -> void:
+	## 如果在 Phase2（左右预览界面），返回到 Phase1（选牌界面）
+	if _phase2.visible:
+		_on_back_to_pick()
+		return
+	
+	## 如果在 Phase1，清理资源
 	if is_instance_valid(_menu_center) and is_instance_valid(_menu_center.visuals):
 		_disconnect_menu_upgrade_pick(_menu_center)
 	if is_instance_valid(_menu_left) and is_instance_valid(_menu_left.visuals):
@@ -359,8 +426,14 @@ func _on_cancel_all() -> void:
 	if is_instance_valid(_menu_right) and is_instance_valid(_menu_right.visuals):
 		_disconnect_right_desc_meta(_menu_right.visuals.description_label)
 		_menu_right.visuals.configure_cost_upgrade_for_flow(Callable())
-	queue_free()
-	finished.emit(false)
+	
+	## 非预览模式下，返回到选牌界面；预览模式下，直接关闭
+	if _readonly:
+		queue_free()
+		finished.emit(Result.CANCELLED)
+	else:
+		queue_free()
+		finished.emit(Result.BACK_TO_PICK)
 
 
 func _exit_tree() -> void:

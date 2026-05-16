@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scenes/treasure/treasure.gd" id="1_0dgmn"]
 [ext_resource type="Texture2D" path="res://art/background.png" id="2_g7pdp"]
@@ -13,6 +13,7 @@
 [ext_resource type="Resource" path="res://relics/confusing_staff.tres" id="6_fkuuo"]
 [ext_resource type="Resource" path="res://relics/wooden_sword.tres" id="7_oqlxp"]
 [ext_resource type="Resource" path="res://relics/defect_machine.tres" id="8_defmc"]
+[ext_resource type="Resource" path="res://relics/peerless_gem.tres" id="9_peerless"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_8a2h2"]
 font_size = 54
@@ -155,7 +156,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_0dgmn")
-treasure_relic_pool = Array[Resource("res://custom_resources/relic.gd")]([ExtResource("2_g8620"), ExtResource("3_b2sgi"), ExtResource("4_xb65p"), ExtResource("5_5havh"), ExtResource("6_fkuuo"), ExtResource("7_oqlxp"), ExtResource("8_defmc")])
+treasure_relic_pool = Array[Resource("res://custom_resources/relic.gd")]([ExtResource("2_g8620"), ExtResource("3_b2sgi"), ExtResource("4_xb65p"), ExtResource("5_5havh"), ExtResource("6_fkuuo"), ExtResource("7_oqlxp"), ExtResource("8_defmc"), ExtResource("9_peerless")])
 
 [node name="Background" type="TextureRect" parent="."]
 layout_mode = 1

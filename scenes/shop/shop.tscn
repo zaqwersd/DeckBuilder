@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [ext_resource type="Script" path="res://scenes/shop/shop.gd" id="1_oqoy8"]
 [ext_resource type="Texture2D" path="res://art/tile_0086.png" id="2_41omk"]
@@ -11,6 +11,7 @@
 [ext_resource type="Resource" path="res://relics/confusing_staff.tres" id="7_wrryf"]
 [ext_resource type="Resource" path="res://relics/wooden_sword.tres" id="8_rq1it"]
 [ext_resource type="Resource" path="res://relics/defect_machine.tres" id="9_defmc"]
+[ext_resource type="Resource" path="res://relics/peerless_gem.tres" id="10_peerless"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier_handler.tscn" id="11_863hj"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier.tscn" id="12_xf6l8"]
 
@@ -75,7 +76,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_oqoy8")
-shop_relics = Array[Resource("res://custom_resources/relic.gd")]([ExtResource("2_ccxow"), ExtResource("3_7lk2o"), ExtResource("4_4u268"), ExtResource("5_8ym3b"), ExtResource("6_t35ch"), ExtResource("7_wrryf"), ExtResource("8_rq1it"), ExtResource("9_defmc")])
+shop_relics = Array[Resource("res://custom_resources/relic.gd")]([ExtResource("2_ccxow"), ExtResource("3_7lk2o"), ExtResource("4_4u268"), ExtResource("5_8ym3b"), ExtResource("6_t35ch"), ExtResource("7_wrryf"), ExtResource("8_rq1it"), ExtResource("9_defmc"), ExtResource("10_peerless")])
 
 [node name="BackgroundLayer" type="CanvasLayer" parent="."]
 layer = 0
@@ -163,7 +164,7 @@ grow_vertical = 2
 [node name="ShopColumns" type="HBoxContainer" parent="UILayer/ShopContent"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = -30
 alignment = 1
 
 [node name="ModifierHandler" parent="." instance=ExtResource("11_863hj")]

@@ -217,6 +217,15 @@ func get_total_upgrade_count() -> int:
 	return n
 
 
+## 将所有可升级轨道一次性升至满级（无上宝石遗物使用）
+func max_out_all_upgrade_tracks() -> void:
+	for track_id in get_upgrade_track_ids():
+		var ch := get_upgrade_chain(track_id)
+		if not ch.is_empty():
+			upgrade_track_steps[track_id] = ch.size() - 1
+	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+
+
 func is_single_targeted() -> bool:
 	return target == Target.SINGLE_ENEMY
 

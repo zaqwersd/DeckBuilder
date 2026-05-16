@@ -230,6 +230,10 @@ func _collect_battle_basenames() -> PackedStringArray:
 
 func _collect_event_room_basenames() -> PackedStringArray:
 	var out: Array[String] = []
+	# 添加特殊快速选项
+	out.append("campfire")
+	out.append("shop")
+	
 	var dir := DirAccess.open(EVENT_ROOMS_DIR)
 	if dir == null:
 		return PackedStringArray()
@@ -749,7 +753,7 @@ func _cmd_relic(arg: String) -> String:
 	var inst: Relic = (res as Relic).duplicate(true) as Relic
 	if rh.has_relic(inst.id):
 		return "已拥有遗物：%s" % inst.id
-	rh.add_relic(inst, false)
+	rh.add_relic(inst, true)
 	return "已添加遗物：%s（%s）" % [inst.relic_name, inst.id]
 
 
