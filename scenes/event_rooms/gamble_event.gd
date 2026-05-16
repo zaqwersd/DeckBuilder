@@ -6,9 +6,15 @@ extends EventRoom
 
 
 func setup() -> void:
-	skip_button.visible = run_stats.gold < 50
-	fifty_button.disabled = run_stats.gold < 50
-	thirty_button.disabled = run_stats.gold < 50
+	# 如果是重载，重置按钮为初始状态（场景快照已恢复金币）
+	if _is_run_reload:
+		fifty_button.disabled = false
+		thirty_button.disabled = false
+		skip_button.visible = false
+	else:
+		skip_button.visible = run_stats.gold < 50
+		fifty_button.disabled = run_stats.gold < 50
+		thirty_button.disabled = run_stats.gold < 50
 	
 	fifty_button.event_button_callback = bet_50
 	thirty_button.event_button_callback = bet_30

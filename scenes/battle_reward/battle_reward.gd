@@ -27,6 +27,9 @@ var _is_reload: bool = false
 func _ready() -> void:
 	for node: Node in rewards.get_children():
 		node.queue_free()
+	
+	## 设置与当前层数匹配的背景图
+	_setup_background()
 
 
 ## 从 Run 初始化奖励状态
@@ -35,6 +38,28 @@ func setup_from_run(is_reload: bool) -> void:
 	if is_reload:
 		_restore_reward_state_from_save()
 	## 非重载时：由外部调用 add_*_reward 添加奖励，最后调用 save_initial_state 保存
+
+
+## 设置与当前层数匹配的背景图
+func _setup_background() -> void:
+	var bg_rect := $Background as TextureRect
+	if bg_rect == null:
+		return
+	
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null:
+		return
+	
+	## 根据当前层数设置对应背景图
+	match run.current_act:
+		1:
+			bg_rect.texture = preload("res://art/act1_background.png")
+		2:
+			bg_rect.texture = preload("res://art/background.png")
+		3:
+			bg_rect.texture = preload("res://art/act3_background.png")
+		_:
+			bg_rect.texture = preload("res://art/background.png")
 
 
 ## 保存奖励初始状态到存档（在所有奖励添加完成后调用）
@@ -60,13 +85,10 @@ func _restore_reward_state_from_save() -> void:
 		return
 	
 	_gold_amount = state.get("gold", 0)
-	_gold_taken = state.get("gold_taken", false)
 	_card_reward_ids = state.get("card_ids", PackedStringArray())
-	_cards_taken = state.get("cards_taken", false)
 	
-	## 恢复遗物状态
+	## 恢复遗物列表（但强制标记为未领取，实现"回到战斗刚结束"的效果）
 	var relic_ids: PackedStringArray = state.get("relic_ids", PackedStringArray())
-	var relics_taken: PackedInt32Array = state.get("relics_taken", PackedInt32Array())
 	_relics.clear()
 	_relics_taken.clear()
 	
@@ -75,7 +97,17 @@ func _restore_reward_state_from_save() -> void:
 		var relic: Relic = GameContent.load_relic_template(relic_id)
 		if relic != null:
 			_relics.append(relic)
-			_relics_taken.append(i < relics_taken.size() and relics_taken[i] == 1)
+			_relics_taken.append(false)  # 强制为未领取
+	
+	## 强制重置所有奖励为未领取状态
+	_gold_taken = false
+	_cards_taken = false
+	
+	## 重置存档中的领取状态，确保下次保存也是未领取
+	run.save_data.battle_reward_gold_taken = false
+	run.save_data.battle_reward_cards_taken = false
+	for i: int in range(run.save_data.battle_reward_relics_taken.size()):
+		run.save_data.battle_reward_relics_taken[i] = 0
 	
 	## 根据恢复的状态重新构建UI
 	_rebuild_reward_ui()
@@ -170,6 +202,48 @@ func add_card_reward() -> void:
 		_add_card_reward_button()
 
 
+## 公共方法：添加必定Rare的卡牌奖励（层BOSS奖励专用）
+func add_rare_card_reward() -> void:
+	if _is_reload:
+		return
+	
+	## 生成必定Rare的卡牌列表（3选1）
+	var available_cards: Array[Card] = character_stats.draftable_cards.duplicate_cards()
+	var rare_cards: Array[Card] = []
+	for c: Card in available_cards:
+		if c.rarity == Card.Rarity.RARE:
+			rare_cards.append(c)
+	
+	## 如果没有Rare卡牌，回退到普通卡牌奖励
+	if rare_cards.is_empty():
+		add_card_reward()
+		return
+	
+	## 随机选择3张Rare卡牌（或全部如果不足3张）
+	var pick_count := mini(3, rare_cards.size())
+	var selected_cards: Array[Card] = []
+	while selected_cards.size() < pick_count and rare_cards.size() > 0:
+		var idx := RNG.instance.randi() % rare_cards.size()
+		selected_cards.append(rare_cards[idx])
+		rare_cards.remove_at(idx)
+	
+	## 保存卡牌奖励ID（使用Rare卡牌）
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		var ids := PackedStringArray()
+		for c: Card in selected_cards:
+			ids.append(c.id)
+		_card_reward_ids = ids
+		run.persist_battle_reward_cards_pending(ids)
+	
+	## 添加稀有卡牌奖励按钮（使用标准描述）
+	var card_reward := REWARD_BUTTON.instantiate() as RewardButton
+	card_reward.reward_icon = CARD_ICON
+	card_reward.reward_text = CARD_TEXT  ## 使用标准常量"添加新卡牌"
+	card_reward.pressed.connect(_show_card_rewards)
+	rewards.add_child.call_deferred(card_reward)
+
+
 ## 公共方法：添加遗物奖励
 func add_relic_reward(relic: Relic) -> void:
 	if not relic:
@@ -184,9 +258,12 @@ func add_relic_reward(relic: Relic) -> void:
 ## 生成或恢复卡牌奖励列表
 func _roll_or_restore_card_rewards() -> Array[Card]:
 	var run := get_tree().get_first_node_in_group("run") as Run
-	if _is_reload and run != null and not _card_reward_ids.is_empty():
+	
+	## 如果已经设置了卡牌奖励ID（如add_rare_card_reward设置的Rare卡），直接使用
+	if not _card_reward_ids.is_empty() and run != null:
 		return run.get_pending_card_templates()
 	
+	## 生成普通随机卡牌奖励
 	var available_cards: Array[Card] = character_stats.draftable_cards.duplicate_cards()
 	var pick_count := mini(run_stats.card_rewards, available_cards.size())
 	var card_reward_array := RNG.pick_weighted_distinct_cards(
@@ -208,9 +285,9 @@ func _roll_or_restore_card_rewards() -> Array[Card]:
 ## 打开卡牌奖励覆盖层
 func _open_card_rewards_overlay(card_reward_array: Array[Card]) -> void:
 	var card_rewards := CARD_REWARDS.instantiate() as CardRewards
-	add_child(card_rewards)
 	card_rewards.card_reward_selected.connect(_on_card_reward_taken, CONNECT_ONE_SHOT)
 	card_rewards.rewards = card_reward_array
+	get_tree().root.add_child(card_rewards)
 	card_rewards.show()
 
 

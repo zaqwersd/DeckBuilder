@@ -1,7 +1,7 @@
 class_name BattleDebugConsole
 extends Control
 
-## 全局调试：反引号 ` 打开；Esc /「关闭」收起。战斗中可用 \\enemy \\card \\health \\win；任意时刻 \\event。
+## 全局调试：反引号 ` 打开；Esc /「关闭」收起。输入 \\help 查看可用指令。
 ## 挂在 Run 的 CanvasLayer 上（全地图/商店/战斗均可输入）。
 
 const BATTLES_DIR := "res://battles"
@@ -135,7 +135,7 @@ func _build_ui() -> void:
 	top_bar.add_child(close_btn)
 
 	_hint = Label.new()
-	_hint.text = "隐藏时按 ` 打开 | Esc /「关闭」| \\enemy \\card … \\health \\win（须战斗中）| \\event | \\relic add/delete id"
+	_hint.text = "按 ` 打开控制台 | Esc 关闭 | \\help 查看指令"
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vb.add_child(_hint)
@@ -570,8 +570,12 @@ func _run_command(text: String) -> String:
 			return _cmd_relic(arg)
 		"\\win":
 			return _cmd_win(arg)
+		"\\help":
+			return _cmd_help()
+		"\\jump":
+			return _cmd_jump(arg)
 		_:
-			return "未知指令。使用 \\enemy / \\card <位置> <id> [数量] / \\health \\win（战斗）| \\event | \\relic add/delete id"
+			return "未知指令。输入 \\help 查看可用指令"
 
 
 func _cmd_event(arg: String) -> String:
@@ -789,6 +793,44 @@ func _cmd_win(_arg: String) -> String:
 	## 触发战斗胜利
 	battle.debug_force_win()
 	return "已触发战斗胜利！"
+
+
+func _cmd_help() -> String:
+	return """可用指令：
+战斗中：\\enemy <id> | \\card <位置> <id> [数量] | \\health <数值> | \\win
+任意时刻：\\event <id> | \\relic add/delete <id> | \\jump [on/off] | \\help"""
+
+
+var _jump_mode: bool = false
+
+func _cmd_jump(arg: String) -> String:
+	_ensure_run()
+	if _run == null or not is_instance_valid(_run):
+		return "无法获取 Run 节点。"
+	
+	var map := _run.map
+	if map == null or not is_instance_valid(map):
+		return "当前不在地图界面。"
+	
+	## 切换模式
+	if arg.strip_edges().to_lower() == "off" or (arg.is_empty() and _jump_mode):
+		_jump_mode = false
+		## 恢复正常解锁逻辑：先锁定所有房间，再正常解锁
+		for map_room in map.rooms.get_children():
+			if "available" in map_room:
+				map_room.available = false
+		if map.floors_climbed > 0:
+			map.unlock_next_rooms()
+		else:
+			map.unlock_floor()
+		return "\\jump 已关闭，恢复正常路线限制。"
+	else:
+		_jump_mode = true
+		## 解锁所有房间（检查是否有 available 属性）
+		for map_room in map.rooms.get_children():
+			if "available" in map_room:
+				map_room.available = true
+		return "\\jump 已开启，现在可以自由选择任何房间。再次输入 \\jump 关闭。"
 
 
 func _find_card_tres_path(card_id: String) -> String:

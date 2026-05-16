@@ -185,9 +185,12 @@ func _apply_deck_pick_panel_style() -> void:
 		return
 	if _deck_pick_selected:
 		var glow := visuals.main_panel_style_base.duplicate() as StyleBoxFlat
-		const bw := 3
-		glow.set_border_width_all(bw)
-		glow.border_color = Color(0.98, 0.92, 0.42, 1.0)
+		# 白色羽化发光轮廓效果
+		glow.shadow_color = Color(1.0, 1.0, 1.0, 0.9)
+		glow.shadow_size = 10
+		glow.shadow_offset = Vector2(0, 0)
+		# 保留原边框但设为透明，让 shadow 成为主要视觉效果
+		glow.set_border_width_all(0)
 		visuals.panel.add_theme_stylebox_override("panel", glow)
 	else:
 		visuals.panel.add_theme_stylebox_override("panel", visuals.main_panel_style_base)

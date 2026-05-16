@@ -34,7 +34,7 @@ music = ExtResource("3_nuoky")
 metadata/_edit_lock_ = true
 
 [node name="Background" type="Sprite2D" parent="." unique_id=1466098328]
-modulate = Color(0.321569, 0.321569, 0.321569, 1)
+modulate = Color(1, 1, 1, 1)
 scale = Vector2(4.5, 4.5)
 texture = ExtResource("1_ybkl6")
 centered = false

@@ -42,9 +42,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	camera_2d.position.x = _camera_anchor_x
 
 
-func generate_new_map() -> void:
+func generate_new_map(act: int = 1) -> void:
 	floors_climbed = 0
-	map_data = map_generator.generate_map()
+	map_data = map_generator.generate_map(act)
 	create_map()
 
 
@@ -61,6 +61,20 @@ func load_map(map: Array[Array], floors_completed: int, last_room_climbed: Room)
 
 
 func create_map() -> void:
+	## 清理旧地图：删除所有房间和连线
+	for child in rooms.get_children():
+		child.queue_free()
+	for child in lines.get_children():
+		child.queue_free()
+	
+	## 强制立即执行清理（不等待帧）
+	for child in rooms.get_children():
+		if is_instance_valid(child):
+			child.free()
+	for child in lines.get_children():
+		if is_instance_valid(child):
+			child.free()
+	
 	for current_floor: Array in map_data:
 		for room: Room in current_floor:
 			if room.next_rooms.size() > 0:

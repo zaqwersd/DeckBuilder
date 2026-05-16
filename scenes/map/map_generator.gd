@@ -24,9 +24,11 @@ var random_room_type_weights = {
 }
 var random_room_type_total_weight := 0
 var map_data: Array[Array]
+var current_act: int = 1  ## 当前层数（1-3），用于区分不同层的内容池
 
 
-func generate_map() -> Array[Array]:
+func generate_map(act: int = 1) -> Array[Array]:
+	current_act = act
 	map_data = _generate_initial_grid()
 	var starting_points := _get_random_starting_points()
 	
@@ -137,7 +139,7 @@ func _setup_boss_room() -> void:
 			current_room.next_rooms.append(boss_room)
 			
 	boss_room.type = Room.Type.BOSS
-	boss_room.battle_stats = battle_stats_pool.get_random_battle_for_tier(2)
+	boss_room.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 2)
 
 
 func _setup_random_room_weights() -> void:
@@ -154,7 +156,7 @@ func _setup_room_types() -> void:
 	for room: Room in map_data[0]:
 		if room.next_rooms.size() > 0:
 				room.type = Room.Type.MONSTER
-				room.battle_stats = battle_stats_pool.get_random_battle_for_tier(0)
+				room.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 0)
 
 	# 9th floor is always a treasure
 	for room: Room in map_data[8]:
@@ -202,10 +204,10 @@ func _set_room_randomly(room_to_set: Room) -> void:
 		var tier_for_monster_rooms := 0
 		if room_to_set.row >= 5:
 			tier_for_monster_rooms = 1
-		room_to_set.battle_stats = battle_stats_pool.get_random_battle_for_tier(tier_for_monster_rooms)
+		room_to_set.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, tier_for_monster_rooms)
 	
 	if type_candidate == Room.Type.EVENT:
-		room_to_set.event_scene = event_room_pool.get_random()
+		room_to_set.event_scene = event_room_pool.get_random_for_act(current_act)
 
 
 func _room_has_parent_of_type(room: Room, type: Room.Type) -> bool:

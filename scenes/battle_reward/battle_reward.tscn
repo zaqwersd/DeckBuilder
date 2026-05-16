@@ -13,6 +13,8 @@ font_size = 54
 bg_color = Color(0, 0, 0, 0.501961)
 
 [node name="BattleReward" type="Control"]
+z_index = 200
+z_as_relative = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0

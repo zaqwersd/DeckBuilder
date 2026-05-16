@@ -17,6 +17,7 @@ const _TIER2_EVIL_BATTLE_SCENE := preload("res://battles/tier_2_evil_spirit.tscn
 @export var last_room: Room
 @export var floors_climbed: int
 @export var was_on_map: bool
+@export var act_number: int = 1  ## 当前层数（1-3），用于三层游戏结构
 ## 营火：休息或升级后已生效，但尚未点「离开」；读档时回到仅「离开」界面。
 @export var campfire_leave_pending: bool = false
 
@@ -158,3 +159,95 @@ static func _fix_toxic_ghost_battle_scene(room: Room) -> void:
 static func delete_data() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(SAVE_PATH)
+
+
+## ============================================================================
+## 场景进入快照：用于商店、事件、宝藏等场景重进时恢复到刚进入时的状态
+## ============================================================================
+
+## 场景进入时的角色状态快照
+@export var scene_entry_health: int = -1
+@export var scene_entry_gold: int = -1
+@export var scene_entry_deck_cards: Array[Card] = []
+@export var scene_entry_relic_ids: PackedStringArray = PackedStringArray()
+@export var scene_entry_rng_seed: int = 0
+@export var scene_entry_rng_state: int = 0
+@export var scene_entry_room_type: int = -1
+@export var has_scene_entry_snapshot: bool = false
+
+
+func save_scene_entry_snapshot(
+	room_type: int,
+	character: CharacterStats,
+	relics: Array[Relic],
+	rng_seed: int,
+	rng_state: int
+) -> void:
+	"""保存进入场景时的初始状态快照"""
+	if character == null:
+		return
+	
+	scene_entry_room_type = room_type
+	scene_entry_health = character.health
+	scene_entry_gold = run_stats.gold if run_stats else 0
+	
+	# 保存卡组
+	scene_entry_deck_cards.clear()
+	if character.deck != null:
+		for card in character.deck.cards:
+			scene_entry_deck_cards.append(card.duplicate(true) as Card)
+	
+	# 保存遗物ID
+	scene_entry_relic_ids.clear()
+	for relic in relics:
+		if is_instance_valid(relic) and relic != null:
+			scene_entry_relic_ids.append(relic.id)
+	
+	scene_entry_rng_seed = rng_seed
+	scene_entry_rng_state = rng_state
+	has_scene_entry_snapshot = true
+
+
+func apply_scene_entry_snapshot(character: CharacterStats, relic_handler: RelicHandler) -> bool:
+	"""应用场景进入时的快照状态，返回是否成功应用"""
+	if not has_scene_entry_snapshot or character == null:
+		return false
+	
+	# 恢复生命值
+	if scene_entry_health >= 0:
+		character.health = scene_entry_health
+	
+	# 恢复金币
+	if run_stats != null and scene_entry_gold >= 0:
+		run_stats.gold = scene_entry_gold
+	
+	# 恢复卡组
+	if character.deck != null and not scene_entry_deck_cards.is_empty():
+		character.deck.cards.clear()
+		for card in scene_entry_deck_cards:
+			character.deck.cards.append(card.duplicate(true) as Card)
+	
+	# 恢复遗物
+	if relic_handler != null:
+		relic_handler.clear_relics()
+		for relic_id in scene_entry_relic_ids:
+			var relic := GameContent.load_relic_template(relic_id)
+			if relic != null:
+				relic_handler.add_relic(relic, false)
+	
+	# 恢复RNG状态
+	RNG.set_from_save_data(scene_entry_rng_seed, scene_entry_rng_state)
+	
+	return true
+
+
+func clear_scene_entry_snapshot() -> void:
+	"""清除场景快照"""
+	has_scene_entry_snapshot = false
+	scene_entry_room_type = -1
+	scene_entry_health = -1
+	scene_entry_gold = -1
+	scene_entry_deck_cards.clear()
+	scene_entry_relic_ids.clear()
+	scene_entry_rng_seed = 0
+	scene_entry_rng_state = 0

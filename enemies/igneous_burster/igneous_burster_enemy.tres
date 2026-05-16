@@ -9,5 +9,5 @@ script = ExtResource("1_es")
 ai = ExtResource("3_ai")
 health_bar_width = 200
 status_bar_offset = Vector2(0, 50)
-max_health = 49
+max_health = 57
 art = ExtResource("2_art")

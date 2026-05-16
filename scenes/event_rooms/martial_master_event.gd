@@ -74,6 +74,18 @@ func _iron_preview_hover_out_deferred() -> void:
 
 
 func setup() -> void:
+	# 重载时回到初始状态（场景快照已恢复角色状态）
+	if _is_run_reload:
+		option_strike_block.disabled = not _deck_has_strike_and_block()
+		option_two_pick.disabled = not _can_roll_attack_and_skill()
+		if option_strike_block.disabled and is_instance_valid(_iron_preview_menu):
+			_iron_preview_menu.hide()
+		# 清除待处理的事件奖励状态
+		var run := get_tree().get_first_node_in_group("run") as Run
+		if run != null:
+			run.clear_room_pending_and_save()
+		return
+	
 	option_strike_block.disabled = not _deck_has_strike_and_block()
 	option_two_pick.disabled = not _can_roll_attack_and_skill()
 	if option_strike_block.disabled and is_instance_valid(_iron_preview_menu):
@@ -150,10 +162,7 @@ func _on_option_strike_block() -> void:
 		_iron_preview_menu.hide()
 	option_strike_block.disabled = true
 	option_two_pick.disabled = true
-	var overlay := DECK_OVERLAY.instantiate() as DeckPickerOverlay
-	overlay.z_index = 200
-	overlay.z_as_relative = false
-	add_child(overlay)
+	var overlay := DeckPickerOverlay.open_on_tree(get_tree())
 	var allowed := PackedStringArray(["blade_strike", "blade_block"])
 	overlay.setup(
 		character_stats.deck,
@@ -212,9 +221,9 @@ func _show_option_two_rewards(pair: Array[Card]) -> void:
 	option_two_pick.disabled = true
 	option_strike_block.disabled = true
 	var rewards := CARD_REWARDS.instantiate() as CardRewards
-	add_child(rewards)
 	rewards.rewards = pair
 	rewards.card_reward_selected.connect(_on_option_two_reward_picked, CONNECT_ONE_SHOT)
+	get_tree().root.add_child(rewards)
 
 
 func _on_option_two_reward_picked(menu: Variant, from_global: Vector2) -> void:

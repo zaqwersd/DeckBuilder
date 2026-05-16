@@ -21,7 +21,7 @@ const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
 @onready var status_hover_tooltip: StatusHoverTooltip = %StatusHoverTooltip
 @onready var card_keyword_tooltip: CardKeywordTooltip = %CardKeywordTooltip
 @onready var deck_button: CardPileOpener = %DeckButton
-@onready var pause_button: Button = %PauseButton
+@onready var pause_button: TextureButton = %PauseButton
 @onready var deck_view: CardPileView = %DeckView
 @onready var pause_menu: PauseMenu = $PauseMenu
 @onready var run_card_fx: RunCardFx = $RunCardFxLayer/RunCardFx
@@ -36,6 +36,7 @@ const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
 var stats: RunStats
 var character: CharacterStats
 var save_data: SaveGame
+var current_act: int = 1  ## 当前层数（1-3），用于三层游戏结构
 
 
 func _ready() -> void:
@@ -57,11 +58,12 @@ func _ready() -> void:
 	_ensure_debug_console()
 func _start_run() -> void:
 	stats = RunStats.new()
+	current_act = 1
 	
 	_setup_event_connections()
 	_setup_top_bar()
 	
-	map.generate_new_map()
+	map.generate_new_map(current_act)
 	map.unlock_floor(0)
 	
 	save_data = SaveGame.new()
@@ -76,6 +78,7 @@ func _save_run(was_on_map: bool) -> void:
 	save_data.map_data = map.map_data.duplicate()
 	save_data.floors_climbed = map.floors_climbed
 	save_data.was_on_map = was_on_map
+	save_data.act_number = current_act
 	
 	# 获取当前遗物列表
 	var current_relics := relic_handler.get_all_relics()
@@ -108,6 +111,10 @@ func _load_run() -> void:
 	character = save_data.char_stats
 	character.deck = save_data.current_deck
 	character.health = save_data.current_health
+	
+	## 加载当前层数（默认为1，兼容旧存档）
+	current_act = save_data.act_number if save_data.act_number > 0 else 1
+	
 	if save_data.campfire_leave_pending:
 		save_data.apply_campfire_pending_rollback_to(character)
 	
@@ -140,7 +147,7 @@ func _load_run() -> void:
 			## 关闭任何子界面，确保回到奖励栏主界面
 			reward_scene.restore_card_picker_if_pending()
 		else:
-			# 其他房间（战斗、商店等）
+			# 其他房间（战斗、商店、事件、宝藏等）
 			if save_data.combat_snapshot != null:
 				# 有战斗快照：先恢复快照，然后设置UI
 				save_data.combat_snapshot.apply_to(character, relic_handler, save_data.relics)
@@ -151,11 +158,30 @@ func _load_run() -> void:
 				_setup_top_bar()  # 快照恢复后才设置UI
 				_on_battle_room_entered(save_data.combat_snapshot.room, true)
 			else:
-				# 没有战斗快照：正常加载遗物
-				_load_relics_from_save_data()
-				_setup_top_bar()
-				RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
-				_on_map_exited(save_data.last_room, true)
+				# 检查是否有场景进入快照需要恢复（商店、事件、宝藏）
+				var should_apply_snapshot := (
+					save_data.has_scene_entry_snapshot
+					and save_data.last_room != null
+					and save_data.scene_entry_room_type == save_data.last_room.type
+					and save_data.last_room.type in [
+						Room.Type.SHOP,
+						Room.Type.TREASURE,
+						Room.Type.EVENT
+					]
+				)
+				
+				if should_apply_snapshot:
+					# 应用场景进入快照，恢复到刚进入场景时的状态
+					save_data.apply_scene_entry_snapshot(character, relic_handler)
+					_load_relics_from_save_data()
+					_setup_top_bar()
+					_on_map_exited(save_data.last_room, true)
+				else:
+					# 没有场景快照：正常加载遗物和RNG
+					_load_relics_from_save_data()
+					_setup_top_bar()
+					RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+					_on_map_exited(save_data.last_room, true)
 	else:
 		# 在地图上
 		_load_relics_from_save_data()
@@ -222,6 +248,7 @@ func _show_map() -> void:
 			save_data.commit_campfire_pending_to(character)
 		save_data.clear_campfire_pending_staging()
 		save_data.clear_room_pending()
+		save_data.clear_scene_entry_snapshot()  # 清除场景进入快照
 	_save_run(true)
 
 
@@ -499,10 +526,62 @@ func _show_regular_battle_rewards() -> void:
 	reward_scene.relic_handler = relic_handler
 	reward_scene.setup_from_run(false)
 
-	reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward())
+	## 添加金币奖励（如果有战斗配置）
+	if map.last_room != null and map.last_room.battle_stats != null:
+		reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward())
+	else:
+		## 回退到默认金币奖励（控制台强制胜利时使用）
+		reward_scene.add_gold_reward(RNG.instance.randi_range(50, 80))
+	
 	reward_scene.add_card_reward()
 	## 所有奖励添加完成后，保存初始状态
 	reward_scene.save_initial_state()
+
+
+## 层BOSS奖励：给予100-150金币和必定Rare的卡牌奖励
+func _show_act_boss_rewards() -> void:
+	## 直接给予金币奖励
+	var gold_reward := RNG.instance.randi_range(100, 150)
+	stats.gold += gold_reward
+	
+	## 创建奖励界面
+	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
+	reward_scene.run_stats = stats
+	reward_scene.character_stats = character
+	reward_scene.relic_handler = relic_handler
+	reward_scene.setup_from_run(false)
+	
+	## 添加金币奖励显示（已直接给予，但显示在奖励界面）
+	reward_scene.add_gold_reward(gold_reward)
+	
+	## 添加必定Rare的卡牌奖励
+	reward_scene.add_rare_card_reward()
+	
+	## 保存初始状态，并连接退出信号以进入下一层
+	reward_scene.save_initial_state()
+	reward_scene.tree_exited.connect(_on_act_reward_finished, CONNECT_ONE_SHOT)
+
+
+## 层BOSS奖励领取完毕后进入下一层
+func _on_act_reward_finished() -> void:
+	current_act += 1
+	
+	## 保存当前层数到存档
+	if save_data != null:
+		save_data.act_number = current_act
+	
+	## 生成新的地图（新的一层），传递当前层数以加载对应内容池
+	map.generate_new_map(current_act)
+	map.unlock_floor(0)
+	
+	## 重置已攀爬层数（新的一层从0开始）
+	map.floors_climbed = 0
+	
+	## 显示地图
+	_show_map()
+	
+	## 保存进度
+	_save_run(true)
 
 
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
@@ -580,6 +659,12 @@ func _on_shop_entered(is_reload: bool = false) -> void:
 
 
 func _on_event_room_entered(room: Room, is_reload: bool = false) -> void:
+	if room.event_scene == null:
+		push_error("_on_event_room_entered: room.event_scene 为 null，无法进入事件房间")
+		## 回退到显示地图，避免游戏卡住
+		_show_map()
+		return
+	
 	var event_room: Node = _change_view(room.event_scene)
 	event_room.set("character_stats", character)
 	event_room.set("run_stats", stats)
@@ -590,9 +675,22 @@ func _on_event_room_entered(room: Room, is_reload: bool = false) -> void:
 
 
 func debug_enter_event(id: String) -> String:
+	var t := id.strip_edges().to_lower()
+	
+	# 特殊选项：快速进入商店
+	if t == "shop":
+		_on_shop_entered(false)
+		return "已进入商店"
+	
+	# 特殊选项：快速进入营火
+	if t == "campfire":
+		_on_campfire_entered()
+		return "已进入营火"
+	
+	# 默认：加载事件场景
 	var scene := _load_event_scene_by_id(id)
 	if scene == null:
-		return "找不到事件：%s（可用 scenes/event_rooms 下 .tscn 名或 res:// 完整路径）" % id
+		return "找不到事件：%s（可用 scenes/event_rooms 下 .tscn 名或 res:// 完整路径，或特殊选项 shop/campfire）" % id
 	var room := Room.new()
 	room.type = Room.Type.EVENT
 	room.event_scene = scene
@@ -628,11 +726,19 @@ func _ensure_debug_console() -> void:
 
 func _on_battle_won() -> void:
 	_clear_combat_snapshot()
-	if map.floors_climbed == MapGenerator.FLOORS:
-		var win_screen := _change_view(WIN_SCREEN_SCENE) as WinScreen
-		win_screen.character = character
-		SaveGame.delete_data()
+	
+	## 检查是否是BOSS房间
+	if map.last_room != null and map.last_room.type == Room.Type.BOSS:
+		if current_act < 3:
+			## 第1或第2层BOSS，给予奖励并进入下一层
+			_show_act_boss_rewards()
+		else:
+			## 第3层（最终）BOSS，通关
+			var win_screen := _change_view(WIN_SCREEN_SCENE) as WinScreen
+			win_screen.character = character
+			SaveGame.delete_data()
 	else:
+		## 普通战斗，显示常规奖励
 		_show_regular_battle_rewards()
 
 
@@ -651,6 +757,10 @@ func _on_window_close_requested() -> void:
 func _on_map_exited(room: Room, is_reload: bool = false) -> void:
 	_save_run(false)
 	
+	# 如果不是重载（即新进入场景），保存场景进入快照
+	if not is_reload:
+		_save_scene_entry_snapshot(room)
+	
 	match room.type:
 		Room.Type.MONSTER:
 			_on_battle_room_entered(room, is_reload)
@@ -664,3 +774,19 @@ func _on_map_exited(room: Room, is_reload: bool = false) -> void:
 			_on_battle_room_entered(room, is_reload)
 		Room.Type.EVENT:
 			_on_event_room_entered(room, is_reload)
+
+
+func _save_scene_entry_snapshot(room: Room) -> void:
+	"""进入场景前保存完整状态快照"""
+	if save_data == null or character == null:
+		return
+	
+	var current_relics := relic_handler.get_all_relics()
+	save_data.save_scene_entry_snapshot(
+		room.type,
+		character,
+		current_relics,
+		RNG.instance.seed,
+		RNG.instance.state
+	)
+	_save_run(false)

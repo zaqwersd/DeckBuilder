@@ -49,7 +49,8 @@ func populate_shop(is_reload: bool = false) -> void:
 
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if is_reload and run != null and run.can_restore_shop_pending():
-		_build_shop_from_pending(run.get_shop_pending_data())
+		# 重载时忽略售出状态，因为场景快照已恢复金币
+		_build_shop_from_pending(run.get_shop_pending_data(), true)
 		return
 
 	var shop_card_array := _pick_shop_cards()
@@ -66,7 +67,7 @@ func populate_shop(is_reload: bool = false) -> void:
 		)
 
 
-func _build_shop_from_pending(data: Dictionary) -> void:
+func _build_shop_from_pending(data: Dictionary, is_fresh_enter: bool = false) -> void:
 	var cards: Array[Card] = GameContent.load_cards_by_ids(data.get("card_ids", PackedStringArray()))
 	var relics: Array[Relic] = []
 	for rid: String in data.get("relic_ids", PackedStringArray()):
@@ -80,6 +81,11 @@ func _build_shop_from_pending(data: Dictionary) -> void:
 		data.get("relic_costs", PackedInt32Array()),
 		false
 	)
+	# 只有非新进入时才恢复售出状态（即游戏内正常流程）
+	# 重载时（刚进入场景状态）不恢复售出状态，因为场景快照已恢复金币
+	if is_fresh_enter:
+		return
+	
 	var card_sold: PackedInt32Array = data.get("card_sold", PackedInt32Array())
 	var relic_sold: PackedInt32Array = data.get("relic_sold", PackedInt32Array())
 	var card_i := 0

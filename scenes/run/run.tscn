@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/gold_ui.tscn" id="4_dtarl"]
 [ext_resource type="PackedScene" path="res://scenes/ui/health_ui.tscn" id="4_k05q4"]
 [ext_resource type="Texture2D" path="res://art/deck.png" id="5_dw5bf"]
+[ext_resource type="Texture2D" path="res://art/pauset.png" id="5_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/card_pile_view.tscn" id="6_4w0b2"]
 [ext_resource type="PackedScene" path="res://scenes/relic_handler/relic_handler.tscn" id="6_f8fbw"]
 [ext_resource type="PackedScene" path="res://scenes/relic_handler/relic_tooltip.tscn" id="10_xh4qt"]
@@ -16,6 +17,7 @@
 [ext_resource type="Script" path="res://scenes/ui/run_card_fx.gd" id="12_runfx"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_68deg"]
+font_size = 64
 
 [node name="Run" type="Node" unique_id=871483244 groups=["run"]]
 script = ExtResource("1_bedv1")
@@ -104,14 +106,15 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 texture_normal = ExtResource("5_dw5bf")
+stretch_mode = 0
 counter = NodePath("Counter")
 
-[node name="PauseButton" type="Button" parent="TopBar/BarRoot/BarItems"]
+[node name="PauseButton" type="TextureButton" parent="TopBar/BarRoot/BarItems"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "暂停"
+texture_normal = ExtResource("5_pause")
+stretch_mode = 0
 
 [node name="Counter" type="Label" parent="TopBar/BarRoot/BarItems/DeckButton" unique_id=37227574]
 layout_mode = 0

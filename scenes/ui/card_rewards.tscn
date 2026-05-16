@@ -7,7 +7,12 @@
 [ext_resource type="Resource" path="res://characters/blade/cards/blade_press_blade.tres" id="3_k78il"]
 [ext_resource type="Resource" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_iwxg7"]
 
-[node name="CardRewards" type="Control" unique_id=1145581924]
+[node name="CardRewards" type="CanvasLayer" unique_id=1145581924]
+layer = 11
+script = ExtResource("1_okwb6")
+
+[node name="Content" type="Control" parent="."]
+unique_name_in_owner = true
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -15,10 +20,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
-script = ExtResource("1_okwb6")
-rewards = Array[ExtResource("2_drxgv")]([ExtResource("2_o7v21"), ExtResource("3_k78il"), ExtResource("4_iwxg7")])
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="Content"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,7 +31,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.666667)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=303299105]
+[node name="VBoxContainer" type="VBoxContainer" parent="Content" unique_id=303299105]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -43,7 +46,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 45
 
-[node name="Cards" type="GridContainer" parent="VBoxContainer" unique_id=1722697331]
+[node name="Cards" type="GridContainer" parent="Content/VBoxContainer" unique_id=1722697331]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -51,16 +54,16 @@ theme_override_constants/h_separation = 0
 theme_override_constants/v_separation = 36
 columns = 5
 
-[node name="CardMenuUI" parent="VBoxContainer/Cards" unique_id=1965217093 instance=ExtResource("1_spfg3")]
+[node name="CardMenuUI" parent="Content/VBoxContainer/Cards" unique_id=1965217093 instance=ExtResource("1_spfg3")]
 layout_mode = 2
 
-[node name="CardMenuUI2" parent="VBoxContainer/Cards" unique_id=1564197362 instance=ExtResource("1_spfg3")]
+[node name="CardMenuUI2" parent="Content/VBoxContainer/Cards" unique_id=1564197362 instance=ExtResource("1_spfg3")]
 layout_mode = 2
 
-[node name="CardMenuUI3" parent="VBoxContainer/Cards" unique_id=1378635481 instance=ExtResource("1_spfg3")]
+[node name="CardMenuUI3" parent="Content/VBoxContainer/Cards" unique_id=1378635481 instance=ExtResource("1_spfg3")]
 layout_mode = 2
 
-[node name="SkipCardReward" type="Button" parent="VBoxContainer" unique_id=1085774326]
+[node name="SkipCardReward" type="Button" parent="Content/VBoxContainer" unique_id=1085774326]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(225, 63)
 layout_mode = 2

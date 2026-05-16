@@ -196,8 +196,8 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if want_pick_upgrade and chosen_ref.has_any_upgradeable_track():
 		var flow := CardUpgradeFlow.open_on_tree(tree)
 		flow.begin(temp_pile, idx)
-		var did_upgrade: bool = await flow.finished
-		if not did_upgrade:
+		var result: int = await flow.finished
+		if result != CardUpgradeFlow.Result.UPGRADED:
 			return
 
 	var chosen := temp_pile.cards[idx].duplicate(true) as Card

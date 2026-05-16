@@ -222,7 +222,9 @@ func max_out_all_upgrade_tracks() -> void:
 	for track_id in get_upgrade_track_ids():
 		var ch := get_upgrade_chain(track_id)
 		if not ch.is_empty():
-			upgrade_track_steps[track_id] = ch.size() - 1
+			## 循环升级直到满级，确保触发子类的同步逻辑（如压剑的cost更新）
+			while not is_upgrade_track_maxed(track_id):
+				increment_upgrade_track(track_id)
 	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 
 

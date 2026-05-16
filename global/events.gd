@@ -80,7 +80,11 @@ func effective_canvas_layer_of(node: Node) -> int:
 func is_pointer_ui_obscured_for(control: Node) -> bool:
 	# 清理已失效的节点（保险机制）
 	while not _pointer_exclusive_stack.is_empty():
-		var top: Node = _pointer_exclusive_stack.back() as Node
+		var raw_top: Variant = _pointer_exclusive_stack.back()
+		if typeof(raw_top) != TYPE_OBJECT or raw_top == null:
+			_pointer_exclusive_stack.pop_back()
+			continue
+		var top: Node = raw_top as Node
 		if not is_instance_valid(top) or not top.is_inside_tree():
 			_pointer_exclusive_stack.pop_back()
 		else:

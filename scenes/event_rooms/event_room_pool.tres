@@ -8,3 +8,5 @@
 [resource]
 script = ExtResource("1_nlwb2")
 event_rooms = Array[PackedScene]([ExtResource("1_6hnmb"), ExtResource("2_yy7kk"), ExtResource("3_martial")])
+event_rooms_act2 = Array[PackedScene]([ExtResource("1_6hnmb"), ExtResource("2_yy7kk"), ExtResource("3_martial")])
+event_rooms_act3 = Array[PackedScene]([ExtResource("1_6hnmb"), ExtResource("2_yy7kk"), ExtResource("3_martial")])

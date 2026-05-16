@@ -63,6 +63,10 @@ func _on_relic_pressed(_r: Relic) -> void:
 	mark_as_sold()
 
 
+func is_sold() -> bool:
+	return _sold
+
+
 func mark_as_sold() -> void:
 	_sold = true
 	var keep := size

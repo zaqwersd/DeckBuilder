@@ -10,6 +10,13 @@ func _ready() -> void:
 	plus_max_hp_button.event_button_callback = plus_max_hp
 
 
+func setup() -> void:
+	# 如果是重载，重置按钮为可用状态（场景快照已恢复角色状态）
+	if _is_run_reload:
+		duplicate_last_card_button.disabled = false
+		plus_max_hp_button.disabled = false
+
+
 func duplicate_last_card() -> void:
 	if character_stats == null or character_stats.deck.cards.is_empty():
 		return

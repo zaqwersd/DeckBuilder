@@ -54,6 +54,7 @@ func _setup_background() -> void:
 	## 优先使用战斗配置的背景图
 	if battle_stats and battle_stats.background_texture:
 		bg_sprite.texture = battle_stats.background_texture
+		_setup_background_modulate()
 		return
 	
 	## 其次使用层默认背景图
@@ -62,6 +63,31 @@ func _setup_background() -> void:
 		var act_bg := _get_default_background_for_act(run.current_act)
 		if act_bg != null:
 			bg_sprite.texture = act_bg
+			_setup_background_modulate()
+
+
+## 设置背景图色调（第1层调暗并偏蓝绿色）
+func _setup_background_modulate() -> void:
+	var bg_sprite := $Background as Sprite2D
+	if bg_sprite == null:
+		return
+	
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null:
+		return
+	
+	match run.current_act:
+		1:
+			## 第1层：调暗并偏向蓝绿色调
+			bg_sprite.modulate = Color(0.5, 0.7, 0.75, 1)
+		2:
+			## 第2层：正常亮度
+			bg_sprite.modulate = Color(1, 1, 1, 1)
+		3:
+			## 第3层：正常亮度
+			bg_sprite.modulate = Color(1, 1, 1, 1)
+		_:
+			bg_sprite.modulate = Color(1, 1, 1, 1)
 
 
 ## 获取对应层的默认背景图
@@ -71,11 +97,11 @@ func _get_default_background_for_act(act: int) -> Texture2D:
 			## 第1层使用专属背景图
 			return preload("res://art/act1_background.png")
 		2:
-			## 第2层使用相同的背景图（可替换为不同的）
+			## 第2层使用默认背景图
 			return preload("res://art/background.png")
 		3:
-			## 第3层使用相同的背景图（可替换为不同的）
-			return preload("res://art/background.png")
+			## 第3层使用专属背景图
+			return preload("res://art/act3_background.png")
 	return preload("res://art/background.png")
 
 

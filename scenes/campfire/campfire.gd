@@ -165,41 +165,59 @@ func _on_upgrade_button_pressed() -> void:
 	if char_stats == null or char_stats.deck == null:
 		return
 	var layer := _upgrade_modal_layer()
-	var overlay := DECK_PICKER_OVERLAY.instantiate() as DeckPickerOverlay
-	layer.add_child(overlay)
-	overlay.setup(
-		char_stats.deck,
-		1,
-		Callable(),
-		"选择要升级的牌。",
-		PackedStringArray(),
-		Callable(),
-		Callable(self, "_upgrade_picker_ok"),
-		true,
-		true
-	)
-	var indices: Array = await overlay.pick_confirmed
-	if indices.is_empty():
+	
+	# 循环处理选牌和升级的切换
+	while true:
+		var overlay := DECK_PICKER_OVERLAY.instantiate() as DeckPickerOverlay
+		layer.add_child(overlay)
+		overlay.setup(
+			char_stats.deck,
+			1,
+			Callable(),
+			"选择要升级的牌。",
+			PackedStringArray(),
+			Callable(),
+			Callable(self, "_upgrade_picker_ok"),
+			true,
+			true
+		)
+		var indices: Array = await overlay.pick_confirmed
+		if indices.is_empty():
+			if is_instance_valid(overlay):
+				overlay.queue_free()
+			return  # 用户彻底取消
+		
+		var idx := int(indices[0])
+		_upgrade_save_index = idx
+		_upgrade_save_card_backup = char_stats.deck.cards[idx].duplicate(true) as Card
+		
+		var flow := CARD_UPGRADE_FLOW.instantiate() as CardUpgradeFlow
+		layer.add_child(flow)
+		flow.begin(char_stats.deck, idx)
+		
+		# 等待升级流程结束
+		var result: int = await flow.finished
+		
 		if is_instance_valid(overlay):
 			overlay.queue_free()
-		return
-	var idx := int(indices[0])
-	_campfire_leave_after_rest = false
-	_upgrade_save_index = idx
-	_upgrade_save_card_backup = char_stats.deck.cards[idx].duplicate(true) as Card
-	var flow := CARD_UPGRADE_FLOW.instantiate() as CardUpgradeFlow
-	layer.add_child(flow)
-	flow.begin(char_stats.deck, idx)
-	var did_upgrade := bool(await flow.finished)
-	if is_instance_valid(overlay):
-		overlay.queue_free()
-	if not did_upgrade:
-		_upgrade_save_index = -1
-		_upgrade_save_card_backup = null
-		return
+		
+		if result == CardUpgradeFlow.Result.BACK_TO_PICK:
+			_upgrade_save_index = -1
+			_upgrade_save_card_backup = null
+			continue  # 返回到选牌界面
+		
+		if result == CardUpgradeFlow.Result.CANCELLED:
+			_upgrade_save_index = -1
+			_upgrade_save_card_backup = null
+			return  # 用户彻底取消
+		
+		# 升级完成，跳出循环
+		_campfire_leave_after_rest = false
+		break
+	
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run:
-		await run.await_deck_gain_card_visual(char_stats.deck.cards[idx], Vector2.ZERO)
+		await run.await_deck_gain_card_visual(char_stats.deck.cards[_upgrade_save_index], Vector2.ZERO)
 	_enter_campfire_await_leave_phase()
 
 

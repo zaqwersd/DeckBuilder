@@ -1,21 +1,19 @@
 class_name CardRewards
-extends CardGridListing
+extends CanvasLayer
+
+const CARD_MENU_UI_SCENE := preload("res://scenes/ui/card_menu_ui.tscn")
 
 ## picked_menu 为选中的 CardMenuUI（会从本面板摘下再飞入牌库）；跳过奖励时发 null
 signal card_reward_selected(picked_menu: Variant, from_global: Vector2)
 
-@export var rewards: Array[Card] : set = set_rewards
+var rewards: Array[Card] : set = set_rewards
 
+@onready var content: Control = %Content
 @onready var cards: GridContainer = %Cards
 @onready var skip_card_reward: Button = %SkipCardReward
 
 
-func get_card_listing_grid() -> GridContainer:
-	return cards
-
-
 func _ready() -> void:
-	super._ready()
 	_clear_rewards()
 
 	skip_card_reward.pressed.connect(
@@ -26,19 +24,29 @@ func _ready() -> void:
 
 
 func _enter_tree() -> void:
-	super._enter_tree()
 	Events.begin_pointer_exclusive_ui(self)
 
 
 func _exit_tree() -> void:
 	Events.end_pointer_exclusive_ui(self)
-	super._exit_tree()
 
 
 func _clear_rewards() -> void:
-	reset_listing_keyword_tooltip_state()
+	Events.card_keyword_tooltip_hide.emit()
 	for card: Node in cards.get_children():
 		card.queue_free()
+
+
+static func make_listing_card_menu() -> CardMenuUI:
+	var menu := CARD_MENU_UI_SCENE.instantiate() as CardMenuUI
+	menu.use_listing_hover_zoom = true
+	menu.mouse_filter = Control.MOUSE_FILTER_STOP
+	menu.call_deferred("refresh_listing_hover_pivot")
+	return menu
+
+
+func create_listing_card_menu() -> CardMenuUI:
+	return make_listing_card_menu()
 
 
 func _on_reward_card_pick_pressed(menu: Variant, _card: Variant) -> void:

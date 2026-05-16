@@ -1,7 +1,7 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://b4p21k3ukcq02"]
 
-[ext_resource type="Script" path="res://scenes/ui/card_upgrade_flow.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://art/arrow_small.png" id="2_arrow"]
+[ext_resource type="Script" uid="uid://dlaqrphq0u7rq" path="res://scenes/ui/card_upgrade_flow.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://313csfw3voyr" path="res://art/arrow_small.png" id="2_arrow"]
 
 [node name="CardUpgradeFlow" type="Control" unique_id=1569399385]
 z_index = 120
@@ -21,7 +21,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 color = Color(0, 0, 0, 0.65098)
 
 [node name="Phase1" type="VBoxContainer" parent="." unique_id=2141165357]

@@ -12,15 +12,42 @@ var found_relic: Relic
 
 
 func populate_from_run(is_reload: bool) -> void:
+	_setup_background()
+	
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if is_reload and run != null:
 		var restored := run.get_pending_treasure_relic()
 		if restored != null:
 			found_relic = restored
+			# 重置动画到初始状态（未打开）
+			if animation_player:
+				animation_player.play("RESET")
 			return
 	generate_relic()
 	if run != null and found_relic != null:
 		run.persist_treasure_pending(found_relic.id)
+
+
+## 设置与当前层数匹配的背景图
+func _setup_background() -> void:
+	var bg_rect := $Background as TextureRect
+	if bg_rect == null:
+		return
+	
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null:
+		return
+	
+	## 根据当前层数设置对应背景图
+	match run.current_act:
+		1:
+			bg_rect.texture = preload("res://art/act1_background.png")
+		2:
+			bg_rect.texture = preload("res://art/background.png")
+		3:
+			bg_rect.texture = preload("res://art/act3_background.png")
+		_:
+			bg_rect.texture = preload("res://art/background.png")
 
 
 func generate_relic() -> void:
