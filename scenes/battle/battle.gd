@@ -68,7 +68,8 @@ func _setup_background() -> void:
 func _get_default_background_for_act(act: int) -> Texture2D:
 	match act:
 		1:
-			return preload("res://art/background.png")
+			## 第1层使用专属背景图
+			return preload("res://art/act1_background.png")
 		2:
 			## 第2层使用相同的背景图（可替换为不同的）
 			return preload("res://art/background.png")
