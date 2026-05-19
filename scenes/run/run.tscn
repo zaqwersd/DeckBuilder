@@ -10,9 +10,7 @@
 [ext_resource type="Texture2D" path="res://art/pauset.png" id="5_pause"]
 [ext_resource type="PackedScene" path="res://scenes/ui/card_pile_view.tscn" id="6_4w0b2"]
 [ext_resource type="PackedScene" path="res://scenes/relic_handler/relic_handler.tscn" id="6_f8fbw"]
-[ext_resource type="PackedScene" path="res://scenes/relic_handler/relic_tooltip.tscn" id="10_xh4qt"]
-[ext_resource type="PackedScene" path="res://scenes/ui/status_hover_tooltip.tscn" id="13_shtip"]
-[ext_resource type="PackedScene" path="res://scenes/ui/card_keyword_tooltip.tscn" id="14_kwtip"]
+[ext_resource type="PackedScene" path="res://scenes/ui/game_tooltip.tscn" id="10_gametip"]
 [ext_resource type="Script" path="res://scenes/run/pause_menu.gd" id="11_a4w7h"]
 [ext_resource type="Script" path="res://scenes/ui/run_card_fx.gd" id="12_runfx"]
 
@@ -132,22 +130,15 @@ size_flags_horizontal = 3
 
 [node name="RelicHandler" parent="TopBar/BarRoot/RelicRow" unique_id=127879230 instance=ExtResource("6_f8fbw")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 72)
 
 [node name="DeckView" parent="TopBar" unique_id=1701988833 instance=ExtResource("6_4w0b2")]
 unique_name_in_owner = true
 visible = false
 
-[node name="RelicTooltip" parent="TopBar" unique_id=493273341 instance=ExtResource("10_xh4qt")]
-unique_name_in_owner = true
-visible = false
-
-[node name="StatusHoverTooltip" parent="TopBar" instance=ExtResource("13_shtip")]
-unique_name_in_owner = true
-visible = false
-
-[node name="CardKeywordTooltip" parent="TopBar" instance=ExtResource("14_kwtip")]
+[node name="GameTooltip" parent="TopBar" unique_id=493273341 instance=ExtResource("10_gametip")]
 unique_name_in_owner = true
 visible = false
 

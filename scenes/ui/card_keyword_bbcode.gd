@@ -1,7 +1,7 @@
 class_name CardKeywordBbcode
 extends RefCounted
 
-## 卡面 RichText meta：词条说明由 CardKeywordTooltip / Events 统一显示
+## 卡面 RichText meta：词条说明由 GameTooltip / Events 统一显示
 const META_KW_PREFIX := "kw:"
 
 ## 词条说明正文（可含嵌套 `[url=kw:…]`，嵌套展示时用 plain 版避免递归）
@@ -21,6 +21,12 @@ const TOOLTIP_BODY_EXHAUST_WITH_LINKS := (
 
 const TOOLTIP_BODY_EXHAUST_PLAIN := TOOLTIP_BODY_EXHAUST_WITH_LINKS
 
+const TOOLTIP_BODY_TRANSFORM_WITH_LINKS := (
+	"[color=#ffdd33][b]变化[/b][/color]\n"
+	+ "将你的一张牌变成另一张随机牌。"
+)
+const TOOLTIP_BODY_TRANSFORM_PLAIN := TOOLTIP_BODY_TRANSFORM_WITH_LINKS
+
 const TOOLTIP_BODY_VULNERABLE_WITH_LINKS := "[color=#ffdd33][b]易伤[/b][/color]\n受到的伤害增加50%。"
 const TOOLTIP_BODY_VULNERABLE_PLAIN := TOOLTIP_BODY_VULNERABLE_WITH_LINKS
 
@@ -30,6 +36,11 @@ const TOOLTIP_BODY_STRENGTH_PLAIN := TOOLTIP_BODY_STRENGTH_WITH_LINKS
 const TOOLTIP_BODY_INTRINSIC := (
 	"[color=#ffdd33][b]固有[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
 )
+
+const TOOLTIP_BODY_MANA_WITH_LINKS := (
+	"[color=#ffdd33][b]能量[/b][/color]\n你需要花费能量来打出卡牌。"
+)
+const TOOLTIP_BODY_MANA_PLAIN := TOOLTIP_BODY_MANA_WITH_LINKS
 
 ## 颜色说明 tooltip
 const TOOLTIP_BODY_COLOR_YELLOW := (
@@ -45,9 +56,11 @@ const TOOLTIP_BODY_COLOR_GRAY := (
 ## 自动为中文词包 `[url=kw:id]`；顺序靠前者先包，避免子串冲突。
 const _AUTO_WRAP: Array[Dictionary] = [
 	{"word": "虚无", "id": "ethereal"},
+	{"word": "变化", "id": "transform"},
 	{"word": "消耗", "id": "exhaust"},
 	{"word": "易伤", "id": "vulnerable"},
 	{"word": "力量", "id": "strength"},
+	{"word": "能量", "id": "mana"},
 ]
 
 
@@ -132,11 +145,48 @@ static func collect_tooltip_ids_from_raw_description(raw: String) -> PackedStrin
 		has_exhaust = true
 	if raw.find("消耗") != -1 and not has_exhaust:
 		ids.append("exhaust")
+	if raw.find("变化") != -1:
+		ids.append("transform")
 	if raw.find("易伤") != -1:
 		ids.append("vulnerable")
 	if raw.find("力量") != -1:
 		ids.append("strength")
+	if raw.find("能量") != -1:
+		ids.append("mana")
 	return ids
+
+
+const COLOR_TOOLTIP_IDS: Array[String] = ["color_yellow", "color_red", "color_gray"]
+
+
+## 局外升级色说明 id；战斗中修饰预览色与之语义不同，应剔除。
+static func without_color_tooltip_ids(ids: PackedStringArray) -> PackedStringArray:
+	var out: PackedStringArray = PackedStringArray()
+	for i in range(ids.size()):
+		var id := String(ids[i])
+		if id in COLOR_TOOLTIP_IDS:
+			continue
+		out.append(id)
+	return out
+
+
+## 手牌 CardUI、ManaUI、战斗牌堆 CombatCardVisuals 等战斗内锚点。
+static func is_combat_tooltip_anchor(near_to: Control) -> bool:
+	if not is_instance_valid(near_to):
+		return false
+	if near_to is CardUI or near_to is ManaUI:
+		return true
+	if near_to is CombatCardVisuals:
+		return true
+	var n: Node = near_to
+	while n != null:
+		if n is CardUI or n is ManaUI:
+			return true
+		if n is CardMenuUI:
+			var menu := n as CardMenuUI
+			return is_instance_valid(menu.visuals) and menu.visuals is CombatCardVisuals
+		n = n.get_parent()
+	return false
 
 
 ## Tooltip 单段正文；`embed_cross_links=false` 用于嵌套悬停子面板，避免再嵌套 url。
@@ -146,12 +196,16 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_ETHEREAL_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_ETHEREAL_PLAIN
 		"exhaust":
 			return TOOLTIP_BODY_EXHAUST_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_EXHAUST_PLAIN
+		"transform":
+			return TOOLTIP_BODY_TRANSFORM_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_TRANSFORM_PLAIN
 		"vulnerable":
 			return TOOLTIP_BODY_VULNERABLE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_VULNERABLE_PLAIN
 		"strength":
 			return TOOLTIP_BODY_STRENGTH_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_STRENGTH_PLAIN
 		"intrinsic":
 			return TOOLTIP_BODY_INTRINSIC
+		"mana":
+			return TOOLTIP_BODY_MANA_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_MANA_PLAIN
 		"color_yellow":
 			return TOOLTIP_BODY_COLOR_YELLOW
 		"color_red":

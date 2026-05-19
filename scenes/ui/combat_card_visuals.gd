@@ -4,11 +4,19 @@ extends CardVisualsBase
 ## 战斗中卡牌的视觉显示规则：
 ## - 固有关键词：只有 intrinsic == true 且 should_show_intrinsic_keyword_in_combat_description() 才显示
 ## - 数值颜色：白底 + 红绿变化（COMBAT_MODIFIED_RED/GREEN）
-## - 不显示灰色升级词条
+## - 不显示灰色升级词条；不挂黄/红/灰「升级说明」tooltip（与局外 LISTING 语义不同）
 
 
 func _sync_cost_label_style() -> void:
 	if not is_instance_valid(cost) or card == null:
+		return
+	if card.is_x_cost():
+		if not _combat_effective_mana_affordable:
+			cost.add_theme_color_override(
+				"font_color", CardUpgradeUiColors.color_bb_negative_removable()
+			)
+		else:
+			cost.add_theme_color_override("font_color", Color.WHITE)
 		return
 	if card.cost >= 0:
 		var display_cost := card.cost
@@ -28,7 +36,9 @@ func _sync_from_card() -> void:
 	var dc := card.cost
 	if _display_mana_cost_override >= 0:
 		dc = _display_mana_cost_override
-	if dc >= 0:
+	if card.is_x_cost():
+		cost.text = "X"
+	elif dc >= 0:
 		cost.text = str(dc)
 	else:
 		cost.text = ""
@@ -97,9 +107,7 @@ func _refresh_description_text() -> void:
 	if not _upgrade_pick_bbcode_override.is_empty():
 		# 战斗中的升级预览（理论上不应发生，但做安全处理）
 		Card.push_visual_number_bbcode_style(Card.NumberBbcodeStyle.LISTING_UPGRADE)
-		description_label.text = CardKeywordBbcode.wrap_ascii_digit_runs_bold(
-			CardKeywordBbcode.inject_keywords(_upgrade_pick_bbcode_override)
-		)
+		_set_description_label_text(_upgrade_pick_bbcode_override)
 		Card.pop_visual_number_bbcode_style()
 		_apply_pick_through_nested_controls()
 		_apply_description_default_color_for_style()
@@ -114,7 +122,7 @@ func _refresh_description_text() -> void:
 		)
 	)
 	Card.pop_visual_number_bbcode_style()
-	description_label.text = CardKeywordBbcode.wrap_ascii_digit_runs_bold(CardKeywordBbcode.inject_keywords(raw))
+	_set_description_label_text(raw)
 	_apply_pick_through_nested_controls()
 	_ensure_description_meta_signals()
 	_apply_description_default_color_for_style()
@@ -148,37 +156,4 @@ func get_keyword_tooltip_ids() -> PackedStringArray:
 				with_kw.append(ids[i])
 			ids = with_kw
 	
-	# 收集颜色说明 IDs（基于描述中的颜色标记和费用颜色）
-	ids = _append_color_tooltip_ids(ids, raw)
-	return ids
-
-
-## 根据描述中的颜色标记添加对应的颜色说明 tooltip IDs
-## 颜色说明排在词条上方（先添加颜色说明，再添加词条）
-func _append_color_tooltip_ids(ids: PackedStringArray, raw_bbcode: String) -> PackedStringArray:
-	var color_ids: PackedStringArray = PackedStringArray()
-	var has_yellow := raw_bbcode.find("#ffee58") != -1 or raw_bbcode.find("color=%s" % CardUpgradeUiColors.BB_VALUE) != -1
-	var has_red := raw_bbcode.find("#f36c60") != -1 or raw_bbcode.find("color=%s" % CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE) != -1
-	var has_gray := raw_bbcode.find("#b0bec5") != -1 or raw_bbcode.find("color=%s" % CardUpgradeUiColors.BB_INACTIVE_KEYWORD) != -1
-	
-	# 检查费用是否可升级（黄色）- 通过检查费用标签的颜色
-	if is_instance_valid(cost) and card != null:
-		var cost_color := cost.get_theme_color("font_color")
-		if cost_color.is_equal_approx(CardUpgradeUiColors.color_bb_value()):
-			has_yellow = true
-	
-	# 先收集颜色说明 IDs（排在前面）
-	if has_yellow:
-		color_ids.append("color_yellow")
-	if has_red:
-		color_ids.append("color_red")
-	if has_gray:
-		color_ids.append("color_gray")
-	
-	# 合并：颜色说明在前，词条在后（去重）
-	var result := color_ids.duplicate()
-	for id in ids:
-		if not result.has(id):
-			result.append(id)
-	
-	return result
+	return CardKeywordBbcode.without_color_tooltip_ids(ids)

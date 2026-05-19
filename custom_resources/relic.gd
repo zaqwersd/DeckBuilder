@@ -23,6 +23,13 @@ func apply_persistent_pickup_on_acquire(_run: Node) -> void:
 	pass
 
 
+## 异步版本的 apply_persistent_pickup_on_acquire
+## 对于有UI交互的遗物（如无上宝石），此方法会被异步等待直到效果完成
+func apply_persistent_pickup_on_acquire_async(_run: Node) -> void:
+	## 默认实现：调用同步版本
+	apply_persistent_pickup_on_acquire(_run)
+
+
 func activate_relic(_owner: RelicUI) -> void:
 	pass
 

@@ -313,7 +313,9 @@ func discard_cards() -> void:
 				if is_instance_valid(slot):
 					slot.queue_free()
 
+	print("[DEBUG] About to emit player_hand_discarded (normal path)")
 	Events.player_hand_discarded.emit()
+	print("[DEBUG] player_hand_discarded emitted (normal path)")
 
 
 func reshuffle_deck_from_discard() -> void:
@@ -335,22 +337,30 @@ func _on_card_played(card: Card) -> void:
 		return
 	if card.type == Card.Type.POWER:
 		return
-	# 故障机器等：同一张 Card 资源第二次「视为打出」时不应再次入弃牌堆
-	if character.discard.cards.has(card):
-		return
-	character.discard.add_card(card)
+	# 延迟弃牌：普通技能/攻击牌现在由 Card.play() 在 apply_effects 完成后统一弃置
+	# 避免卡牌在效果执行期间（如抽牌时）被洗回抽牌堆
+	# 消耗牌和能力牌保持原有逻辑
 
 
 func _on_statuses_applied(type: Status.Type) -> void:
+	print("[DEBUG] _on_statuses_applied called, type: ", type)
 	match type:
 		Status.Type.START_OF_TURN:
+			print("[DEBUG] START_OF_TURN - calling draw_cards")
 			draw_cards(character.cards_per_turn, true)
 		Status.Type.END_OF_TURN:
+			print("[DEBUG] END_OF_TURN - calling discard_cards")
 			discard_cards()
 
 
 func _on_relics_activated(type: Relic.Type) -> void:
+	print("[DEBUG] _on_relics_activated called, type: ", type)
+	print("[DEBUG] player valid: ", is_instance_valid(player))
+	if is_instance_valid(player):
+		print("[DEBUG] status_handler valid: ", is_instance_valid(player.status_handler))
+	
 	if not is_instance_valid(player) or not is_instance_valid(player.status_handler):
+		push_error("[DEBUG] Early return - player or status_handler invalid")
 		return
 	match type:
 		Relic.Type.START_OF_TURN:

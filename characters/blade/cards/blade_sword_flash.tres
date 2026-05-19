@@ -8,9 +8,9 @@
 script = ExtResource("2_script")
 id = "blade_sword_flash"
 rarity = 1
-target = 1
+target = 2
 cost = 1
 card_name = "剑影"
 icon = ExtResource("1_y13v4")
-tooltip_text = "[center]造成%s点伤害%s次。[/center]"
+tooltip_text = "[center]随机对敌人造成%s点伤害%s次。[/center]"
 sound = ExtResource("3_y13v4")

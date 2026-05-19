@@ -48,10 +48,7 @@ func add_card_to_exhaust(card: Card) -> void:
 
 
 func can_play_card(card: Card, effective_mana_cost: int = -1) -> bool:
-	if card.cost < 0:
-		return false
-	var need := effective_mana_cost if effective_mana_cost >= 0 else card.cost
-	return mana >= need
+	return PlayCostResolver.can_play(card, self, effective_mana_cost)
 
 
 func create_instance() -> Resource:
@@ -59,7 +56,12 @@ func create_instance() -> Resource:
 	instance.health = max_health
 	instance.block = 0
 	instance.reset_mana()
-	instance.deck = instance.starting_deck.duplicate()
+	## 使用 custom_duplicate 确保每张卡牌都是独立实例
+	## 避免升级一张卡牌时影响其他同名卡牌
+	if instance.starting_deck != null:
+		instance.deck = instance.starting_deck.custom_duplicate()
+	else:
+		instance.deck = CardPile.new()
 	instance.draw_pile = CardPile.new()
 	instance.discard = CardPile.new()
 	instance.exhaust = CardPile.new()

@@ -42,6 +42,9 @@ func _ready() -> void:
 	_apply_label_outline(block_value_label)
 
 	block_badge.custom_minimum_size = BLOCK_BADGE_SIZE
+	hp_bar.z_index = 0
+	health_label.z_index = 1
+	block_badge.z_index = 2
 	_reposition_block_badge()
 
 

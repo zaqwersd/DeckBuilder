@@ -44,7 +44,7 @@ func _block_current_colored_bbcode() -> String:
 			return "[color=%s]%d[/color]" % [Card.COMBAT_MODIFIED_RED, cur]
 		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, cur]
 	if cur > first:
-		return "[color=%s]%d[/color]" % [Card.COMBAT_MODIFIED_GREEN, cur]
+		return "[color=%s]%d[/color]" % [Card.BB_COLOR_UPGRADEABLE, cur]
 	if combat:
 		return "[color=%s]%d[/color]" % [Card.COMBAT_BODY_TEXT, cur]
 	return "[color=%s]%d[/color]" % [Card.BB_COLOR_UPGRADEABLE, cur]
@@ -113,8 +113,9 @@ func _show_card_selector() -> void:
 	if not has_any:
 		return
 
+	## allow_cancel = false：强制选择，不可ESC取消
 	var overlay := HandCardPickOverlay.open_on_tree(
-		tree, hand, 1, Callable(), "选择要消耗的卡牌"
+		tree, hand, 1, Callable(), "选择要消耗的卡牌", false
 	)
 	_selector_close_state = {"finished": false}
 	overlay.selection_finished.connect(_on_selector_screen_finished, CONNECT_ONE_SHOT)
@@ -157,13 +158,17 @@ func _exhaust_selected_cards(hand: Hand, selected_cards: Array) -> void:
 			if is_instance_valid(bcf) and bcf is BattleCardFx:
 				var start_c := cui.get_global_rect().get_center()
 				cui.modulate.a = 0.0
+				if is_instance_valid(cui.hand_slot):
+					hand.collapse_slot_for_exhaust_animation(cui.hand_slot)
 				await (bcf as BattleCardFx).animate_played_card(
 					cui.card, start_c, BattleCardFx.PlayedKind.EXHAUST
 				)
 				if is_instance_valid(hand) and is_instance_valid(cui) and not cui.is_queued_for_deletion():
 					hand.discard_card(cui)
+					hand.resync_layout_after_draw()
 			else:
 				hand.discard_card(cui)
+				hand.resync_layout_after_draw()
 			break
 
 

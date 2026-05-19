@@ -18,12 +18,42 @@ var _combat_started: bool = false
 func _ready() -> void:
 	Events.reset_combat_flow()
 	_combat_started = false
-	enemy_handler.child_order_changed.connect(_on_enemies_child_order_changed)
+	
+	if is_instance_valid(enemy_handler):
+		enemy_handler.child_order_changed.connect(_on_enemies_child_order_changed)
+	else:
+		push_error("Battle: enemy_handler invalid in _ready.")
+	
 	Events.enemy_turn_ended.connect(_on_enemy_turn_ended)
 	
-	Events.player_turn_ended.connect(player_handler.end_turn)
-	Events.player_hand_discarded.connect(enemy_handler.start_turn)
+	if is_instance_valid(player_handler):
+		Events.player_turn_ended.connect(player_handler.end_turn)
+	else:
+		push_error("Battle: player_handler invalid in _ready.")
+	
+	## player_hand_discarded 在 start_battle() 布置完敌人后再连接，见 _connect_enemy_turn_after_discard()
+	
 	Events.player_died.connect(_on_player_died)
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(enemy_handler) and Events.player_hand_discarded.is_connected(enemy_handler.start_turn):
+		Events.player_hand_discarded.disconnect(enemy_handler.start_turn)
+	if Events.enemy_turn_ended.is_connected(_on_enemy_turn_ended):
+		Events.enemy_turn_ended.disconnect(_on_enemy_turn_ended)
+	if is_instance_valid(player_handler) and Events.player_turn_ended.is_connected(player_handler.end_turn):
+		Events.player_turn_ended.disconnect(player_handler.end_turn)
+	if Events.player_died.is_connected(_on_player_died):
+		Events.player_died.disconnect(_on_player_died)
+
+
+func _connect_enemy_turn_after_discard() -> void:
+	if not is_instance_valid(enemy_handler):
+		push_error("Battle: cannot connect enemy turn — enemy_handler invalid.")
+		return
+	if Events.player_hand_discarded.is_connected(enemy_handler.start_turn):
+		Events.player_hand_discarded.disconnect(enemy_handler.start_turn)
+	Events.player_hand_discarded.connect(enemy_handler.start_turn)
 
 
 func start_battle() -> void:
@@ -40,6 +70,8 @@ func start_battle() -> void:
 	enemy_handler.setup_enemies(battle_stats)
 	enemy_handler.reset_enemy_actions()
 	_combat_started = true
+	
+	_connect_enemy_turn_after_discard()
 	
 	relics.relics_activated.connect(_on_relics_activated)
 	relics.activate_relics_by_type(Relic.Type.START_OF_COMBAT)

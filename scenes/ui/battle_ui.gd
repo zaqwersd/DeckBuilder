@@ -1,10 +1,15 @@
 class_name BattleUI
 extends CanvasLayer
 
+const GAME_TOOLTIP_SCENE := preload("res://scenes/ui/game_tooltip.tscn")
+## 高于手牌抬起与飞牌幽灵，保证战斗词条 tooltip 可见
+const COMBAT_KEYWORD_TOOLTIP_Z_INDEX := 600
+
 @export var char_stats: CharacterStats : set = _set_char_stats
 
 ## 不用 @onready %Hand：父节点可能在子树就绪前调用 start_battle() 触发 setter，且 % 在部分实例化路径下可能为 null
 var hand: Hand
+var _combat_keyword_tooltip: GameTooltip = null
 @onready var mana_ui: ManaUI = $ManaUI
 @onready var end_turn_button: Button = %EndTurnButton
 @onready var draw_pile_button: CardPileOpener = %DrawPileButton
@@ -29,6 +34,54 @@ func _ready() -> void:
 	exhaust_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
 	if char_stats:
 		_apply_char_stats_to_ui_nodes()
+	_bind_combat_keyword_tooltip()
+
+
+func _exit_tree() -> void:
+	_unbind_combat_keyword_tooltip()
+
+
+func _bind_combat_keyword_tooltip() -> void:
+	if _combat_keyword_tooltip != null:
+		return
+	_combat_keyword_tooltip = GAME_TOOLTIP_SCENE.instantiate() as GameTooltip
+	_combat_keyword_tooltip.z_index = COMBAT_KEYWORD_TOOLTIP_Z_INDEX
+	_combat_keyword_tooltip.z_as_relative = false
+	_combat_keyword_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_combat_keyword_tooltip)
+	if not Events.card_keyword_tooltip_show.is_connected(_on_combat_keyword_tooltip_show):
+		Events.card_keyword_tooltip_show.connect(_on_combat_keyword_tooltip_show)
+	if not Events.card_keyword_tooltip_hide.is_connected(_on_combat_keyword_tooltip_hide):
+		Events.card_keyword_tooltip_hide.connect(_on_combat_keyword_tooltip_hide)
+
+
+func _unbind_combat_keyword_tooltip() -> void:
+	if _combat_keyword_tooltip == null:
+		return
+	if Events.card_keyword_tooltip_show.is_connected(_on_combat_keyword_tooltip_show):
+		Events.card_keyword_tooltip_show.disconnect(_on_combat_keyword_tooltip_show)
+	if Events.card_keyword_tooltip_hide.is_connected(_on_combat_keyword_tooltip_hide):
+		Events.card_keyword_tooltip_hide.disconnect(_on_combat_keyword_tooltip_hide)
+	_combat_keyword_tooltip.hide_tooltip()
+	_combat_keyword_tooltip.queue_free()
+	_combat_keyword_tooltip = null
+
+
+func _on_combat_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
+	if not CardKeywordBbcode.is_combat_tooltip_anchor(near_to):
+		return
+	if Events.is_pointer_ui_obscured_for(_combat_keyword_tooltip):
+		return
+	ids = CardKeywordBbcode.without_color_tooltip_ids(ids)
+	if ids.is_empty():
+		return
+	_combat_keyword_tooltip.show_keyword_blocks(ids, near_to)
+
+
+func _on_combat_keyword_tooltip_hide() -> void:
+	if _combat_keyword_tooltip == null:
+		return
+	_combat_keyword_tooltip.hide_tooltip()
 
 
 func _setup_end_turn_button() -> void:

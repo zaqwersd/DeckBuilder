@@ -72,6 +72,23 @@ func add_relic(relic: Relic, apply_persistent_pickup: bool = true) -> void:
 	new_relic_ui.relic.initialize_relic(new_relic_ui)
 
 
+## 异步添加遗物，等待 persistent_pickup 效果完成（用于战斗奖励领取流程）
+func add_relic_async(relic: Relic) -> void:
+	if has_relic(relic.id):
+		return
+	
+	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
+	relics.add_child(new_relic_ui)
+	new_relic_ui.relic = relic
+	
+	## 执行 persistent_pickup 效果（可能是异步的）
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run:
+		await relic.apply_persistent_pickup_on_acquire_async(run)
+	
+	new_relic_ui.relic.initialize_relic(new_relic_ui)
+
+
 func has_relic(id: String) -> bool:
 	for relic_ui: RelicUI in relics.get_children():
 		if relic_ui.relic.id == id and is_instance_valid(relic_ui):

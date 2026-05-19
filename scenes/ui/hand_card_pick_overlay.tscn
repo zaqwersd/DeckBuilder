@@ -29,8 +29,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 100.0
-offset_bottom = 100.0
+offset_top = 80.0
+offset_bottom = 80.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 0
@@ -74,7 +74,13 @@ layout_mode = 2
 mouse_filter = 2
 alignment = 1
 
-[node name="ConfirmButton" type="Button" parent="Root/PickColumn/MainVBox" unique_id=1144511528]
+[node name="ConfirmWrap" type="MarginContainer" parent="Root/PickColumn/MainVBox" unique_id=503423749]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/margin_top = 40
+
+[node name="ConfirmButton" type="Button" parent="Root/PickColumn/MainVBox/ConfirmWrap" unique_id=1144511528]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 48)
 layout_mode = 2
@@ -94,6 +100,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 9.0
+offset_top = -77.0
+offset_right = 9.0
+offset_bottom = -77.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2

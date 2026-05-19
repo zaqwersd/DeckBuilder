@@ -8,6 +8,8 @@ const GOLD_TEXT := "%s 金币"
 const CARD_ICON := preload("res://art/rarity.png")
 const CARD_TEXT := "添加新卡牌"
 
+## 卡牌奖励升级概率（已移至 RunStats 动态计算）
+
 @export var run_stats: RunStats
 @export var character_stats: CharacterStats
 @export var relic_handler: RelicHandler
@@ -263,16 +265,92 @@ func _roll_or_restore_card_rewards() -> Array[Card]:
 	if not _card_reward_ids.is_empty() and run != null:
 		return run.get_pending_card_templates()
 	
+	## 获取当前层数
+	var floors_climbed := 0
+	if run != null and run.save_data != null:
+		floors_climbed = run.save_data.floors_climbed
+	
+	## 判断是否Boss奖励（使用固定权重）
+	var is_boss_reward := (run != null and run.map != null and run.map.last_room != null 
+		and run.map.last_room.type == Room.Type.BOSS)
+	
+	## 获取动态或固定稀有度权重
+	var weights: Dictionary
+	if is_boss_reward:
+		## Boss奖励使用固定权重
+		weights = {
+			"common": RunStats.BASE_COMMON_WEIGHT,
+			"uncommon": RunStats.BASE_UNCOMMON_WEIGHT,
+			"rare": RunStats.BASE_RARE_WEIGHT
+		}
+	else:
+		## 普通奖励使用动态权重
+		weights = run_stats.get_dynamic_weights(floors_climbed)
+		
+		## 应用稀有度连锁惩罚
+		if run != null and run.save_data != null:
+			weights = run_stats.apply_rarity_streak_penalty(
+				weights,
+				run.save_data.last_card_reward_rarity,
+				run.save_data.rarity_streak_count
+			)
+	
 	## 生成普通随机卡牌奖励
 	var available_cards: Array[Card] = character_stats.draftable_cards.duplicate_cards()
 	var pick_count := mini(run_stats.card_rewards, available_cards.size())
 	var card_reward_array := RNG.pick_weighted_distinct_cards(
 		available_cards,
 		pick_count,
-		run_stats.common_weight,
-		run_stats.uncommon_weight,
-		run_stats.rare_weight
+		weights.common,
+		weights.uncommon,
+		weights.rare
 	)
+	
+	## 记录本次抽到的稀有度（用于连锁惩罚和回升）
+	if run != null and run.save_data != null and not card_reward_array.is_empty():
+		var first_card_rarity := card_reward_array[0].rarity
+		var base_weights := run_stats.get_dynamic_weights(floors_climbed)
+		
+		if first_card_rarity == run.save_data.last_card_reward_rarity:
+			## 连续同稀有度，加重惩罚
+			run.save_data.rarity_streak_count += 1
+		else:
+			## 抽到不同稀有度，逐步恢复之前的惩罚
+			if run.save_data.rarity_streak_count > 0 and run.save_data.last_card_reward_rarity >= 0:
+				## 使用回升机制恢复之前被惩罚的稀有度权重
+				var recovered_weights := run_stats.recover_rarity_weights(
+					weights,
+					base_weights,
+					run.save_data.last_card_reward_rarity
+				)
+				## 更新权重用于下次计算
+				weights = recovered_weights
+				## 降低惩罚计数（逐步回升）
+				run.save_data.rarity_streak_count = maxi(run.save_data.rarity_streak_count - 1, 0)
+				
+				## 如果惩罚已完全恢复，重置稀有度记录
+				if run.save_data.rarity_streak_count == 0:
+					run.save_data.last_card_reward_rarity = first_card_rarity
+					run.save_data.rarity_streak_count = 1
+			else:
+				## 没有之前的惩罚，直接记录新的稀有度
+				run.save_data.last_card_reward_rarity = first_card_rarity
+				run.save_data.rarity_streak_count = 1
+	
+	## 获取动态升级概率
+	var upgrade_once_chance := run_stats.get_upgrade_chance_tier1(floors_climbed)
+	var upgrade_twice_chance := run_stats.get_upgrade_chance_tier2(floors_climbed)
+	
+	## 为每张卡牌应用随机升级概率
+	for card: Card in card_reward_array:
+		if not card.has_any_upgradeable_track():
+			continue
+		var roll := RNG.instance.randf()
+		if roll < upgrade_twice_chance:
+			_apply_random_upgrades(card, 2)
+		elif roll < upgrade_twice_chance + upgrade_once_chance:
+			_apply_random_upgrades(card, 1)
+	
 	if run != null:
 		var ids := PackedStringArray()
 		for c: Card in card_reward_array:
@@ -332,17 +410,88 @@ func _on_relic_reward_taken(relic: Relic, index: int) -> void:
 	if not relic or not relic_handler:
 		return
 	
-	relic_handler.add_relic(relic)
-	
-	if index >= 0 and index < _relics_taken.size():
-		_relics_taken[index] = true
-	
-	## 更新保存状态
 	var run := get_tree().get_first_node_in_group("run") as Run
-	if run != null:
-		run.take_battle_reward_relic(index)
+	if run == null:
+		return
+	
+	## 1. 先保存领取前的快照状态
+	_save_battle_reward_pending_snapshot(run, index)
+	
+	## 2. 标记遗物为"领取中"（但未确认）
+	if index >= 0 and index < _relics_taken.size():
+		_relics_taken[index] = true  ## 本地标记，防止重复点击
+	_rebuild_reward_ui()  ## 立即刷新UI，隐藏该遗物按钮
+	
+	## 3. 执行遗物效果（可能涉及异步UI流程，如无上宝石的选牌升级）
+	await relic_handler.add_relic_async(relic)
+	
+	## 4. 效果完成，确认领取并清除快照
+	run.take_battle_reward_relic(index)
+	run.save_data.clear_battle_reward_pending_staging()
+	run._save_run(false)
+
+
+## 保存领取遗物前的快照状态
+func _save_battle_reward_pending_snapshot(run: Run, relic_index: int) -> void:
+	if run == null or run.save_data == null:
+		return
+	
+	var sd := run.save_data
+	sd.battle_reward_pending_kind = SaveGame.BATTLE_REWARD_PENDING_RELIC
+	sd.battle_reward_pending_relic_index = relic_index
+	
+	## 保存当前状态
+	if character_stats != null:
+		sd.battle_reward_pending_pre_health = character_stats.health
+	if run_stats != null:
+		sd.battle_reward_pending_pre_gold = run_stats.gold
+	
+	## 保存卡组
+	sd.battle_reward_pending_pre_deck_cards.clear()
+	if character_stats != null and character_stats.deck != null:
+		for card in character_stats.deck.cards:
+			sd.battle_reward_pending_pre_deck_cards.append(card.duplicate(true) as Card)
+	
+	## 保存遗物ID列表
+	sd.battle_reward_pending_pre_relic_ids.clear()
+	var current_relics := relic_handler.get_all_relics()
+	for r: Relic in current_relics:
+		if is_instance_valid(r) and r.id != "":
+			sd.battle_reward_pending_pre_relic_ids.append(r.id)
+	
+	## 保存RNG状态
+	sd.battle_reward_pending_pre_rng_seed = RNG.instance.seed
+	sd.battle_reward_pending_pre_rng_state = RNG.instance.state
+	
+	print("[BattleReward] 保存领取前快照: health=%d, gold=%d, relics=%d, deck_cards=%d" % [
+		sd.battle_reward_pending_pre_health,
+		sd.battle_reward_pending_pre_gold,
+		sd.battle_reward_pending_pre_relic_ids.size(),
+		sd.battle_reward_pending_pre_deck_cards.size()
+	])
 
 
 ## 返回按钮被按下
 func _on_back_button_pressed() -> void: 
 	Events.battle_reward_exited.emit()
+
+
+## 为卡牌应用随机升级（随机选择可升级轨道）
+func _apply_random_upgrades(card: Card, count: int) -> void:
+	if not card or not card.has_any_upgradeable_track():
+		return
+	
+	for i in range(count):
+		# 获取当前仍可升级的轨道
+		var upgradeable_tracks: Array[String] = []
+		for track_id in card.get_upgrade_track_ids():
+			if not card.is_upgrade_track_maxed(track_id):
+				upgradeable_tracks.append(track_id)
+		
+		# 没有可升级轨道时停止
+		if upgradeable_tracks.is_empty():
+			break
+		
+		# 随机选择一个轨道进行升级
+		var chosen_track := upgradeable_tracks[RNG.instance.randi() % upgradeable_tracks.size()]
+		card.increment_upgrade_track(chosen_track)

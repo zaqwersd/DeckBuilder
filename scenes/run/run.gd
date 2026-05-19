@@ -17,9 +17,7 @@ const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
 @onready var health_ui: HealthUI = %HealthUI
 @onready var gold_ui: GoldUI = %GoldUI
 @onready var relic_handler: RelicHandler = %RelicHandler
-@onready var relic_tooltip: RelicTooltip = %RelicTooltip
-@onready var status_hover_tooltip: StatusHoverTooltip = %StatusHoverTooltip
-@onready var card_keyword_tooltip: CardKeywordTooltip = %CardKeywordTooltip
+@onready var game_tooltip: GameTooltip = %GameTooltip
 @onready var deck_button: CardPileOpener = %DeckButton
 @onready var pause_button: TextureButton = %PauseButton
 @onready var deck_view: CardPileView = %DeckView
@@ -139,6 +137,16 @@ func _load_run() -> void:
 			_load_relics_from_save_data()
 			_setup_top_bar()
 			RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+			
+			## 检查是否有领取中的遗物需要回退（玩家在领取过程中退出）
+			if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
+				print("[Run] 检测到遗物领取中状态，恢复快照...")
+				save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+				save_data.clear_battle_reward_pending_staging()
+				## 快照恢复后重新加载遗物显示
+				relic_handler.clear_relics()
+				_load_relics_from_save_data()
+			
 			var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
 			reward_scene.run_stats = stats
 			reward_scene.character_stats = character
@@ -172,8 +180,8 @@ func _load_run() -> void:
 				
 				if should_apply_snapshot:
 					# 应用场景进入快照，恢复到刚进入场景时的状态
+					# 注意：apply_scene_entry_snapshot 已经恢复了遗物和RNG状态
 					save_data.apply_scene_entry_snapshot(character, relic_handler)
-					_load_relics_from_save_data()
 					_setup_top_bar()
 					_on_map_exited(save_data.last_room, true)
 				else:
@@ -219,8 +227,24 @@ func _change_view(scene: PackedScene, configure_before_add: Callable = Callable(
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
 	Events.card_keyword_tooltip_hide.emit()
+	
+	## 清理旧场景前先断开其信号连接
 	if current_view.get_child_count() > 0:
-		current_view.get_child(0).queue_free()
+		var old_view := current_view.get_child(0)
+		## 如果是 Battle 场景，断开其信号
+		if old_view is Battle:
+			var old_battle := old_view as Battle
+			if is_instance_valid(old_battle.enemy_handler):
+				if Events.player_hand_discarded.is_connected(old_battle.enemy_handler.start_turn):
+					Events.player_hand_discarded.disconnect(old_battle.enemy_handler.start_turn)
+					print("[DEBUG] _change_view: disconnected old battle enemy_handler start_turn")
+			
+			if is_instance_valid(old_battle.player_handler):
+				if Events.player_turn_ended.is_connected(old_battle.player_handler.end_turn):
+					Events.player_turn_ended.disconnect(old_battle.player_handler.end_turn)
+					print("[DEBUG] _change_view: disconnected old battle player_handler end_turn")
+		
+		old_view.queue_free()
 	
 	get_tree().paused = false
 	var new_view := scene.instantiate()
@@ -228,7 +252,7 @@ func _change_view(scene: PackedScene, configure_before_add: Callable = Callable(
 		configure_before_add.call(new_view)
 	current_view.add_child(new_view)
 	map.hide_map()
-	
+
 	return new_view
 
 
@@ -273,10 +297,8 @@ func _setup_top_bar() -> void:
 	var top_bar := get_node_or_null("TopBar") as CanvasLayer
 	if top_bar:
 		top_bar.process_mode = Node.PROCESS_MODE_ALWAYS
-	if status_hover_tooltip:
-		status_hover_tooltip.process_mode = Node.PROCESS_MODE_ALWAYS
-	if card_keyword_tooltip:
-		card_keyword_tooltip.process_mode = Node.PROCESS_MODE_ALWAYS
+	if game_tooltip:
+		game_tooltip.process_mode = Node.PROCESS_MODE_ALWAYS
 	if not character.stats_changed.is_connected(health_ui.update_stats.bind(character)):
 		character.stats_changed.connect(health_ui.update_stats.bind(character))
 	health_ui.update_stats(character)
@@ -289,18 +311,18 @@ func _setup_top_bar() -> void:
 		relic_handler.add_relic(character.starting_relic)
 	else:
 		print("_setup_top_bar: 已有 %d 个遗物，跳过初始遗物添加" % current_relics.size())
-	if not Events.relic_tooltip_hover_show.is_connected(relic_tooltip.show_tooltip):
-		Events.relic_tooltip_hover_show.connect(relic_tooltip.show_tooltip)
-	if not Events.relic_tooltip_hover_hide.is_connected(relic_tooltip.hide):
-		Events.relic_tooltip_hover_hide.connect(relic_tooltip.hide)
-	if not Events.status_tooltip_hover_show.is_connected(status_hover_tooltip.show_tooltip):
-		Events.status_tooltip_hover_show.connect(status_hover_tooltip.show_tooltip)
-	if not Events.status_tooltip_hover_hide.is_connected(status_hover_tooltip.hide):
-		Events.status_tooltip_hover_hide.connect(status_hover_tooltip.hide)
-	if not Events.intent_tooltip_hover_show.is_connected(status_hover_tooltip.show_custom_bbcode):
-		Events.intent_tooltip_hover_show.connect(status_hover_tooltip.show_custom_bbcode)
-	if not Events.intent_tooltip_hover_hide.is_connected(status_hover_tooltip.hide):
-		Events.intent_tooltip_hover_hide.connect(status_hover_tooltip.hide)
+	if not Events.relic_tooltip_hover_show.is_connected(game_tooltip.show_tooltip):
+		Events.relic_tooltip_hover_show.connect(game_tooltip.show_tooltip)
+	if not Events.relic_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
+		Events.relic_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
+	if not Events.status_tooltip_hover_show.is_connected(game_tooltip.show_status_tooltip):
+		Events.status_tooltip_hover_show.connect(game_tooltip.show_status_tooltip)
+	if not Events.status_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
+		Events.status_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
+	if not Events.intent_tooltip_hover_show.is_connected(game_tooltip.show_custom_bbcode):
+		Events.intent_tooltip_hover_show.connect(game_tooltip.show_custom_bbcode)
+	if not Events.intent_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
+		Events.intent_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
 	if not Events.card_keyword_tooltip_show.is_connected(_on_card_keyword_tooltip_show):
 		Events.card_keyword_tooltip_show.connect(_on_card_keyword_tooltip_show)
 	if not Events.card_keyword_tooltip_hide.is_connected(_on_card_keyword_tooltip_hide):
@@ -482,16 +504,19 @@ func clear_room_pending_and_save() -> void:
 
 
 func _on_card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
-	## 战斗选牌/升级等高层模态自带 tooltip；全局 TopBar tooltip 勿画在幕布下层。
-	if Events.is_pointer_ui_obscured_for(card_keyword_tooltip):
+	## 战斗手牌 / ManaUI / 战斗牌堆由 BattleUI 内嵌 GameTooltip 处理（无颜色说明）。
+	if CardKeywordBbcode.is_combat_tooltip_anchor(near_to):
 		return
-	card_keyword_tooltip.show_keyword_blocks(ids, near_to)
+	## 高层模态（选牌/升级等）由各自 elevated GameTooltip 处理。
+	if Events.is_pointer_ui_obscured_for(game_tooltip):
+		return
+	game_tooltip.show_keyword_blocks(ids, near_to)
 
 
 func _on_card_keyword_tooltip_hide() -> void:
-	if Events.is_pointer_ui_obscured_for(card_keyword_tooltip):
+	if Events.is_pointer_ui_obscured_for(game_tooltip):
 		return
-	card_keyword_tooltip.hide_tooltip()
+	game_tooltip.hide_tooltip()
 
 
 func play_deck_gain_card_visual(card: Card, from_global: Vector2) -> void:
@@ -565,7 +590,8 @@ func _show_act_boss_rewards() -> void:
 ## 层BOSS奖励领取完毕后进入下一层
 func _on_act_reward_finished() -> void:
 	current_act += 1
-	
+	character.health = character.max_health
+
 	## 保存当前层数到存档
 	if save_data != null:
 		save_data.act_number = current_act
@@ -585,6 +611,7 @@ func _on_act_reward_finished() -> void:
 
 
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
+	print("[DEBUG] _on_battle_room_entered called, room type: ", room.type, " is_reload: ", is_reload)
 	# 如果不是重新加载（即新进入战斗），创建战斗快照
 	if not is_reload:
 		_save_combat_snapshot(room)
@@ -593,10 +620,23 @@ func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
 	if not is_instance_valid(battle_scene):
 		push_error("无法实例化战斗场景")
 		return
+	
+	print("[DEBUG] Battle scene instantiated, checking player_handler...")
+	if is_instance_valid(battle_scene.player_handler):
+		print("[DEBUG] player_handler valid: ", is_instance_valid(battle_scene.player_handler))
+		print("[DEBUG] player valid: ", is_instance_valid(battle_scene.player_handler.player))
+		if is_instance_valid(battle_scene.player_handler.player):
+			print("[DEBUG] status_handler valid: ", is_instance_valid(battle_scene.player_handler.player.status_handler))
+	else:
+		push_error("[DEBUG] player_handler is invalid!")
+	
+	print("[DEBUG] enemy_handler child count: ", battle_scene.enemy_handler.get_child_count())
+	
 	battle_scene.char_stats = character
 	battle_scene.battle_stats = room.battle_stats
 	battle_scene.relics = relic_handler
 	battle_scene.start_battle()
+	print("[DEBUG] Battle started")
 
 
 func _save_combat_snapshot(room: Room) -> void:

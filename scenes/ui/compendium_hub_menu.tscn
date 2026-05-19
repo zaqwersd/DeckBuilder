@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/compendium_hub_menu.gd" id="1_hub"]
+
+[node name="CompendiumHubMenu" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_hub")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.705882)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 36
+
+[node name="CardCompendiumButton" type="Button" parent="Center/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(225, 63)
+layout_mode = 2
+text = "卡牌图鉴"
+
+[node name="RelicCompendiumButton" type="Button" parent="Center/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(225, 63)
+layout_mode = 2
+text = "遗物图鉴"
+
+[node name="BackButton" type="Button" parent="Center/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(225, 63)
+layout_mode = 2
+text = "返回"

@@ -4,5 +4,5 @@
 
 [node name="StatusHandler" type="HBoxContainer"]
 mouse_filter = 0
-theme_override_constants/separation = 2
+theme_override_constants/separation = 0
 script = ExtResource("1_7l2o8")

@@ -7,13 +7,16 @@
 [ext_resource type="Resource" uid="uid://b1yl5we8yv4oo" path="res://characters/blade/cards/blade_overwhelming.tres" id="4_jteol"]
 [ext_resource type="Resource" uid="uid://2rae3wgfdx6e" path="res://characters/blade/cards/blade_shatter.tres" id="5_sfk5u"]
 [ext_resource type="Resource" uid="uid://cojg2pjac8k4t" path="res://characters/blade/cards/blade_detachment.tres" id="6_mdr4n"]
-[ext_resource type="Resource" uid="uid://bu5t6pggn2enx" path="res://characters/blade/cards/blade_iaijutsu.tres" id="7_iaiju"]
 [ext_resource type="Resource" uid="uid://coii74difhs5s" path="res://characters/blade/cards/blade_anger.tres" id="8_anger"]
 [ext_resource type="Resource" uid="uid://b65hsovl1becp" path="res://characters/blade/cards/blade_destiny.tres" id="9_destiny"]
 [ext_resource type="Resource" uid="uid://dj1cphcq3b502" path="res://characters/blade/cards/blade_flow.tres" id="10_flow"]
 [ext_resource type="Resource" uid="uid://wgxrnoc1mcdu" path="res://characters/blade/cards/blade_opening_stance.tres" id="11_opening"]
 [ext_resource type="Resource" uid="uid://54fkq46ghutb" path="res://characters/blade/cards/blade_sword_flash.tres" id="12_flash"]
+[ext_resource type="Resource" uid="uid://066uu2rv3sgo" path="res://characters/blade/cards/blade_ephemeral_bloom.tres" id="13_bloom"]
+[ext_resource type="Resource" uid="uid://c080ooxmglf1x" path="res://characters/blade/cards/blade_all_out.tres" id="14_all_out"]
+[ext_resource type="Resource" uid="uid://gu80tp4kl5wb" path="res://characters/blade/cards/blade_unyielding.tres" id="15_unyielding"]
+[ext_resource type="Resource" path="res://characters/blade/cards/blade_samsara.tres" id="16_samsara"]
 
 [resource]
 script = ExtResource("1_x06dg")
-cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("7_iaiju"), ExtResource("8_anger"), ExtResource("9_destiny"), ExtResource("10_flow"), ExtResource("11_opening"), ExtResource("12_flash")])
+cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("8_anger"), ExtResource("9_destiny"), ExtResource("10_flow"), ExtResource("11_opening"), ExtResource("12_flash"), ExtResource("13_bloom"), ExtResource("14_all_out"), ExtResource("15_unyielding"), ExtResource("16_samsara")])

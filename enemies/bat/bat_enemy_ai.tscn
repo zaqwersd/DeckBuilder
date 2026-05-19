@@ -1,8 +1,9 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
-[ext_resource type="Script" path="res://scenes/enemy/enemy_action_picker.gd" id="1_ideu7"]
+[ext_resource type="Script" path="res://enemies/bat/bat_enemy_ai.gd" id="1_batai"]
 [ext_resource type="Script" path="res://enemies/bat/bat_attack_action.gd" id="2_ki6rs"]
 [ext_resource type="Script" path="res://enemies/bat/bat_block_action.gd" id="3_lasj1"]
+[ext_resource type="Script" path="res://enemies/bat/bat_buff_action.gd" id="4_buff"]
 [ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_a486a"]
 [ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_r8rjx"]
 [ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_8hq17"]
@@ -17,19 +18,25 @@ script = ExtResource("4_a486a")
 kind = 1
 base_text = ""
 
+[sub_resource type="Resource" id="Resource_buff"]
+script = ExtResource("4_a486a")
+kind = 2
+base_text = "+%d 力量"
+
 [node name="BatEnemyAI" type="Node"]
-script = ExtResource("1_ideu7")
+script = ExtResource("1_batai")
 
 [node name="BatAttackAction" type="Node" parent="."]
 script = ExtResource("2_ki6rs")
 intent = SubResource("Resource_5y0u8")
 sound = ExtResource("5_r8rjx")
-type = 1
-chance_weight = 3.0
 
 [node name="BatBlockAction" type="Node" parent="."]
 script = ExtResource("3_lasj1")
 intent = SubResource("Resource_1xroc")
 sound = ExtResource("8_8hq17")
-type = 1
-chance_weight = 1.0
+
+[node name="BatBuffAction" type="Node" parent="."]
+script = ExtResource("4_buff")
+intent = SubResource("Resource_buff")
+sound = ExtResource("8_8hq17")

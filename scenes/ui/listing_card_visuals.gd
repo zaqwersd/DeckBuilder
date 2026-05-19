@@ -10,6 +10,9 @@ extends CardVisualsBase
 func _sync_cost_label_style() -> void:
 	if not is_instance_valid(cost) or card == null:
 		return
+	if card.is_x_cost():
+		cost.remove_theme_color_override("font_color")
+		return
 	# 列表模式：费用可升级时显示黄色
 	if card.cost >= 0 and card.should_visualize_cost_as_upgradeable():
 		cost.add_theme_color_override("font_color", CardUpgradeUiColors.color_bb_value())
@@ -21,7 +24,9 @@ func _sync_from_card() -> void:
 	var dc := card.cost
 	if _display_mana_cost_override >= 0:
 		dc = _display_mana_cost_override
-	if dc >= 0:
+	if card.is_x_cost():
+		cost.text = "X"
+	elif dc >= 0:
 		cost.text = str(dc)
 	else:
 		cost.text = ""
@@ -126,9 +131,7 @@ func _refresh_description_text() -> void:
 	if not _upgrade_pick_bbcode_override.is_empty():
 		# 升级选择模式
 		Card.push_visual_number_bbcode_style(Card.NumberBbcodeStyle.LISTING_UPGRADE)
-		description_label.text = CardKeywordBbcode.wrap_ascii_digit_runs_bold(
-			CardKeywordBbcode.inject_keywords(_upgrade_pick_bbcode_override)
-		)
+		_set_description_label_text(_upgrade_pick_bbcode_override)
 		Card.pop_visual_number_bbcode_style()
 		_apply_pick_through_nested_controls()
 		_apply_description_default_color_for_style()
@@ -140,7 +143,7 @@ func _refresh_description_text() -> void:
 		card.get_updated_visual_description_bbcode(null, null, null)
 	)
 	Card.pop_visual_number_bbcode_style()
-	description_label.text = CardKeywordBbcode.wrap_ascii_digit_runs_bold(CardKeywordBbcode.inject_keywords(raw))
+	_set_description_label_text(raw)
 	_apply_pick_through_nested_controls()
 	_ensure_description_meta_signals()
 	_apply_description_default_color_for_style()

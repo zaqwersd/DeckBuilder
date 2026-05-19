@@ -111,7 +111,6 @@ func _on_description_meta_hover_started(meta: Variant) -> void:
 	# 标记状态
 	_desc_kw_meta_active = true
 	
-	# 获取所有词条 IDs（包括颜色说明）
 	var ids := get_keyword_tooltip_ids()
 	if not ids.is_empty():
 		if _upgrade_pick_bbcode_override.is_empty():
@@ -188,8 +187,23 @@ func _ensure_card_text_alignments() -> void:
 		upgrade_level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		upgrade_level_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	if is_instance_valid(description_label):
+		description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		description_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+
+## 去掉 [center]：该标签会缩小可排版宽度导致过早换行；行内居中由 RichTextLabel 对齐负责。
+static func format_description_bbcode_for_wrap(bbcode: String) -> String:
+	return bbcode.replace("[center]", "").replace("[/center]", "")
+
+
+func _set_description_label_text(raw_bbcode: String) -> void:
+	if not is_instance_valid(description_label):
+		return
+	var laid_out := format_description_bbcode_for_wrap(raw_bbcode)
+	description_label.text = CardKeywordBbcode.wrap_ascii_digit_runs_bold(
+		CardKeywordBbcode.inject_keywords(laid_out)
+	)
 
 
 func is_description_kw_meta_active() -> bool:
@@ -455,7 +469,7 @@ func _apply_rarity_panel_borders() -> void:
 	panel.add_theme_stylebox_override("panel", main_panel_style_base)
 	var frame_fill := STATUS_PANEL_BG if _is_status_card() or _uses_haunted_gray_panels() else Color(0, 0, 0, 0)
 	frame_panel.add_theme_stylebox_override("panel", _inner_panel_style_opaque(r, frame_fill))
-	var show_cost := card.cost >= 0
+	var show_cost := not card.is_unplayable()
 	cost_panel.visible = show_cost
 	if show_cost:
 		cost_panel.add_theme_stylebox_override("panel", _inner_panel_style_opaque(r, _inner_cost_fill()))

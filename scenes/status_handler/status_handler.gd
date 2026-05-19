@@ -12,6 +12,7 @@ var tooltips_open_to_right: bool = true
 
 
 func apply_statuses_by_type(type: Status.Type) -> void:
+	print("[DEBUG] StatusHandler.apply_statuses_by_type called, type: ", type, " owner: ", status_owner.name if status_owner else "null")
 	if type == Status.Type.EVENT_BASED:
 		return
 		
@@ -19,7 +20,9 @@ func apply_statuses_by_type(type: Status.Type) -> void:
 		func(status: Status):
 			return status.type == type
 	)
+	print("[DEBUG] Status queue size: ", status_queue.size())
 	if status_queue.is_empty():
+		print("[DEBUG] No statuses to apply, emitting statuses_applied immediately")
 		statuses_applied.emit(type)
 		return
 	
@@ -49,6 +52,8 @@ func add_status(status: Status) -> void:
 	# Add it if it's new
 	if not _has_status(status.id):
 		var new_status_ui := STATUS_UI.instantiate() as StatusUI
+		new_status_ui.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		new_status_ui.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		add_child(new_status_ui)
 		new_status_ui.mouse_entered.connect(_on_status_ui_mouse_entered.bind(new_status_ui))
 		new_status_ui.mouse_exited.connect(_on_status_ui_mouse_exited)

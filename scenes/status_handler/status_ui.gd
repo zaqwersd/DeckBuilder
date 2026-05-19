@@ -3,6 +3,7 @@ extends Control
 
 const NEGATIVE_VALUE_COLOR := Color(1.0, 0.0, 0.0)
 
+
 @export var status: Status : set = set_status
 
 @onready var icon: TextureRect = $Icon
@@ -16,6 +17,7 @@ func _ready() -> void:
 	# 动态获取可选的上下标节点（某些状态需要）
 	superscript = get_node_or_null("Superscript")
 	subscript = get_node_or_null("Subscript")
+	_apply_square_cell()
 
 
 func set_status(new_status: Status) -> void:
@@ -37,7 +39,6 @@ func set_status(new_status: Status) -> void:
 	if (is_overwhelming or is_flow) and superscript != null and subscript != null:
 		duration.visible = false
 		stacks.visible = false
-		custom_minimum_size = icon.get_combined_minimum_size()
 		if is_overwhelming:
 			superscript.visible = true
 			subscript.visible = true
@@ -51,13 +52,9 @@ func set_status(new_status: Status) -> void:
 			superscript.visible = false
 		if subscript != null:
 			subscript.visible = false
-		custom_minimum_size = icon.get_combined_minimum_size()
-		
-		if duration.visible:
-			custom_minimum_size = duration.size + duration.position
-		elif stacks.visible:
-			custom_minimum_size = stacks.size + stacks.position
-	
+
+	_apply_square_cell()
+
 	if not status.status_changed.is_connected(_on_status_changed):
 		status.status_changed.connect(_on_status_changed)
 	
@@ -125,3 +122,20 @@ func _apply_negative_value_color(label: Label, value: int) -> void:
 		label.add_theme_color_override("font_color", NEGATIVE_VALUE_COLOR)
 	else:
 		label.remove_theme_color_override("font_color")
+
+
+func _cell_side() -> float:
+	if is_instance_valid(icon):
+		return maxf(icon.custom_minimum_size.x, icon.custom_minimum_size.y)
+	return 33.0
+
+
+## 正方形仅用于 StatusHandler 横向排版的占位；层数/上下标可画出槽位外，仍完整显示。
+func _apply_square_cell() -> void:
+	var side := _cell_side()
+	custom_minimum_size = Vector2(side, side)
+	clip_contents = false
+	icon.position = Vector2.ZERO
+	icon.size = Vector2(side, side)
+	size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	size_flags_vertical = Control.SIZE_SHRINK_CENTER

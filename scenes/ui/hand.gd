@@ -18,6 +18,8 @@ var card_separation: int = 0
 
 ## 卡牌拖向 ui_layer 时槽会暂时无子节点，勿当作「空槽」删除
 const META_SLOT_DRAG_TEMP_EMPTY := &"_hand_slot_drag_temp_empty"
+## 手牌消耗动画期间槽已塌缩，勿被 `_apply_hand_card_transform` 写回满宽
+const META_SLOT_EXHAUST_COLLAPSED := &"_hand_slot_exhaust_collapsed"
 
 ## 整条手牌栏整体上移（相对场景里写的 offset_top/bottom）。在 `_ready` 应用，保证进战斗必生效。
 const HAND_BAR_RAISE_PX := 50.0
@@ -346,11 +348,90 @@ func remove_empty_slot_after_play(slot: Control) -> void:
 		return
 	if slot.has_meta(META_SLOT_DRAG_TEMP_EMPTY):
 		slot.remove_meta(META_SLOT_DRAG_TEMP_EMPTY)
+	if slot.has_meta(META_SLOT_EXHAUST_COLLAPSED):
+		slot.remove_meta(META_SLOT_EXHAUST_COLLAPSED)
 	slot.custom_minimum_size = Vector2.ZERO
 	slot.visible = false
 	if not slot.is_queued_for_deletion():
 		slot.queue_free()
 	_request_reflow_hand_bar()
+
+
+func _slot_participates_in_row(slot: Node) -> bool:
+	if not slot is Control:
+		return false
+	var ctl := slot as Control
+	if not ctl.visible:
+		return false
+	if ctl.has_meta(META_SLOT_DRAG_TEMP_EMPTY) and ctl.get_meta(META_SLOT_DRAG_TEMP_EMPTY, false):
+		return false
+	if ctl.has_meta(META_SLOT_EXHAUST_COLLAPSED) and ctl.get_meta(META_SLOT_EXHAUST_COLLAPSED, false):
+		return false
+	return get_card_ui_in_slot(slot) != null
+
+
+func _slot_should_skip_width_write(slot: Control) -> bool:
+	if slot.has_meta(META_SLOT_DRAG_TEMP_EMPTY) and slot.get_meta(META_SLOT_DRAG_TEMP_EMPTY, false):
+		return true
+	if slot.has_meta(META_SLOT_EXHAUST_COLLAPSED) and slot.get_meta(META_SLOT_EXHAUST_COLLAPSED, false):
+		return true
+	return false
+
+
+func _collapse_slot_control(slot: Control, meta_key: StringName) -> void:
+	slot.set_meta(meta_key, true)
+	slot.custom_minimum_size = Vector2.ZERO
+	slot.size = Vector2.ZERO
+	slot.visible = false
+	var cui := get_card_ui_in_slot(slot)
+	if cui:
+		cui.visible = false
+
+
+## 选牌消耗：牌移到勾选区前立即塌缩槽宽，避免 HBox 留空缝。
+func collapse_slot_for_pick(slot: Control) -> void:
+	if not is_instance_valid(slot) or slot.get_parent() != self:
+		return
+	_collapse_slot_control(slot, META_SLOT_DRAG_TEMP_EMPTY)
+	_request_reflow_hand_bar()
+
+
+## 手牌消耗动画：透明占位仍留在槽内，但槽不参与 HBox 排版。
+func collapse_slot_for_exhaust_animation(slot: Control) -> void:
+	if not is_instance_valid(slot) or slot.get_parent() != self:
+		return
+	_collapse_slot_control(slot, META_SLOT_EXHAUST_COLLAPSED)
+	_request_reflow_hand_bar()
+
+
+## 选牌取消勾选：恢复槽参与排版。
+func restore_slot_after_pick(slot: Control) -> void:
+	if not is_instance_valid(slot) or slot.get_parent() != self:
+		return
+	if slot.has_meta(META_SLOT_DRAG_TEMP_EMPTY):
+		slot.remove_meta(META_SLOT_DRAG_TEMP_EMPTY)
+	slot.visible = true
+	slot.size = Vector2.ZERO
+	_request_reflow_hand_bar()
+
+
+func get_active_row_width() -> float:
+	if not is_inside_tree():
+		return 0.0
+	var sep := float(card_separation)
+	var total_w := 0.0
+	var n := 0
+	for slot in get_children():
+		if not _slot_participates_in_row(slot):
+			continue
+		var ctl := slot as Control
+		if ctl == null:
+			continue
+		total_w += ctl.get_combined_minimum_size().x
+		n += 1
+	if n > 1:
+		total_w += sep * float(n - 1)
+	return total_w
 
 
 func _request_reflow_hand_bar() -> void:
@@ -423,7 +504,10 @@ func add_card(card: Card) -> void:
 		new_card_ui.card_visuals.position.y = 0.0
 	new_card_ui.hand_slot = slot
 	# 打出/销毁时 CardUI 离树：用 tree_exited 比 child_exiting+await 更稳；空槽若留着会仍带 custom_minimum_size 占一条缝
-	new_card_ui.tree_exited.connect(_on_card_tree_exited_from_slot.bind(slot))
+	new_card_ui.tree_exited.connect(
+		func() -> void: _on_card_tree_exited_from_slot(slot),
+		CONNECT_ONE_SHOT
+	)
 	new_card_ui.reparent_requested.connect(_on_card_ui_reparent_requested)
 	new_card_ui.parent = self
 	new_card_ui.char_stats = char_stats
@@ -463,13 +547,18 @@ func _deferred_flush_hand_layout_resync() -> void:
 func _reflow_hand_bar() -> void:
 	if not is_inside_tree():
 		return
-	var slots_with_card: Array[Node] = []
-	for slot in get_children():
-		if get_card_ui_in_slot(slot) != null:
-			slots_with_card.append(slot)
-	var n := slots_with_card.size()
-	## 统一槽高度：所有槽使用相同的固定高度，避免新槽与旧槽高度不一致
 	var uniform_slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
+	var active_slots: Array[Node] = []
+	for slot in get_children():
+		var ctl := slot as Control
+		if ctl == null:
+			continue
+		if _slot_participates_in_row(slot):
+			active_slots.append(slot)
+		else:
+			ctl.custom_minimum_size = Vector2.ZERO
+			ctl.size = Vector2.ZERO
+	var n := active_slots.size()
 	if n == 0:
 		custom_minimum_size = Vector2(0.0, uniform_slot_h)
 		offset_left = -_empty_bar_half_width
@@ -479,20 +568,18 @@ func _reflow_hand_bar() -> void:
 		return
 	var sep := float(card_separation)
 	var total_w := 0.0
-	for slot in slots_with_card:
+	for slot in active_slots:
 		var ctl := slot as Control
 		if ctl == null:
 			continue
 		var ms: Vector2 = ctl.get_combined_minimum_size()
 		total_w += ms.x
-		## 统一设置所有槽的高度，确保对齐一致
 		ctl.custom_minimum_size = Vector2(ms.x, uniform_slot_h)
 	if n > 1:
 		total_w += sep * float(n - 1)
 	var half := total_w * 0.5
 	offset_left = -half
 	offset_right = half
-	## Hand 高度按统一槽高度设置
 	custom_minimum_size = Vector2(total_w, uniform_slot_h)
 	update_minimum_size()
 	queue_sort()
@@ -517,6 +604,11 @@ func get_card_ui_in_slot(slot_or_card: Node) -> CardUI:
 
 
 func discard_card(card: CardUI) -> void:
+	if is_instance_valid(card.hand_slot):
+		if card.hand_slot.has_meta(META_SLOT_EXHAUST_COLLAPSED):
+			card.hand_slot.remove_meta(META_SLOT_EXHAUST_COLLAPSED)
+		if card.hand_slot.has_meta(META_SLOT_DRAG_TEMP_EMPTY):
+			card.hand_slot.remove_meta(META_SLOT_DRAG_TEMP_EMPTY)
 	var p := card.get_parent()
 	if p and p != self:
 		p.queue_free()
@@ -603,6 +695,8 @@ func _apply_hand_card_transform_and_sync(card_ui: CardUI) -> void:
 func _apply_hand_card_transform(card_ui: CardUI) -> void:
 	if not is_instance_valid(card_ui):
 		return
+	if is_instance_valid(card_ui.hand_slot) and _slot_should_skip_width_write(card_ui.hand_slot):
+		return
 	var s := display_scale
 	# 必须保持为 1，否则每次 HBox 排序都会被 Container 盖回 (1,1)
 	card_ui.scale = Vector2.ONE
@@ -615,7 +709,6 @@ func _apply_hand_card_transform(card_ui: CardUI) -> void:
 	# 仅当牌仍是槽的子节点时才写槽的 minimum_size。否则（拖出/打出已 reparent 但 hand_slot 尚未清空）
 	# 会把 shrink_slot 压成的 0 宽又改回满宽，出现「空槽占位」闪一下。
 	if is_instance_valid(card_ui.hand_slot) and card_ui.get_parent() == card_ui.hand_slot:
-		## 使用统一的槽高度，与 _reflow_hand_bar 保持一致
 		var uniform_slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
 		card_ui.hand_slot.custom_minimum_size = Vector2(scaled_size.x, uniform_slot_h)
 		card_ui.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

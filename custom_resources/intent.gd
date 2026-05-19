@@ -73,9 +73,12 @@ static func build_intent_hover_sentence(intents: Array) -> String:
 	return "这名敌人将会%s。" % "并".join(parts)
 
 
-## 与状态/遗物悬停框同面板样式，但无标题行。
+## 与状态/遗物悬停框同面板样式；标题为「意图」。
 static func build_intent_hover_bbcode(intents: Array) -> String:
-	return build_intent_hover_sentence(intents)
+	var body := build_intent_hover_sentence(intents)
+	if body.is_empty():
+		return ""
+	return TooltipBbcode.titled("意图", body)
 
 
 static func _phrase_for_intent_hover(intent: Intent) -> String:

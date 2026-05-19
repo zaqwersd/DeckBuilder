@@ -51,6 +51,8 @@ mouse_filter = 2
 bbcode_enabled = true
 text = "卡牌说明占位 卡牌说明占位 卡牌说明占位
 卡牌说明占位 卡牌说明占位"
+autowrap_mode = 3
 fit_content = true
+horizontal_alignment = 1
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

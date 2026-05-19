@@ -3,6 +3,8 @@ extends CardPileView
 
 ## 主菜单图鉴：按类别列出全部卡各一张（稀有度排序）；点击打开升级预览（只读）。
 
+signal returned_to_hub
+
 enum Category { BLADE, COMMON }
 
 var _category_tabs: HBoxContainer
@@ -13,6 +15,23 @@ var _tab_entries: Array[Dictionary] = []
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
 		_cleanup_compendium_modal_on_hide()
+
+
+func _on_compendium_back_pressed() -> void:
+	if _is_deck_upgrade_input_blocker_active():
+		return
+	Events.card_keyword_tooltip_hide.emit()
+	hide()
+	returned_to_hub.emit()
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		if _is_deck_upgrade_input_blocker_active():
+			return
+		_on_compendium_back_pressed()
+		return
+	super._input(event)
 
 
 func _cleanup_compendium_modal_on_hide() -> void:
@@ -31,6 +50,8 @@ func _cleanup_compendium_modal_on_hide() -> void:
 
 func _ready() -> void:
 	super._ready()
+	back_button.pressed.disconnect(hide)
+	back_button.pressed.connect(_on_compendium_back_pressed)
 	title.text = "卡牌图鉴"
 	_category_tabs = get_node_or_null("%CategoryTabs") as HBoxContainer
 	if _category_tabs:

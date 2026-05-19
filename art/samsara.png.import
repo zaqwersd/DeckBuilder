@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cwmp4pssdr8b6"
-path="res://.godot/imported/Iaijutsu.png-d721c557aa9ee2f1f83561ca5ab4050f.ctex"
+uid="uid://c7ri7xkcjf4yy"
+path="res://.godot/imported/samsara.png-da5f59cc31ddadf33a39f30f03c841c7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/Iaijutsu.png"
-dest_files=["res://.godot/imported/Iaijutsu.png-d721c557aa9ee2f1f83561ca5ab4050f.ctex"]
+source_file="res://art/samsara.png"
+dest_files=["res://.godot/imported/samsara.png-da5f59cc31ddadf33a39f30f03c841c7.ctex"]
 
 [params]
 

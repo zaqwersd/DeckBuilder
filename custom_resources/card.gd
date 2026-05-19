@@ -35,12 +35,17 @@ static func is_visual_number_bbcode_combat() -> bool:
 	return get_current_visual_number_bbcode_style() == NumberBbcodeStyle.COMBAT_PILES_AND_HAND
 
 const RARITY_COLORS := {
-	Card.Rarity.STARTER: Color(0.9, 0.9, 0.9),  # 初始：浅灰白色
-	Card.Rarity.COMMON: Color.GRAY,
+	Card.Rarity.STARTER: Color.GRAY,
+	Card.Rarity.COMMON: Color(0.9, 0.9, 0.9),
 	Card.Rarity.UNCOMMON: Color(129.0 / 255.0, 212.0 / 255.0, 250.0 / 255.0),
 	Card.Rarity.RARE: Color.GOLD,
 	Card.Rarity.SPECIAL: Color(243.0 / 255.0, 108.0 / 255.0, 96.0 / 255.0),
 }
+
+## 不可打出（如恶灵）
+const COST_UNPLAYABLE := -1
+## X 费：消耗当前全部能量
+const COST_X := -2
 
 
 ## 卡面/提示里与「原始数值」对比后的 BBCode。战斗：白字为等；局外：等沿用默认字色，低/高用词条色。
@@ -119,6 +124,8 @@ func should_show_intrinsic_keyword_in_combat_description() -> bool:
 
 ## 打出时由 CardUI 写入、效果协程读取；未设置时为 Vector2.INF。
 var _play_visual_start_center: Vector2 = Vector2.INF
+## 本次出牌快照：mana_spent、x（X 费等于 mana_spent）。再执行效果不扣费时沿用。
+var _play_snapshot: Dictionary = {}
 
 
 func set_play_visual_start_center(center: Vector2) -> void:
@@ -178,6 +185,21 @@ func has_any_upgradeable_track() -> bool:
 	return false
 
 
+## 营火升级：不由玩家点选词条，随机升一条仍可升的轨（如生死流转）。
+func uses_random_upgrade_track_pick() -> bool:
+	return false
+
+
+func pick_random_upgrade_track() -> String:
+	var upgradeable: Array[String] = []
+	for tid: String in get_upgrade_track_ids():
+		if not is_upgrade_track_maxed(tid):
+			upgradeable.append(tid)
+	if upgradeable.is_empty():
+		return ""
+	return upgradeable[RNG.instance.randi() % upgradeable.size()]
+
+
 ## 营火/牌库：可点击的黄字数值（ugp meta）；该轨已升满则为白字。
 func bbcode_upgrade_pick_digit(track_id: String, value: int) -> String:
 	if is_upgrade_track_maxed(track_id):
@@ -228,6 +250,47 @@ func max_out_all_upgrade_tracks() -> void:
 	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 
 
+func is_unplayable() -> bool:
+	return cost == COST_UNPLAYABLE
+
+
+## 除费用外的出牌条件；子类可覆盖（如低血才能打出）。
+func meets_play_requirements(char_stats: CharacterStats) -> bool:
+	return true
+
+
+## 出牌条件未满足时仍正常显示、可拖出；松手由 can_play_card 拦截（如不屈）。
+func allows_hand_drag_when_play_requirements_unmet() -> bool:
+	return false
+
+
+func is_x_cost() -> bool:
+	return cost == COST_X
+
+
+func get_base_mana_cost() -> int:
+	return cost
+
+
+func _begin_play_snapshot(mana_spent: int) -> void:
+	_play_snapshot = {
+		"mana_spent": mana_spent,
+		"x": mana_spent if is_x_cost() else 0,
+	}
+
+
+func get_play_x() -> int:
+	return int(_play_snapshot.get("x", 0))
+
+
+func get_play_mana_spent() -> int:
+	return int(_play_snapshot.get("mana_spent", 0))
+
+
+func has_play_snapshot() -> bool:
+	return not _play_snapshot.is_empty()
+
+
 func is_single_targeted() -> bool:
 	return target == Target.SINGLE_ENEMY
 
@@ -266,25 +329,50 @@ func _play_card_sound() -> void:
 
 
 func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierHandler, mana_to_spend: int = -1) -> void:
-	if cost < 0:
+	if is_unplayable():
 		return
-	var spend := mana_to_spend if mana_to_spend >= 0 else cost
+	var spend := mana_to_spend if mana_to_spend >= 0 else get_base_mana_cost()
+	if is_x_cost() and mana_to_spend < 0:
+		spend = char_stats.mana
+	_begin_play_snapshot(spend)
 	Events.card_played.emit(self)
 	char_stats.mana -= spend
 	if plays_card_sound_on_play():
 		_play_card_sound()
 
+	if is_single_targeted():
+		await _execute_card_effects(targets, modifiers)
+	else:
+		await _execute_card_effects(_get_targets(targets), modifiers)
+
+	# 消耗牌：延迟进入消耗堆
+	if exhausts and defers_exhaust_to_end_of_play():
+		char_stats.add_card_to_exhaust(self)
+
+	# 普通技能/攻击牌：延迟进入弃牌堆（在 apply_effects 完成后）
+	# 避免卡牌在效果执行期间被洗回抽牌堆
+	if not exhausts and not (type == Type.POWER) and not (type == Type.STATUS):
+		# 检查是否已经在弃牌堆（避免重复添加）
+		if not char_stats.discard.cards.has(self):
+			char_stats.discard.add_card(self)
+
+
+func _execute_card_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	var wrap_attack := type == Type.ATTACK
 	if wrap_attack:
 		Events.begin_attack_card_effects()
-	if is_single_targeted():
-		await apply_effects(targets, modifiers)
-	else:
-		await apply_effects(_get_targets(targets), modifiers)
+	await apply_effects(targets, modifiers)
 	if wrap_attack:
 		Events.end_attack_card_effects()
-	if exhausts and defers_exhaust_to_end_of_play():
-		char_stats.add_card_to_exhaust(self)
+
+
+func replay_effects_without_payment(targets: Array[Node], modifiers: ModifierHandler) -> void:
+	if not has_play_snapshot():
+		return
+	if is_single_targeted():
+		await _execute_card_effects(targets, modifiers)
+	else:
+		await _execute_card_effects(_get_targets(targets), modifiers)
 
 
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:

@@ -3,6 +3,8 @@ extends Resource
 
 const SAVE_PATH := "user://savegame.tres"
 
+## 注意！！！需要保存的状态包括遗物，卡牌及其升级，金币，生命值，随机数等，切记！！！
+
 ## Boss 战场景从 toxic_ghost 改名为 evil_spirit 后，旧存档里仍可能引用已删除的 .tscn。
 const _TIER2_EVIL_BATTLE_SCENE := preload("res://battles/tier_2_evil_spirit.tscn")
 
@@ -18,6 +20,11 @@ const _TIER2_EVIL_BATTLE_SCENE := preload("res://battles/tier_2_evil_spirit.tscn
 @export var floors_climbed: int
 @export var was_on_map: bool
 @export var act_number: int = 1  ## 当前层数（1-3），用于三层游戏结构
+
+## 卡牌奖励稀有度追踪（用于连锁惩罚机制）
+@export var last_card_reward_rarity: int = -1  ## 上次卡牌奖励抽到的稀有度
+@export var rarity_streak_count: int = 0       ## 连续同稀有度计数
+
 ## 营火：休息或升级后已生效，但尚未点「离开」；读档时回到仅「离开」界面。
 @export var campfire_leave_pending: bool = false
 
@@ -57,6 +64,18 @@ const PENDING_BATTLE_REWARD := 4
 @export var battle_reward_relics_taken: PackedInt32Array = PackedInt32Array()  ## 0/1 表示每个遗物是否已领取
 @export var battle_reward_cards_taken: bool = false  ## 卡牌奖励是否已领取
 
+## 战斗奖励：遗物领取暂存状态（类似营火的 pending 机制）
+const BATTLE_REWARD_PENDING_NONE := 0
+const BATTLE_REWARD_PENDING_RELIC := 1
+@export var battle_reward_pending_kind: int = BATTLE_REWARD_PENDING_NONE
+@export var battle_reward_pending_relic_index: int = -1  ## 哪个遗物在领取中
+@export var battle_reward_pending_pre_health: int = -1
+@export var battle_reward_pending_pre_gold: int = -1
+@export var battle_reward_pending_pre_deck_cards: Array[Card] = []
+@export var battle_reward_pending_pre_relic_ids: PackedStringArray = PackedStringArray()
+@export var battle_reward_pending_pre_rng_seed: int = 0
+@export var battle_reward_pending_pre_rng_state: int = 0
+
 
 func clear_room_pending() -> void:
 	pending_room_kind = PENDING_NONE
@@ -81,6 +100,17 @@ func clear_campfire_pending_staging() -> void:
 	campfire_pending_upgrade_index = -1
 	campfire_pending_card_backup = null
 	campfire_committed_upgrade_card = null
+
+
+func clear_battle_reward_pending_staging() -> void:
+	battle_reward_pending_kind = BATTLE_REWARD_PENDING_NONE
+	battle_reward_pending_relic_index = -1
+	battle_reward_pending_pre_health = -1
+	battle_reward_pending_pre_gold = -1
+	battle_reward_pending_pre_deck_cards.clear()
+	battle_reward_pending_pre_relic_ids.clear()
+	battle_reward_pending_pre_rng_seed = 0
+	battle_reward_pending_pre_rng_state = 0
 
 
 ## 读档：未点「离开」时显示休息前血量 / 升级前卡面。
@@ -120,6 +150,37 @@ func commit_campfire_pending_to(ch: CharacterStats) -> void:
 			and campfire_committed_upgrade_card != null
 		):
 			ch.deck.cards[ix] = campfire_committed_upgrade_card.duplicate(true) as Card
+
+
+## 战斗奖励：读档时回退到领取遗物前的状态（未完成领取时）
+func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: RelicHandler) -> void:
+	if battle_reward_pending_kind == BATTLE_REWARD_PENDING_NONE:
+		return
+	
+	## 恢复生命值
+	if battle_reward_pending_pre_health >= 0:
+		ch.health = battle_reward_pending_pre_health
+	
+	## 恢复金币
+	if run_stats != null and battle_reward_pending_pre_gold >= 0:
+		run_stats.gold = battle_reward_pending_pre_gold
+	
+	## 恢复卡组
+	if ch.deck != null and not battle_reward_pending_pre_deck_cards.is_empty():
+		ch.deck.cards.clear()
+		for card in battle_reward_pending_pre_deck_cards:
+			ch.deck.cards.append(card.duplicate(true) as Card)
+	
+	## 恢复遗物
+	if relic_handler != null:
+		relic_handler.clear_relics()
+		for relic_id in battle_reward_pending_pre_relic_ids:
+			var relic := GameContent.load_relic_template(relic_id)
+			if relic != null:
+				relic_handler.add_relic(relic, false)
+	
+	## 恢复RNG状态
+	RNG.set_from_save_data(battle_reward_pending_pre_rng_seed, battle_reward_pending_pre_rng_state)
 
 
 func save_data() -> void:

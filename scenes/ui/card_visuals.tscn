@@ -35,9 +35,9 @@ mouse_filter = 2
 [node name="CardDescription" type="RichTextLabel" parent="." unique_id=1205868107]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 19.0
+offset_left = 16.0
 offset_top = 181.0
-offset_right = 199.0
+offset_right = 202.0
 offset_bottom = 290.0
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 20

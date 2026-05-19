@@ -9,6 +9,21 @@ const BLADE_MANA_PANEL_BG := Color(0.0 / 255.0, 150.0 / 255.0, 136.0 / 255.0, 1.
 @onready var mana_label: Label = $ManaLabel
 
 
+func _ready() -> void:
+	mouse_entered.connect(_on_mouse_entered_mana)
+	mouse_exited.connect(_on_mouse_exited_mana)
+	if is_instance_valid(mana_label):
+		mana_label.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+func _on_mouse_entered_mana() -> void:
+	Events.card_keyword_tooltip_show.emit(PackedStringArray(["mana"]), self)
+
+
+func _on_mouse_exited_mana() -> void:
+	Events.card_keyword_tooltip_hide.emit()
+
+
 func _set_char_stats(value: CharacterStats) -> void:
 	char_stats = value
 	

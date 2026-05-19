@@ -33,6 +33,24 @@ static func load_relic_template(relic_id: String) -> Relic:
 	return null
 
 
+static func load_all_relic_templates() -> Array[Relic]:
+	var by_id: Dictionary = {}
+	for path: String in _list_tres_files(RELICS_DIR):
+		var res := load(path) as Relic
+		if res == null or res.id.is_empty():
+			continue
+		if by_id.has(res.id):
+			continue
+		by_id[res.id] = res.duplicate(true) as Relic
+	var out: Array[Relic] = []
+	for k: Variant in by_id.keys():
+		out.append(by_id[k] as Relic)
+	out.sort_custom(func(a: Relic, b: Relic) -> bool:
+		return String(a.relic_name) < String(b.relic_name)
+	)
+	return out
+
+
 static func find_card_resource_path(card_id: String) -> String:
 	var fname := "%s.tres" % card_id
 	var r := _scan_dir_for_file(CHAR_CARDS_ROOT, fname)

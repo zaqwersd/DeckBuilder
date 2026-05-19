@@ -1,7 +1,7 @@
 extends Card
 
 ## 心流 - 0费稀有技能
-## 效果：抽1（2）张牌。消耗1张牌。[获得1点能量（待激活）]
+## 效果：抽2（3）张牌。消耗1张牌。[获得1点能量（待激活）]
 
 const _MANA_GAIN_AMOUNT := 1
 
@@ -13,8 +13,8 @@ func get_upgrade_track_ids() -> PackedStringArray:
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
 		"draw_count":
-			## 1 = 未升级(抽1张)，2 = 已升级(抽2张)
-			return PackedInt32Array([1, 2])
+			## 2 = 未升级(抽2张)，3 = 已升级(抽3张)
+			return PackedInt32Array([2, 3])
 		"mana_gain":
 			## 0 = 未升级(灰色)，1 = 已升级(激活)
 			return PackedInt32Array([0, 0])
@@ -136,9 +136,9 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if not has_any:
 		return
 
-	## 5. 打开手牌选择界面
+	## 5. 打开手牌选择界面（强制选择，不可ESC取消）
 	var overlay := HandCardPickOverlay.open_on_tree(
-		tree, hand, 1, Callable(), "选择要消耗的卡牌"
+		tree, hand, 1, Callable(), "选择要消耗的卡牌", false
 	)
 	var result: Array = await overlay.selection_finished
 
@@ -165,13 +165,17 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 			if is_instance_valid(bcf) and bcf is BattleCardFx:
 				var start_c := cui.get_global_rect().get_center()
 				cui.modulate.a = 0.0
+				if is_instance_valid(cui.hand_slot):
+					hand.collapse_slot_for_exhaust_animation(cui.hand_slot)
 				await (bcf as BattleCardFx).animate_played_card(
 					cui.card, start_c, BattleCardFx.PlayedKind.EXHAUST
 				)
 				if is_instance_valid(hand) and is_instance_valid(cui) and not cui.is_queued_for_deletion():
 					hand.discard_card(cui)
+					hand.resync_layout_after_draw()
 			else:
 				hand.discard_card(cui)
+				hand.resync_layout_after_draw()
 			break
 
 	## 7. 如果升级了mana_gain，获得能量

@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyStats" format=3 uid="uid://bbo24od4aavfj"]
+[gd_resource type="Resource" script_class="BatEnemyStats" format=3 uid="uid://bbo24od4aavfj"]
 
-[ext_resource type="Script" uid="uid://cqw6nj5nsigxl" path="res://custom_resources/enemy_stats.gd" id="1_1akn0"]
+[ext_resource type="Script" uid="uid://bj7xhj07d8m7f" path="res://enemies/bat/bat_enemy_stats.gd" id="1_1akn0"]
 [ext_resource type="PackedScene" path="res://enemies/bat/bat_enemy_ai.tscn" id="1_oeu8d"]
 [ext_resource type="Texture2D" uid="uid://con6y7mc74c5a" path="res://art/tile_0120.png" id="1_xdrl7"]
 
@@ -9,5 +9,5 @@ script = ExtResource("1_1akn0")
 ai = ExtResource("1_oeu8d")
 health_bar_width = 108
 status_bar_offset = Vector2(50, 30)
-max_health = 12
+max_health = 21
 art = ExtResource("1_xdrl7")

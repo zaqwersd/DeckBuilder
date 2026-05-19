@@ -11,13 +11,13 @@ static func ensure_intent_tooltip_handlers_connected(tree: SceneTree) -> void:
 	var run_node := tree.get_first_node_in_group("run")
 	if run_node == null or not (run_node is Run):
 		return
-	var tip := (run_node as Run).status_hover_tooltip
+	var tip := (run_node as Run).game_tooltip
 	if not is_instance_valid(tip):
 		return
 	if not Events.intent_tooltip_hover_show.is_connected(tip.show_custom_bbcode):
 		Events.intent_tooltip_hover_show.connect(tip.show_custom_bbcode)
-	if not Events.intent_tooltip_hover_hide.is_connected(tip.hide):
-		Events.intent_tooltip_hover_hide.connect(tip.hide)
+	if not Events.intent_tooltip_hover_hide.is_connected(tip.hide_tooltip):
+		Events.intent_tooltip_hover_hide.connect(tip.hide_tooltip)
 
 
 func _ready() -> void:

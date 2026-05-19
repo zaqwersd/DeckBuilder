@@ -198,6 +198,14 @@ func _on_cancel() -> void:
 	queue_free()
 
 
+## 清除所有选中状态（用于从升级界面返回时）
+func clear_selection() -> void:
+	_selected_indices.clear()
+	for menu: CardMenuUI in _index_by_menu:
+		menu.set_deck_pick_selected(false)
+	_update_confirm_visibility()
+
+
 static func open_on_tree(tree: SceneTree) -> DeckPickerOverlay:
 	var layer := CanvasLayer.new()
 	layer.layer = BATTLE_MODAL_CANVAS_LAYER

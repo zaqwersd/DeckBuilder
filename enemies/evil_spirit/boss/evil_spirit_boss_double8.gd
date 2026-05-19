@@ -1,6 +1,7 @@
 extends EnemyAction
 
-@export var hit_damage := 2
+@export var hit_damage := 4
+@export var hit_count := 3
 
 
 func perform_action() -> void:
@@ -19,7 +20,7 @@ func perform_action() -> void:
 	dmg_eff.sound = sound
 	var arr: Array[Node] = [target]
 	tween.tween_property(enemy, "global_position", end, 0.36)
-	for _i in 5:
+	for _i in hit_count:
 		tween.tween_callback(dmg_eff.execute.bind(arr))
 		tween.tween_interval(0.18)
 	tween.tween_property(enemy, "global_position", start, 0.36)
@@ -40,4 +41,4 @@ func update_intent_text() -> void:
 		return
 	var modified := player.modifier_handler.get_modified_value(hit_damage, Modifier.Type.DMG_TAKEN)
 	var final_dmg := enemy.modifier_handler.get_modified_value(modified, Modifier.Type.DMG_DEALT)
-	intent.set_attack_segments_display(final_dmg, 5)
+	intent.set_attack_segments_display(final_dmg, hit_count)

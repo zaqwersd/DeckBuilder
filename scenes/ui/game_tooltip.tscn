@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scenes/ui/card_keyword_tooltip.gd" id="1_script"]
+[ext_resource type="Script" path="res://scenes/ui/game_tooltip.gd" id="1_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 4.0
@@ -14,7 +14,7 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.38, 0.38, 0.38, 1)
 
-[node name="CardKeywordTooltip" type="Control"]
+[node name="GameTooltip" type="Control"]
 layout_mode = 0
 mouse_filter = 2
 script = ExtResource("1_script")

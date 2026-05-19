@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://scenes/status_handler/status_ui.gd" id="1_qqi3t"]
 
 [node name="StatusUI" type="Control"]
+custom_minimum_size = Vector2(33, 33)
 layout_mode = 3
 anchors_preset = 0
 mouse_filter = 0

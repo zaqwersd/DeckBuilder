@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3 uid="uid://c080ooxmglf1x"]
+
+[ext_resource type="Texture2D" uid="uid://dqhofl8e3dul3" path="res://art/all_out.png" id="1_1wphg"]
+[ext_resource type="Script" uid="uid://dr84xpkosgnfx" path="res://characters/blade/cards/blade_all_out.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_all_out"
+rarity = 2
+target = 1
+cost = -2
+card_name = "全力一击"
+icon = ExtResource("1_1wphg")
+sound = ExtResource("3_sound")

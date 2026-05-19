@@ -368,13 +368,17 @@ func update_intent() -> void:
 
 
 func do_turn() -> void:
+	print("[DEBUG] Enemy do_turn called on: ", name)
 	if not is_instance_valid(stats):
+		print("[DEBUG] Early return - stats invalid")
 		return
 	stats.block = 0
-	
+
 	if not current_action:
+		print("[DEBUG] Early return - current_action is null")
 		return
-	
+
+	print("[DEBUG] Performing action: ", current_action.name if current_action.name else "unnamed")
 	current_action.perform_action()
 
 

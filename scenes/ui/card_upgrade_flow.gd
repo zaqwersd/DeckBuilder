@@ -84,7 +84,15 @@ func begin(deck: CardPile, card_index: int) -> void:
 	if not is_node_ready():
 		await ready
 	_apply_mode_ui()
-	_show_phase1()
+	if _card.uses_random_upgrade_track_pick():
+		var random_track := _card.pick_random_upgrade_track()
+		if random_track.is_empty():
+			queue_free()
+			finished.emit(Result.CANCELLED)
+			return
+		_show_phase2(random_track)
+	else:
+		_show_phase1()
 	if not _pointer_exclusive_pushed:
 		Events.begin_pointer_exclusive_ui(self)
 		_pointer_exclusive_pushed = true
@@ -403,11 +411,28 @@ func _on_confirm_upgrade() -> void:
 		return
 	if _picked_track.is_empty():
 		return
-	## 无上宝石遗物批量升级模式
-	if _picked_track == "max_out":
-		_card.max_out_all_upgrade_tracks()
+	
+	## 确保升级时创建副本，避免直接修改原始资源（如模板卡牌）
+	if _deck != null and _card_index >= 0 and _card_index < _deck.cards.size():
+		## 创建升级后的副本
+		var upgraded_card: Card = _card.duplicate(true) as Card
+		
+		## 无上宝石遗物批量升级模式
+		if _picked_track == "max_out":
+			upgraded_card.max_out_all_upgrade_tracks()
+		else:
+			upgraded_card.increment_upgrade_track(_picked_track)
+		
+		## 替换牌组中的原始卡牌
+		_deck.cards[_card_index] = upgraded_card
+		_card = upgraded_card
 	else:
-		_card.increment_upgrade_track(_picked_track)
+		## 不在牌组中的卡牌（预览模式），直接修改
+		if _picked_track == "max_out":
+			_card.max_out_all_upgrade_tracks()
+		else:
+			_card.increment_upgrade_track(_picked_track)
+	
 	queue_free()
 	finished.emit(Result.UPGRADED)
 

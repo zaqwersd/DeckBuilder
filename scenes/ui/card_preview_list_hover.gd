@@ -2,16 +2,16 @@ class_name CardPreviewListHover
 extends Control
 
 ## 非手牌场景的卡牌列表预览：依赖 CardMenuUI.use_listing_hover_zoom 做 1.1 倍放大；
-## 悬停带词条的卡时通过 Events 显示词条说明；位置由 CardKeywordTooltip 处理（默认卡右侧，贴边则左侧）。
+## 悬停带词条的卡时通过 Events 显示词条说明；位置由 GameTooltip 处理（默认卡右侧，贴边则左侧）。
 
-const KEYWORD_TOOLTIP_SCENE := preload("res://scenes/ui/card_keyword_tooltip.tscn")
+const KEYWORD_TOOLTIP_SCENE := preload("res://scenes/ui/game_tooltip.tscn")
 ## Run TopBar 上全局词条 tooltip 的 CanvasLayer.layer；≥ 此层的列表（含 TopBar 牌库 layer=3）用内嵌 tooltip，避免被 is_pointer_ui_obscured 挡住。
 const ELEVATED_KEYWORD_TOOLTIP_MIN_CANVAS_LAYER := 3
 const MODAL_KEYWORD_TOOLTIP_Z_INDEX := 256
 
 var _kw_tip_menu: CardMenuUI = null
 var _kw_tip_ids: PackedStringArray = PackedStringArray()
-var _elevated_keyword_tooltip: CardKeywordTooltip = null
+var _elevated_keyword_tooltip: GameTooltip = null
 
 
 ## 子类复写：返回参与检测的 CardMenuUI（通常为列表/牌堆网格中的项）。
@@ -40,7 +40,7 @@ func _wants_elevated_keyword_tooltip() -> bool:
 func _bind_elevated_keyword_tooltip() -> void:
 	if _elevated_keyword_tooltip != null:
 		return
-	_elevated_keyword_tooltip = KEYWORD_TOOLTIP_SCENE.instantiate() as CardKeywordTooltip
+	_elevated_keyword_tooltip = KEYWORD_TOOLTIP_SCENE.instantiate() as GameTooltip
 	_elevated_keyword_tooltip.z_index = MODAL_KEYWORD_TOOLTIP_Z_INDEX
 	_elevated_keyword_tooltip.z_as_relative = false
 	_elevated_keyword_tooltip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -65,6 +65,10 @@ func _unbind_elevated_keyword_tooltip() -> void:
 
 func _on_elevated_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
 	if not is_inside_tree() or not is_visible_in_tree() or _elevated_keyword_tooltip == null:
+		return
+	if CardKeywordBbcode.is_combat_tooltip_anchor(near_to):
+		ids = CardKeywordBbcode.without_color_tooltip_ids(ids)
+	if ids.is_empty():
 		return
 	_elevated_keyword_tooltip.show_keyword_blocks(ids, near_to)
 
@@ -109,6 +113,8 @@ func _process(_delta: float) -> void:
 		if not is_instance_valid(m.visuals):
 			continue
 		var ids := m.visuals.get_keyword_tooltip_ids()
+		if CardKeywordBbcode.is_combat_tooltip_anchor(m):
+			ids = CardKeywordBbcode.without_color_tooltip_ids(ids)
 		if ids.is_empty():
 			continue
 		var d2 := m.visuals.get_global_rect().get_center().distance_squared_to(mp)

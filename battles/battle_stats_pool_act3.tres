@@ -2,11 +2,13 @@
 
 [ext_resource type="Script" path="res://custom_resources/battle_stats_pool.gd" id="1_c0dve"]
 [ext_resource type="Script" path="res://custom_resources/battle_stats.gd" id="1_k3ygp"]
-[ext_resource type="Resource" path="res://battles/tier_1_bats3.tres" id="1_bats"]
-[ext_resource type="Resource" path="res://battles/tier_1_bat_crab.tres" id="2_crab"]
-[ext_resource type="Resource" path="res://battles/tier_1_igneous_burster.tres" id="3_igneous"]
-[ext_resource type="Resource" path="res://battles/tier_2_evil_spirit.tres" id="4_boss"]
+[ext_resource type="Resource" uid="uid://b8n7n2ldcvb0c" path="res://battles/tier_0_bats2.tres" id="1_tier0bats"]
+[ext_resource type="Resource" uid="uid://cqruiasjesoro" path="res://battles/tier_0_crab.tres" id="2_tier0crab"]
+[ext_resource type="Resource" uid="uid://c7wjl4n63052m" path="res://battles/tier_1_bats3.tres" id="3_bats"]
+[ext_resource type="Resource" uid="uid://db7ehci5ojgnv" path="res://battles/tier_1_bat_crab.tres" id="4_crab"]
+[ext_resource type="Resource" uid="uid://d0xdqm83o71ek" path="res://battles/tier_1_igneous_burster.tres" id="5_igneous"]
+[ext_resource type="Resource" uid="uid://b77qc4ublkknd" path="res://battles/tier_2_evil_spirit.tres" id="6_boss"]
 
 [resource]
 script = ExtResource("1_c0dve")
-pool = Array[ExtResource("1_k3ygp")]([ExtResource("1_bats"), ExtResource("2_crab"), ExtResource("3_igneous"), ExtResource("4_boss")])
+pool = Array[ExtResource("1_k3ygp")]([ExtResource("1_tier0bats"), ExtResource("2_tier0crab"), ExtResource("3_bats"), ExtResource("4_crab"), ExtResource("5_igneous"), ExtResource("6_boss")])

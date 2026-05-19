@@ -12,6 +12,7 @@ offset_top = -108
 offset_right = 108
 offset_bottom = -27
 grow_vertical = 0
+mouse_filter = 0
 theme = ExtResource("1_g26dn")
 script = ExtResource("2_wmp1w")
 

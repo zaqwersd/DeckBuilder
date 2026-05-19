@@ -15,6 +15,8 @@ func _ready() -> void:
 		card.queue_free()
 		
 	background.color = background_color
+	card_description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card_description.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func show_tooltip(card: Card) -> void:
@@ -22,7 +24,9 @@ func show_tooltip(card: Card) -> void:
 	tooltip_card.add_child(new_card)
 	new_card.card = card
 	new_card.card_pick_pressed.connect(hide_tooltip.unbind(1))
-	card_description.text = card.get_visual_description_bbcode()
+	card_description.text = CardVisualsBase.format_description_bbcode_for_wrap(
+		card.get_visual_description_bbcode()
+	)
 	show()
 
 

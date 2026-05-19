@@ -48,9 +48,13 @@ func populate_shop(is_reload: bool = false) -> void:
 	reset_listing_keyword_tooltip_state()
 
 	var run := get_tree().get_first_node_in_group("run") as Run
-	if is_reload and run != null and run.can_restore_shop_pending():
-		# 重载时忽略售出状态，因为场景快照已恢复金币
-		_build_shop_from_pending(run.get_shop_pending_data(), true)
+	
+	# 重载时：生成全新的商店商品，不恢复售出状态
+	# 玩家状态（金币、遗物、卡牌）已由场景进入快照恢复
+	if is_reload:
+		var shop_card_array := _pick_shop_cards()
+		var shop_relics_array := _pick_shop_relics()
+		_build_shop_slots(shop_card_array, shop_relics_array, PackedInt32Array(), PackedInt32Array(), true)
 		return
 
 	var shop_card_array := _pick_shop_cards()
@@ -120,6 +124,9 @@ func _build_shop_slots(
 			var new_shop_card := SHOP_CARD.instantiate() as ShopCard
 			if i < card_costs.size():
 				new_shop_card.configure_cost(int(card_costs[i]))
+			else:
+				## 根据卡牌稀有度定价
+				new_shop_card.gold_cost = _get_card_price_by_rarity(shop_card_array[i].rarity)
 			col.add_child(new_shop_card)
 			new_shop_card.card = shop_card_array[i]
 			new_shop_card.call_deferred("set_modifier_context", modifier_handler)
@@ -142,6 +149,19 @@ func _build_shop_slots(
 			col.add_child(_make_spacer(ShopRelic.SLOT_SIZE))
 
 
+## 根据卡牌稀有度定价
+func _get_card_price_by_rarity(rarity: Card.Rarity) -> int:
+	match rarity:
+		Card.Rarity.COMMON:
+			return RNG.instance.randi_range(50, 100)
+		Card.Rarity.UNCOMMON:
+			return RNG.instance.randi_range(80, 170)
+		Card.Rarity.RARE:
+			return RNG.instance.randi_range(100, 250)
+		_:
+			return RNG.instance.randi_range(100, 300)  ## 默认
+
+
 func _make_spacer(slot_size: Vector2) -> Control:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = slot_size
@@ -151,15 +171,25 @@ func _make_spacer(slot_size: Vector2) -> Control:
 
 func _pick_shop_cards() -> Array[Card]:
 	var available_cards: Array[Card] = char_stats.draftable_cards.duplicate_cards()
-	var wc := run_stats.common_weight if run_stats else RunStats.BASE_COMMON_WEIGHT
-	var wu := run_stats.uncommon_weight if run_stats else RunStats.BASE_UNCOMMON_WEIGHT
-	var wr := run_stats.rare_weight if run_stats else RunStats.BASE_RARE_WEIGHT
+	
+	## 获取当前层数，应用动态稀有度权重
+	var floors_climbed := 0
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null and run.save_data != null:
+		floors_climbed = run.save_data.floors_climbed
+	
+	var weights := run_stats.get_dynamic_weights(floors_climbed) if run_stats else {
+		"common": RunStats.BASE_COMMON_WEIGHT,
+		"uncommon": RunStats.BASE_UNCOMMON_WEIGHT,
+		"rare": RunStats.BASE_RARE_WEIGHT
+	}
+	
 	return RNG.pick_weighted_distinct_cards(
 		available_cards,
 		mini(3, available_cards.size()),
-		wc,
-		wu,
-		wr
+		weights.common,
+		weights.uncommon,
+		weights.rare
 	)
 
 
@@ -292,7 +322,7 @@ func _shop_card_purchase_flow(_card: Card, _gold_cost: int, _from: Control) -> v
 
 
 func _on_shop_relic_bought(relic: Relic, gold_cost: int) -> void:
-	relic_handler.add_relic(relic)
+	await relic_handler.add_relic_async(relic)
 	run_stats.gold -= gold_cost
 	_sync_shop_pending()
 

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3 uid="uid://gu80tp4kl5wb"]
+
+[ext_resource type="Texture2D" uid="uid://r56vhom2m4tp" path="res://art/unyielding.png" id="1_wqt5p"]
+[ext_resource type="Script" uid="uid://6nps7akpnptd" path="res://characters/blade/cards/blade_unyielding.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_unyielding"
+type = 1
+rarity = 3
+card_name = "不屈"
+icon = ExtResource("1_wqt5p")
+tooltip_text = "[center]只有当你的生命值不高于%s时才能打出。获得%s点格挡。[/center]"
+sound = ExtResource("3_sound")

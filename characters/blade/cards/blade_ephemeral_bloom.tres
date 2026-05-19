@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3 uid="uid://066uu2rv3sgo"]
+
+[ext_resource type="Texture2D" uid="uid://waxv7rnttgt8" path="res://art/ephemeral_bloom.png" id="1_f7p2u"]
+[ext_resource type="Script" uid="uid://cclcsjjyuegsd" path="res://characters/blade/cards/blade_ephemeral_bloom.gd" id="2_xxx"]
+[ext_resource type="AudioStream" uid="uid://dssxww3rwylt5" path="res://art/ephemeral_bloom.ogg" id="3_822ib"]
+
+[resource]
+script = ExtResource("2_xxx")
+id = "blade_ephemeral_bloom"
+type = 1
+rarity = 3
+cost = 2
+ethereal = true
+card_name = "昙花一现"
+icon = ExtResource("1_f7p2u")
+tooltip_text = "虚无。本回合获得9点力量。"
+sound = ExtResource("3_822ib")

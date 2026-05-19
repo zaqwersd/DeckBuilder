@@ -28,7 +28,18 @@ const GHOST_FADE_DURATION := 0.48
 ## 多卡并列时：卡宽 + 间隙，至少不小于此值（像素）
 const MULTI_INSERT_MIN_STEP_PX := 120.0
 const MULTI_INSERT_CARD_GAP_PX := 36.0
-
+## 生死流转：消耗堆牌错开飞出、屏心变化、再入抽牌堆
+const SAMSARA_STAGGER := 0.1
+const SAMSARA_TO_CENTER := 0.14
+const SAMSARA_TRANSFORM_POP := 0.28
+const SAMSARA_OLD_FADE := 0.12
+const SAMSARA_TO_DRAW := INSERT_TO_DRAW
+const SAMSARA_ANCHOR_Z := 420
+const SAMSARA_LANE_Z := 410
+const SAMSARA_ANCHOR_HOLD := 0.02
+## 单条 lane 预估时长（飞到屏心+变化+飞抽牌堆），用于并行等待兜底
+const SAMSARA_LANE_PIPELINE_ESTIMATE := 0.82
+const SAMSARA_PIPELINE_TIMEOUT_PAD := 1.2
 var draw_pile_button: Control
 var discard_pile_button: Control
 var exhaust_pile_button: Control
@@ -188,6 +199,304 @@ func animate_played_card(card: Card, start_center: Vector2, kind: PlayedKind) ->
 		ghost.queue_free()
 
 
+## 生死流转：锚点飞到屏心；消耗堆牌错开启动，每条独立完成 飞到屏心→变化→飞入抽牌堆。
+func animate_samsara_transform(
+	samsara_card: Card,
+	pairs: Array,
+	samsara_from: Vector2,
+	char_stats: CharacterStats
+) -> void:
+	var anchor: Control = null
+	if samsara_card == null or not char_stats or not _is_fx_in_tree():
+		_fallback_samsara_add_draw(pairs, char_stats)
+		return
+
+	var vp_center := get_viewport().get_visible_rect().get_center()
+	var exhaust_from := vp_center
+	if exhaust_pile_button:
+		exhaust_from = _control_global_center(exhaust_pile_button)
+
+	anchor = _make_ghost(samsara_card)
+	anchor.z_index = SAMSARA_ANCHOR_Z
+	if samsara_card.exhausts:
+		anchor.modulate = Color(1.0, 0.62, 0.35)
+	await _prepare_ghost_for_motion(anchor)
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_queue_free_if_valid(anchor)
+		_fallback_samsara_add_draw(pairs, char_stats)
+		return
+
+	var mid_anchor := _bezier_control_draw_bulge_up(samsara_from, vp_center)
+	await _tween_ghost_curve_scale(
+		anchor, samsara_from, vp_center, SAMSARA_TO_CENTER, false, mid_anchor, SK_SCALE_EXPAND
+	)
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_queue_free_if_valid(anchor)
+		_fallback_samsara_add_draw(pairs, char_stats)
+		return
+
+	if not await _await_fx_delay(SAMSARA_ANCHOR_HOLD):
+		_queue_free_if_valid(anchor)
+		_fallback_samsara_add_draw(pairs, char_stats)
+		return
+
+	if not pairs.is_empty():
+		_queue_free_if_valid(anchor)
+		anchor = null
+		await _await_samsara_lanes_pipeline(pairs, vp_center, exhaust_from, char_stats)
+
+	_queue_free_if_valid(anchor)
+
+
+## 生死流转收尾：屏心直接淡出（消耗）或飞入弃牌堆（已升级去消耗）。
+func animate_samsara_resolve(card: Card, center: Vector2, exhausts: bool) -> void:
+	if card == null or Events.is_combat_ended():
+		return
+	if exhausts:
+		await animate_exhaust_fade_at_center(card, center)
+	else:
+		await animate_discard_from_center(card, center)
+
+
+func animate_exhaust_fade_at_center(card: Card, center: Vector2) -> void:
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		return
+	var ghost := _make_ghost(card)
+	ghost.modulate = Color(1.0, 0.62, 0.35)
+	await _prepare_ghost_for_motion(ghost)
+	if Events.is_combat_ended() or not is_instance_valid(ghost):
+		_queue_free_if_valid(ghost)
+		return
+	_place_visual_center_at(ghost, center)
+	ghost.scale = Vector2.ONE
+	ghost.visible = true
+	var tw := ghost.create_tween()
+	tw.set_trans(Tween.TRANS_QUAD)
+	tw.set_ease(Tween.EASE_OUT)
+	tw.tween_property(ghost, "modulate:a", 0.0, PLAY_TO_PILE)
+	await _await_ghost_tween_finished(ghost, tw)
+	_queue_free_if_valid(ghost)
+	_notify_haunted_if_ghost(card)
+
+
+func animate_discard_from_center(card: Card, center: Vector2) -> void:
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		return
+	if not discard_pile_button:
+		return
+	var ghost := _make_ghost(card)
+	await _prepare_ghost_for_motion(ghost)
+	if Events.is_combat_ended() or not is_instance_valid(ghost):
+		_queue_free_if_valid(ghost)
+		return
+	_place_visual_center_at(ghost, center)
+	ghost.scale = Vector2.ONE
+	ghost.visible = true
+	var dest := _control_global_center(discard_pile_button)
+	var mid := _bezier_control_draw_bulge_up(center, dest)
+	await _tween_ghost_curve_scale(ghost, center, dest, PLAY_TO_PILE, false, mid, SK_SCALE_SHRINK)
+	_queue_free_if_valid(ghost)
+
+
+## 并行 lane：错开启动，每条独立完成 飞到屏心→变化→飞入抽牌堆。
+func _await_samsara_lanes_pipeline(
+	pairs: Array,
+	hub_center: Vector2,
+	exhaust_from: Vector2,
+	char_stats: CharacterStats
+) -> void:
+	var lane_wait := {"started": 0, "completed": 0}
+	var on_lane_done := func() -> void:
+		lane_wait.completed += 1
+
+	for i in pairs.size():
+		if i > 0:
+			if not await _await_fx_delay(SAMSARA_STAGGER):
+				break
+		if Events.is_combat_ended() or not _is_fx_in_tree():
+			break
+		lane_wait.started += 1
+		call_deferred(
+			"_samsara_lane_transform_and_fly", pairs[i], hub_center, exhaust_from, char_stats, on_lane_done
+		)
+
+	var deadline := Time.get_ticks_msec() + int(
+		(SAMSARA_PIPELINE_TIMEOUT_PAD + float(pairs.size()) * (SAMSARA_STAGGER + SAMSARA_LANE_PIPELINE_ESTIMATE))
+		* 1000.0
+	)
+	while lane_wait.completed < lane_wait.started:
+		if Time.get_ticks_msec() >= deadline:
+			break
+		if Events.is_combat_ended() or not _is_fx_in_tree():
+			break
+		if not await _await_fx_process_frame():
+			break
+
+	for pair_variant in pairs:
+		if pair_variant is Dictionary:
+			var nc: Card = (pair_variant as Dictionary).get("new")
+			if nc != null and not char_stats.draw_pile.cards.has(nc):
+				char_stats.draw_pile.add_card(nc)
+
+
+func _samsara_lane_transform_and_fly(
+	pair: Dictionary,
+	hub_center: Vector2,
+	exhaust_from: Vector2,
+	char_stats: CharacterStats,
+	on_done: Callable
+) -> void:
+	var new_card: Card = pair.get("new")
+	var old_card: Card = pair.get("old")
+	var new_ghost: Control = null
+
+	if new_card == null:
+		on_done.call()
+		return
+
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_samsara_lane_add_to_draw(new_card, char_stats)
+		on_done.call()
+		return
+
+	var old_ghost: Control = null
+	if old_card != null:
+		old_ghost = _make_ghost(old_card)
+		old_ghost.z_index = SAMSARA_LANE_Z
+		await _prepare_ghost_for_motion(old_ghost)
+		if Events.is_combat_ended() or not _is_fx_in_tree():
+			_queue_free_if_valid(old_ghost)
+			_samsara_lane_add_to_draw(new_card, char_stats)
+			on_done.call()
+			return
+		var mid1 := _bezier_control_draw_bulge_up(exhaust_from, hub_center)
+		await _tween_ghost_curve_scale(
+			old_ghost, exhaust_from, hub_center, SAMSARA_TO_CENTER, false, mid1, SK_SCALE_EXPAND
+		)
+
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_queue_free_if_valid(old_ghost)
+		_samsara_lane_add_to_draw(new_card, char_stats)
+		on_done.call()
+		return
+
+	if is_instance_valid(old_ghost):
+		var tw_fade := old_ghost.create_tween()
+		tw_fade.set_parallel(true)
+		tw_fade.tween_property(old_ghost, "modulate:a", 0.0, SAMSARA_OLD_FADE)
+		tw_fade.tween_property(old_ghost, "scale", Vector2.ZERO, SAMSARA_OLD_FADE)
+		await _await_ghost_tween_finished(old_ghost, tw_fade, SAMSARA_OLD_FADE + 0.08)
+		old_ghost.queue_free()
+
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_samsara_lane_add_to_draw(new_card, char_stats)
+		on_done.call()
+		return
+
+	new_ghost = _make_ghost(new_card)
+	new_ghost.z_index = SAMSARA_LANE_Z
+	await _prepare_ghost_for_motion(new_ghost)
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_queue_free_if_valid(new_ghost)
+		_samsara_lane_add_to_draw(new_card, char_stats)
+		on_done.call()
+		return
+	_place_visual_center_at(new_ghost, hub_center)
+	new_ghost.scale = Vector2.ZERO
+	new_ghost.visible = true
+	var tw_pop := new_ghost.create_tween()
+	tw_pop.set_trans(Tween.TRANS_CUBIC)
+	tw_pop.set_ease(Tween.EASE_OUT)
+	tw_pop.tween_method(func(t: float) -> void: _insert_pop_scale(new_ghost, t), 0.0, 1.0, SAMSARA_TRANSFORM_POP)
+	await _await_ghost_tween_finished(new_ghost, tw_pop, SAMSARA_TRANSFORM_POP + 0.08)
+
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		_queue_free_if_valid(new_ghost)
+		_samsara_lane_add_to_draw(new_card, char_stats)
+		on_done.call()
+		return
+
+	_samsara_lane_add_to_draw(new_card, char_stats)
+	await _samsara_fly_ghost_to_draw_pile(new_ghost)
+	on_done.call()
+
+
+func _samsara_lane_add_to_draw(card: Card, char_stats: CharacterStats) -> void:
+	if card == null or char_stats == null:
+		return
+	if not char_stats.draw_pile.cards.has(card):
+		char_stats.draw_pile.add_card(card)
+
+
+func _samsara_fly_ghost_to_draw_pile(ghost: Control) -> void:
+	if not is_instance_valid(ghost):
+		return
+	if Events.is_combat_ended() or not _is_fx_in_tree() or not draw_pile_button:
+		_queue_free_if_valid(ghost)
+		return
+	ghost.visible = true
+	if ghost.scale == Vector2.ZERO:
+		ghost.scale = Vector2.ONE
+	var dest := _control_global_center(draw_pile_button)
+	var from_c := ghost.get_global_rect().get_center()
+	var mid := _bezier_control_draw_bulge_up(from_c, dest)
+	await _tween_ghost_curve_scale(ghost, from_c, dest, SAMSARA_TO_DRAW, false, mid, SK_SCALE_SHRINK)
+	_queue_free_if_valid(ghost)
+
+
+func _fallback_samsara_add_draw(pairs: Array, char_stats: CharacterStats) -> void:
+	if not char_stats:
+		return
+	for pair_variant in pairs:
+		if pair_variant is Dictionary:
+			var nc: Card = (pair_variant as Dictionary).get("new")
+			if nc != null and not char_stats.draw_pile.cards.has(nc):
+				char_stats.draw_pile.add_card(nc)
+
+
+func _is_fx_in_tree() -> bool:
+	return is_instance_valid(self) and is_inside_tree() and get_tree() != null
+
+
+func _await_fx_process_frame() -> bool:
+	if not _is_fx_in_tree():
+		return false
+	await get_tree().process_frame
+	return _is_fx_in_tree()
+
+
+func _await_fx_delay(seconds: float) -> bool:
+	if seconds <= 0.0:
+		return _is_fx_in_tree()
+	if not _is_fx_in_tree():
+		return false
+	await get_tree().create_timer(seconds).timeout
+	return _is_fx_in_tree()
+
+
+func _await_ghost_tween_finished(ghost: Control, tw: Tween, max_wait_sec: float = -1.0) -> void:
+	if tw == null or not is_instance_valid(ghost):
+		return
+	if max_wait_sec <= 0.0:
+		await tw.finished
+		return
+	if not _is_fx_in_tree():
+		return
+	var deadline := Time.get_ticks_msec() + int(max_wait_sec * 1000.0)
+	while tw.is_valid() and tw.is_running() and is_instance_valid(ghost):
+		if Time.get_ticks_msec() >= deadline:
+			return
+		if Events.is_combat_ended() or not _is_fx_in_tree():
+			return
+		if not await _await_fx_process_frame():
+			return
+
+
+func _queue_free_if_valid(node: Node) -> void:
+	if is_instance_valid(node):
+		node.queue_free()
+
+
 ## 故障机器遗物：复制品在屏中结算效果后以「故障消散」消失（不进消耗堆）。
 func animate_defect_machine_echo(
 	card: Card,
@@ -224,7 +533,7 @@ func animate_defect_machine_echo(
 		return
 	var eff_targets: Array[Node] = card.get_effect_targets(played_targets)
 	Events.card_played.emit(card)
-	await card.apply_effects(eff_targets, player_modifiers)
+	await card.replay_effects_without_payment(eff_targets, player_modifiers)
 	if card.sound:
 		SFXPlayer.play(card.sound)
 	if Events.is_combat_ended():
@@ -596,8 +905,9 @@ func animate_hand_card_exhaust(hand: Hand, card_ui: CardUI) -> void:
 	var card_scale := card_ui.scale
 	var card_rotation := card_ui.rotation
 	
-	# 使用透明占位，保持手牌布局不变（其他牌不会靠拢）
 	card_ui.modulate.a = 0.0
+	if is_instance_valid(hand) and is_instance_valid(card_ui.hand_slot):
+		hand.collapse_slot_for_exhaust_animation(card_ui.hand_slot)
 	
 	var ghost := _make_ghost(c)
 	await _prepare_ghost_for_motion(ghost)
@@ -608,14 +918,12 @@ func animate_hand_card_exhaust(hand: Hand, card_ui: CardUI) -> void:
 			hand.discard_card(card_ui)
 		return
 	
-	# 精确复制原卡牌的全局位置和尺寸（其他手牌保持原位）
 	ghost.global_position = card_pos
 	ghost.size = card_size
 	ghost.scale = card_scale
 	ghost.rotation = card_rotation
 	ghost.visible = true
 	
-	# 直接淡出（不缩小）
 	var tw := create_tween()
 	tw.set_trans(Tween.TRANS_QUAD)
 	tw.set_ease(Tween.EASE_OUT)
@@ -624,14 +932,9 @@ func animate_hand_card_exhaust(hand: Hand, card_ui: CardUI) -> void:
 	if is_instance_valid(ghost):
 		ghost.queue_free()
 	
-	# 动画完成后才移除卡牌，其他手牌此时才靠拢
 	if is_instance_valid(hand):
 		hand.discard_card(card_ui)
-		# 等待两帧让布局系统处理，然后强制重新居中
-		await get_tree().process_frame
-		await get_tree().process_frame
-		if is_instance_valid(hand) and hand.has_method("_request_reflow_hand_bar"):
-			hand._request_reflow_hand_bar()
+		hand.resync_layout_after_draw()
 
 
 func _ethereal_add_exhaust_if_possible(c: Card) -> void:
@@ -667,10 +970,14 @@ func _place_visual_center_at(ghost: Control, global_center: Vector2) -> void:
 
 
 func _prepare_ghost_for_motion(ghost: Control) -> void:
+	if not _is_fx_in_tree():
+		return
 	await get_tree().process_frame
 	if not is_instance_valid(ghost):
 		return
 	if ghost.get_rect().size.x < 4.0 or ghost.get_rect().size.y < 4.0:
+		if not _is_fx_in_tree():
+			return
 		await get_tree().process_frame
 	if not is_instance_valid(ghost):
 		return
@@ -790,8 +1097,12 @@ func _tween_ghost_curve_scale(
 	mid_override: Vector2,
 	scale_sk: int
 ) -> void:
+	if not is_instance_valid(ghost):
+		return
 	if wait_layout:
 		await _prepare_ghost_for_motion(ghost)
+		if not is_instance_valid(ghost):
+			return
 	var mid := mid_override
 	if mid == Vector2.ZERO:
 		mid = _bezier_control_draw_bulge_up(from_center, to_center)
@@ -805,9 +1116,11 @@ func _tween_ghost_curve_scale(
 	_bezier_ghost_step(data, 0.0)
 	if is_instance_valid(ghost):
 		ghost.visible = true
-	var tw := create_tween()
+	if not is_instance_valid(ghost):
+		return
+	var tw := ghost.create_tween()
 	tw.set_ease(Tween.EASE_IN_OUT)
 	tw.set_trans(Tween.TRANS_SINE)
 	# 勿用 .bind(data)：Tween 的 MethodTweener 会把插值 float 当作第 1 个实参直接调方法，导致「float 无法转成 Dictionary」
 	tw.tween_method(func(te: float) -> void: _bezier_ghost_step(data, te), 0.0, 1.0, duration)
-	await tw.finished
+	await _await_ghost_tween_finished(ghost, tw, duration + 0.12)

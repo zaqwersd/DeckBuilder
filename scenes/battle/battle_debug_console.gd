@@ -545,12 +545,46 @@ func _on_suggest_item_selected(index: int) -> void:
 
 
 func _on_line_submitted(text: String) -> void:
-	var msg := _run_command(text.strip_edges())
+	_run_command_async(text.strip_edges())
+
+
+## 异步执行命令
+func _run_command_async(text: String) -> void:
+	var msg = await _run_command_with_async(text)
 	_hint.text = msg
 	_line.clear()
 	_hide_suggestions()
 
 
+## 支持异步命令的版本
+func _run_command_with_async(text: String) -> String:
+	if text.is_empty():
+		return _hint.text
+	var parts := text.split(" ", false, 1)
+	var cmd := parts[0]
+	var arg := parts[1].strip_edges() if parts.size() > 1 else ""
+	match cmd:
+		"\\enemy":
+			return _cmd_enemy(arg)
+		"\\card":
+			return _cmd_card(arg)
+		"\\health":
+			return _cmd_health(arg)
+		"\\event":
+			return _cmd_event(arg)
+		"\\relic":
+			return await _cmd_relic_async(arg)
+		"\\win":
+			return _cmd_win(arg)
+		"\\help":
+			return _cmd_help()
+		"\\jump":
+			return _cmd_jump(arg)
+		_:
+			return "未知指令。输入 \\help 查看可用指令"
+
+
+## 保留同步版本供其他代码调用
 func _run_command(text: String) -> String:
 	if text.is_empty():
 		return _hint.text
@@ -567,7 +601,7 @@ func _run_command(text: String) -> String:
 		"\\event":
 			return _cmd_event(arg)
 		"\\relic":
-			return _cmd_relic(arg)
+			return "请使用命令行输入 relic 命令"
 		"\\win":
 			return _cmd_win(arg)
 		"\\help":
@@ -730,7 +764,13 @@ func _find_relic_tres_path(relic_id: String) -> String:
 	return ""
 
 
+## 同步版本：仅用于查询，添加操作请使用 _cmd_relic_async
 func _cmd_relic(arg: String) -> String:
+	return "请通过命令行使用 \\relic 命令"
+
+
+## 异步版本：使用 add_relic_async 触发遗物的 pickup 效果
+func _cmd_relic_async(arg: String) -> String:
 	var bits := arg.split(" ", false, 1)
 	if bits.is_empty():
 		return "用法：\\relic add id | \\relic delete id"
@@ -759,7 +799,8 @@ func _cmd_relic(arg: String) -> String:
 	var inst: Relic = (res as Relic).duplicate(true) as Relic
 	if rh.has_relic(inst.id):
 		return "已拥有遗物：%s" % inst.id
-	rh.add_relic(inst, true)
+	## 使用异步添加，确保触发遗物的 pickup 效果（如无上宝石的选牌升级）
+	await rh.add_relic_async(inst)
 	return "已添加遗物：%s（%s）" % [inst.relic_name, inst.id]
 
 

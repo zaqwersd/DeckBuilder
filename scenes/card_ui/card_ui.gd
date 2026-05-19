@@ -94,10 +94,21 @@ func animate_to_position(new_position: Vector2, duration: float) -> void:
 	tween.tween_property(self, "global_position", new_position, duration)
 
 
+func _blocked_only_by_play_requirements() -> bool:
+	if not card or not char_stats:
+		return false
+	return (
+		card.allows_hand_drag_when_play_requirements_unmet()
+		and not card.meets_play_requirements(char_stats)
+	)
+
+
 func allows_hand_drag_preview() -> bool:
 	if not card or not char_stats:
 		return false
-	if card.cost < 0:
+	if card.is_unplayable():
+		return true
+	if _blocked_only_by_play_requirements():
 		return true
 	return card.type == Card.Type.STATUS and not char_stats.can_play_card(card)
 
@@ -186,8 +197,9 @@ func sync_hand_hover_presentation() -> void:
 			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 		return
 	if not is_instance_valid(hand_slot) or get_parent() != hand_slot:
-		_set_hand_hover_visual_active(false)
-		if is_instance_valid(card_visuals):
+		if _hand_hover_visual_active or _hand_hover_visual_offsets_not_snapped():
+			force_hand_hover_visuals_off()
+		elif is_instance_valid(card_visuals):
 			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 		return
 	var sm := card_state_machine
@@ -429,12 +441,9 @@ func refresh_combat_description() -> void:
 
 
 func get_effective_mana_cost() -> int:
-	if not card or card.cost < 0:
+	if not card or not char_stats:
 		return card.cost if card else 0
-	var base := card.cost
-	if combat_player and is_instance_valid(combat_player) and card.type == Card.Type.ATTACK:
-		base += OverwhelmingStatus.stacks_on_player(combat_player)
-	return base
+	return PlayCostResolver.compute_mana_to_spend(card, char_stats, combat_player, player_modifiers)
 
 
 func refresh_mana_cost_display() -> void:
@@ -442,10 +451,16 @@ func refresh_mana_cost_display() -> void:
 		return
 	var want := get_effective_mana_cost()
 	if char_stats:
-		card_visuals.set_combat_effective_mana_affordable(char_stats.can_play_card(card, want))
+		var affordable := char_stats.can_play_card(card, want)
+		if _blocked_only_by_play_requirements():
+			affordable = PlayCostResolver.can_afford_mana(card, char_stats, want)
+		card_visuals.set_combat_effective_mana_affordable(affordable)
 	else:
 		card_visuals.set_combat_effective_mana_affordable(true)
-	card_visuals.set_display_mana_cost_override(want if want != card.cost else -1)
+	if card.is_x_cost():
+		card_visuals.set_display_mana_cost_override(-1)
+	else:
+		card_visuals.set_display_mana_cost_override(want if want != card.cost else -1)
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -478,8 +493,13 @@ func _set_card(value: Card) -> void:
 
 func _set_playable(value: bool) -> void:
 	playable = value
-	if card and card.cost < 0:
+	if card and card.is_unplayable():
 		card_visuals.icon.modulate = Color(1, 1, 1, 1)
+		refresh_mana_cost_display()
+		return
+	if _blocked_only_by_play_requirements():
+		card_visuals.icon.modulate = Color(1, 1, 1, 1)
+		refresh_mana_cost_display()
 		return
 	## 手牌自选：仅禁止打出，卡图仍保持不透明
 	if has_meta(HAND_PICK_DELEGATE_META):
@@ -501,6 +521,8 @@ func sync_gui_rect_to_pick_collision() -> void:
 		return
 	if not is_instance_valid(card_visuals):
 		return
+	if not is_equal_approx(card_visuals.position.y, 0.0):
+		reset_hand_hover_lift_instant()
 	var gr := card_visuals.get_pick_collision_global_rect()
 	if gr.size.x <= 0.001 or gr.size.y <= 0.001:
 		return

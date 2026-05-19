@@ -7,6 +7,19 @@ var combat_ended: bool = false
 func reset_combat_flow() -> void:
 	combat_ended = false
 	_attack_card_effect_depth = 0
+	## 全局信号若残留旧 Battle 的 Callable，会导致弃牌/回合切换串线（如二层敌人不行动）。
+	_clear_signal_handlers(player_hand_discarded)
+	_clear_signal_handlers(enemy_turn_ended)
+	_clear_signal_handlers(player_turn_ended)
+	_clear_signal_handlers(player_died)
+
+
+func _clear_signal_handlers(sig: Signal) -> void:
+	var conns := sig.get_connections()
+	for c: Dictionary in conns:
+		var cb: Callable = c.get("callable", Callable())
+		if cb.is_valid() and sig.is_connected(cb):
+			sig.disconnect(cb)
 
 
 var _attack_card_effect_depth: int = 0
@@ -135,7 +148,7 @@ signal status_tooltip_requested(statuses: Array[Status])
 ## 战斗/地图：悬停在单个状态图标上显示说明；open_to_right 为 true 时框在图标右侧（玩家），false 时在左侧（敌人）
 signal status_tooltip_hover_show(status: Status, near_to: Control, open_to_right: bool)
 signal status_tooltip_hover_hide
-## 战斗：悬停在敌人意图条（IntentUI）上；`bbcode` 与 `StatusHoverTooltip` 正文格式一致。
+## 战斗：悬停在敌人意图条（IntentUI）上；`bbcode` 由 `TooltipBbcode.titled` 含标题「意图」。
 signal intent_tooltip_hover_show(bbcode: String, near_to: Control, open_to_right: bool)
 signal intent_tooltip_hover_hide
 
@@ -144,7 +157,7 @@ signal card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control)
 signal card_keyword_tooltip_hide
 ## 词条链接悬停时请求刷新 tooltip（由 Hand 统一显示所有词条）
 signal card_keyword_tooltip_refresh_requested(from_visuals: Control)
-## 由 CardKeywordTooltip 在 show/hide 时同步，供 Hand 检测渲染 abort 后的自愈
+## 由 GameTooltip 在 show/hide 时同步，供 Hand 检测渲染 abort 后的自愈
 var card_keyword_tooltip_visible := false
 var card_keyword_tooltip_render_pending := false
 

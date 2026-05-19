@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3 uid="uid://dam45bmphl8fk"]
+
+[ext_resource type="Texture2D" uid="uid://c7ri7xkcjf4yy" path="res://art/samsara.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://dyy0l1d2j0w7w" path="res://characters/blade/cards/blade_samsara.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://8nnbi2h8y7c7" path="res://art/samsara.ogg" id="3_snd"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_samsara"
+type = 1
+rarity = 3
+cost = 1
+exhausts = true
+card_name = "生死流转"
+icon = ExtResource("1_icon")
+tooltip_text = "[center]变化你消耗堆的所有牌，然后将它们[color=#888888]随机升级以后[/color]放入你的抽牌堆。消耗。[/center]"
+sound = ExtResource("3_snd")
