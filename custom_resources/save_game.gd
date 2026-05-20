@@ -6,7 +6,8 @@ const SAVE_PATH := "user://savegame.tres"
 ## 注意！！！需要保存的状态包括遗物，卡牌及其升级，金币，生命值，随机数等，切记！！！
 
 ## Boss 战场景从 toxic_ghost 改名为 evil_spirit 后，旧存档里仍可能引用已删除的 .tscn。
-const _TIER2_EVIL_BATTLE_SCENE := preload("res://battles/tier_2_evil_spirit.tscn")
+const _TIER2_MIMIC_BATTLE_SCENE := preload("res://battles/tier_2_mimic.tscn")
+const _TIER3_EVIL_BATTLE_SCENE := preload("res://battles/tier_3_evil_spirit.tscn")
 
 @export var rng_seed: int
 @export var rng_state: int
@@ -76,6 +77,17 @@ const BATTLE_REWARD_PENDING_RELIC := 1
 @export var battle_reward_pending_pre_rng_seed: int = 0
 @export var battle_reward_pending_pre_rng_state: int = 0
 
+## 战斗奖励画面打开时的快照：读档回到「尚未领取任何奖励」的状态（含精英战）
+@export var battle_reward_entry_staged: bool = false
+@export var battle_reward_entry_pre_health: int = -1
+@export var battle_reward_entry_pre_max_mana: int = -1
+@export var battle_reward_entry_pre_mana: int = -1
+@export var battle_reward_entry_pre_gold: int = -1
+@export var battle_reward_entry_pre_deck_cards: Array[Card] = []
+@export var battle_reward_entry_pre_relic_ids: PackedStringArray = PackedStringArray()
+@export var battle_reward_entry_pre_rng_seed: int = 0
+@export var battle_reward_entry_pre_rng_state: int = 0
+
 
 func clear_room_pending() -> void:
 	pending_room_kind = PENDING_NONE
@@ -90,6 +102,20 @@ func clear_room_pending() -> void:
 	battle_reward_relic_ids = PackedStringArray()
 	battle_reward_relics_taken = PackedInt32Array()
 	battle_reward_cards_taken = false
+	clear_battle_reward_entry_staging()
+	clear_battle_reward_pending_staging()
+
+
+func clear_battle_reward_entry_staging() -> void:
+	battle_reward_entry_staged = false
+	battle_reward_entry_pre_health = -1
+	battle_reward_entry_pre_max_mana = -1
+	battle_reward_entry_pre_mana = -1
+	battle_reward_entry_pre_gold = -1
+	battle_reward_entry_pre_deck_cards.clear()
+	battle_reward_entry_pre_relic_ids.clear()
+	battle_reward_entry_pre_rng_seed = 0
+	battle_reward_entry_pre_rng_state = 0
 
 
 func clear_campfire_pending_staging() -> void:
@@ -152,6 +178,60 @@ func commit_campfire_pending_to(ch: CharacterStats) -> void:
 			ch.deck.cards[ix] = campfire_committed_upgrade_card.duplicate(true) as Card
 
 
+## 战斗奖励画面打开时保存快照（尚未领取金币/卡牌/遗物）
+func stage_battle_reward_entry_snapshot(
+	character: CharacterStats,
+	relic_handler: RelicHandler,
+	rng_seed: int,
+	rng_state: int
+) -> void:
+	if character == null:
+		return
+	battle_reward_entry_pre_health = character.health
+	battle_reward_entry_pre_max_mana = character.max_mana
+	battle_reward_entry_pre_mana = character.mana
+	battle_reward_entry_pre_gold = run_stats.gold if run_stats != null else -1
+	battle_reward_entry_pre_deck_cards.clear()
+	if character.deck != null:
+		for card in character.deck.cards:
+			battle_reward_entry_pre_deck_cards.append(card.duplicate(true) as Card)
+	battle_reward_entry_pre_relic_ids.clear()
+	if relic_handler != null:
+		for r: Relic in relic_handler.get_all_relics():
+			if is_instance_valid(r) and r.id != "":
+				battle_reward_entry_pre_relic_ids.append(r.id)
+	battle_reward_entry_pre_rng_seed = rng_seed
+	battle_reward_entry_pre_rng_state = rng_state
+	battle_reward_entry_staged = true
+
+
+## 读档：回到战斗刚结束、尚未领取任何战斗奖励时的状态
+func apply_battle_reward_entry_rollback_to(ch: CharacterStats, relic_handler: RelicHandler) -> void:
+	if not battle_reward_entry_staged:
+		return
+	if battle_reward_entry_pre_health >= 0:
+		ch.health = battle_reward_entry_pre_health
+	if battle_reward_entry_pre_max_mana >= 0:
+		ch.max_mana = battle_reward_entry_pre_max_mana
+	if battle_reward_entry_pre_mana >= 0:
+		ch.mana = battle_reward_entry_pre_mana
+	if run_stats != null and battle_reward_entry_pre_gold >= 0:
+		run_stats.gold = battle_reward_entry_pre_gold
+	if ch.deck != null and not battle_reward_entry_pre_deck_cards.is_empty():
+		ch.deck.cards.clear()
+		for card in battle_reward_entry_pre_deck_cards:
+			ch.deck.cards.append(card.duplicate(true) as Card)
+	if relic_handler != null:
+		relic_handler.clear_relics_immediate()
+		for relic_id in battle_reward_entry_pre_relic_ids:
+			var relic := GameContent.load_relic_template(relic_id)
+			if relic != null:
+				relic_handler.add_relic(relic, false)
+		relics = relic_handler.get_all_relics()
+	ch.stats_changed.emit()
+	RNG.set_from_save_data(battle_reward_entry_pre_rng_seed, battle_reward_entry_pre_rng_state)
+
+
 ## 战斗奖励：读档时回退到领取遗物前的状态（未完成领取时）
 func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: RelicHandler) -> void:
 	if battle_reward_pending_kind == BATTLE_REWARD_PENDING_NONE:
@@ -173,12 +253,14 @@ func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: 
 	
 	## 恢复遗物
 	if relic_handler != null:
-		relic_handler.clear_relics()
+		relic_handler.clear_relics_immediate()
 		for relic_id in battle_reward_pending_pre_relic_ids:
 			var relic := GameContent.load_relic_template(relic_id)
 			if relic != null:
 				relic_handler.add_relic(relic, false)
+		relics = relic_handler.get_all_relics()
 	
+	ch.stats_changed.emit()
 	## 恢复RNG状态
 	RNG.set_from_save_data(battle_reward_pending_pre_rng_seed, battle_reward_pending_pre_rng_state)
 
@@ -193,6 +275,7 @@ static func load_data() -> SaveGame:
 		var data := ResourceLoader.load(SAVE_PATH) as SaveGame
 		if data:
 			_migrate_renamed_battle_scenes(data)
+			_migrate_relic_ids(data)
 		return data
 	
 	return null
@@ -206,15 +289,46 @@ static func _migrate_renamed_battle_scenes(data: SaveGame) -> void:
 		_fix_toxic_ghost_battle_scene(data.last_room)
 
 
+static func _migrate_relic_ids(data: SaveGame) -> void:
+	const NEW_ID := "lycoris"
+	for old_id: String in ["healing_potion", "shattered_flower"]:
+		_replace_relic_id_in_array(data.pending_relic_ids, old_id, NEW_ID)
+		_replace_relic_id_in_array(data.battle_reward_relic_ids, old_id, NEW_ID)
+		_replace_relic_id_in_array(data.battle_reward_pending_pre_relic_ids, old_id, NEW_ID)
+		_replace_relic_id_in_array(data.battle_reward_entry_pre_relic_ids, old_id, NEW_ID)
+		_replace_relic_id_in_array(data.scene_entry_relic_ids, old_id, NEW_ID)
+		if data.combat_snapshot:
+			_replace_relic_id_in_array(data.combat_snapshot.relic_ids, old_id, NEW_ID)
+	for i in range(data.relics.size()):
+		var relic: Relic = data.relics[i]
+		if relic == null:
+			continue
+		if relic.id == "healing_potion" or relic.id == "shattered_flower":
+			var replacement := GameContent.load_relic_template(NEW_ID)
+			if replacement != null:
+				data.relics[i] = replacement
+
+
+static func _replace_relic_id_in_array(arr: PackedStringArray, old_id: String, new_id: String) -> void:
+	for i in range(arr.size()):
+		if arr[i] == old_id:
+			arr[i] = new_id
+
+
 static func _fix_toxic_ghost_battle_scene(room: Room) -> void:
 	if not room or not room.battle_stats:
 		return
 	var enemies := room.battle_stats.enemies
 	var path := enemies.resource_path if enemies else ""
-	var stale := path.contains("tier_2_toxic_ghost") or path.contains("/toxic_ghost/")
-	var broken_boss := room.battle_stats.battle_tier == 2 and enemies == null
-	if stale or broken_boss:
-		room.battle_stats.enemies = _TIER2_EVIL_BATTLE_SCENE
+	var tier := room.battle_stats.battle_tier
+	var stale_elite := path.contains("elite/elite_mimic")
+	var stale_boss := path.contains("tier_2_toxic_ghost") or path.contains("/toxic_ghost/") or path.contains("tier_2_evil_spirit")
+	if stale_elite or (tier == 2 and enemies == null):
+		room.battle_stats.enemies = _TIER2_MIMIC_BATTLE_SCENE
+		return
+	var broken_boss := tier == 3 and (enemies == null or stale_boss)
+	if broken_boss:
+		room.battle_stats.enemies = _TIER3_EVIL_BATTLE_SCENE
 
 
 static func delete_data() -> void:

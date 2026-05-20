@@ -42,7 +42,11 @@ func on_gui_input(event: InputEvent) -> void:
 	if not _hand_drag_start_enabled():
 		return
 
-	if card_ui.is_hand_pointer_over_this_card() and event.is_action_pressed("left_mouse"):
+	if (
+		card_ui.is_hand_pointer_over_this_card()
+		and card_ui.get_hand_active_pick_global_rect().has_point(card_ui.get_global_mouse_position())
+		and event.is_action_pressed("left_mouse")
+	):
 		card_ui.pivot_offset = card_ui.get_global_mouse_position() - card_ui.global_position
 		transition_requested.emit(self, CardState.State.CLICKED)
 

@@ -141,3 +141,15 @@ func clear_relics() -> void:
 	for relic_ui: RelicUI in relics.get_children():
 		if is_instance_valid(relic_ui):
 			relic_ui.queue_free()
+
+
+## 读档回退等需要立刻刷新遗物栏时用（避免 queue_free 延迟导致栏上仍显示未确认的遗物）
+func clear_relics_immediate() -> void:
+	var children := relics.get_children().duplicate()
+	for child in children:
+		var relic_ui := child as RelicUI
+		if not is_instance_valid(relic_ui):
+			continue
+		if relic_ui.relic:
+			relic_ui.relic.deactivate_relic(relic_ui)
+		relic_ui.free()

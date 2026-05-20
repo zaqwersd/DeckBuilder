@@ -1,0 +1,44 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://enemies/mimic/mimic_enemy_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/mimic/mimic_sleep_action.gd" id="2_sleep"]
+[ext_resource type="Script" path="res://enemies/mimic/mimic_wake_strike20_action.gd" id="3_wake"]
+[ext_resource type="Script" path="res://enemies/mimic/mimic_strike8_exposed_action.gd" id="4_s8"]
+[ext_resource type="Script" path="res://enemies/mimic/mimic_strike16_action.gd" id="5_s16"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="6_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="7_atk"]
+
+[sub_resource type="Resource" id="Intent_sleep"]
+script = ExtResource("6_intent")
+kind = 5
+
+[sub_resource type="Resource" id="Intent_atk"]
+script = ExtResource("6_intent")
+kind = 0
+
+[sub_resource type="Resource" id="Intent_debuff"]
+script = ExtResource("6_intent")
+kind = 3
+
+[node name="MimicEnemyAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="MimicSleep" type="Node" parent="."]
+script = ExtResource("2_sleep")
+intent = SubResource("Intent_sleep")
+
+[node name="MimicWakeStrike20" type="Node" parent="."]
+script = ExtResource("3_wake")
+intent = SubResource("Intent_atk")
+sound = ExtResource("7_atk")
+
+[node name="MimicStrike8Exposed" type="Node" parent="."]
+script = ExtResource("4_s8")
+intent = SubResource("Intent_atk")
+debuff_intent = SubResource("Intent_debuff")
+sound = ExtResource("7_atk")
+
+[node name="MimicStrike16" type="Node" parent="."]
+script = ExtResource("5_s16")
+intent = SubResource("Intent_atk")
+sound = ExtResource("7_atk")

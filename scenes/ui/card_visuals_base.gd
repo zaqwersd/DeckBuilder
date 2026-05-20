@@ -30,6 +30,9 @@ const BLADE_INNER_TYPE_BG := Color(26.0 / 255.0, 176.0 / 255.0, 162.0 / 255.0, 1
 
 ## 状态牌灰底
 const STATUS_PANEL_BG := Color(97.0 / 255.0, 97.0 / 255.0, 97.0 / 255.0, 1.0)
+## 公共牌（恶灵 / 铁斩波 / 遗香）统一底板 #78909c
+const COMMON_PUBLIC_PANEL_BG := Color(120.0 / 255.0, 144.0 / 255.0, 156.0 / 255.0, 1.0)
+const COMMON_PUBLIC_CARD_IDS: Array[String] = ["ghost", "iron_wave", "scent"]
 
 ## 卡面整体被 scale 缩小时，保证屏幕上文字至少该像素
 const MIN_SCREEN_CARD_TEXT_PX := 16
@@ -441,18 +444,31 @@ func _is_status_card() -> bool:
 	return card != null and card.type == Card.Type.STATUS
 
 
-func _uses_haunted_gray_panels() -> bool:
-	return card != null and card.id == "iron_wave"
+func _uses_common_public_panels() -> bool:
+	return card != null and card.id in COMMON_PUBLIC_CARD_IDS
+
+
+func _uses_flat_panel_style() -> bool:
+	return _uses_common_public_panels() or _is_status_card()
+
+
+func _flat_panel_bg() -> Color:
+	if _uses_common_public_panels():
+		return COMMON_PUBLIC_PANEL_BG
+	if _is_status_card():
+		return STATUS_PANEL_BG
+	return Color(0.0, 0.0, 0.0, 0.0)
 
 
 func _rebuild_main_panel_styles() -> void:
 	main_panel_style_base = _with_rarity_border(STYLE_BASE.duplicate() as StyleBoxFlat, card.rarity)
 	main_panel_style_hover = _with_rarity_border(STYLE_HOVER.duplicate() as StyleBoxFlat, card.rarity)
 	main_panel_style_drag = _with_rarity_border(STYLE_DRAG.duplicate() as StyleBoxFlat, card.rarity)
-	if _is_status_card() or _uses_haunted_gray_panels():
-		main_panel_style_base.bg_color = STATUS_PANEL_BG
-		main_panel_style_hover.bg_color = STATUS_PANEL_BG
-		main_panel_style_drag.bg_color = STATUS_PANEL_BG
+	if _uses_flat_panel_style():
+		var fill := _flat_panel_bg()
+		main_panel_style_base.bg_color = fill
+		main_panel_style_hover.bg_color = fill
+		main_panel_style_drag.bg_color = fill
 	elif _is_blade_card():
 		main_panel_style_base.bg_color = BLADE_MAIN_BG
 		main_panel_style_hover.bg_color = BLADE_MAIN_BG
@@ -467,7 +483,7 @@ func _with_rarity_border(sb: StyleBoxFlat, rarity: Card.Rarity) -> StyleBoxFlat:
 func _apply_rarity_panel_borders() -> void:
 	var r := card.rarity
 	panel.add_theme_stylebox_override("panel", main_panel_style_base)
-	var frame_fill := STATUS_PANEL_BG if _is_status_card() or _uses_haunted_gray_panels() else Color(0, 0, 0, 0)
+	var frame_fill := _flat_panel_bg() if _uses_flat_panel_style() else Color(0, 0, 0, 0)
 	frame_panel.add_theme_stylebox_override("panel", _inner_panel_style_opaque(r, frame_fill))
 	var show_cost := not card.is_unplayable()
 	cost_panel.visible = show_cost
@@ -521,20 +537,20 @@ func _on_cost_label_gui_input(event: InputEvent) -> void:
 
 
 func _inner_cost_fill() -> Color:
-	if _is_status_card() or _uses_haunted_gray_panels():
-		return STATUS_PANEL_BG
+	if _uses_flat_panel_style():
+		return _flat_panel_bg()
 	return BLADE_INNER_COST_BG if _is_blade_card() else INNER_COST_BG
 
 
 func _inner_title_fill() -> Color:
-	if _is_status_card() or _uses_haunted_gray_panels():
-		return STATUS_PANEL_BG
+	if _uses_flat_panel_style():
+		return _flat_panel_bg()
 	return BLADE_INNER_TITLE_BG if _is_blade_card() else INNER_TITLE_BG
 
 
 func _inner_type_fill() -> Color:
-	if _is_status_card() or _uses_haunted_gray_panels():
-		return STATUS_PANEL_BG
+	if _uses_flat_panel_style():
+		return _flat_panel_bg()
 	return BLADE_INNER_TYPE_BG if _is_blade_card() else INNER_TYPE_BG
 
 

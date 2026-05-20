@@ -59,7 +59,12 @@ func _on_viewport_size_changed() -> void:
 
 
 func _fit_to_viewport() -> void:
-	var r := get_viewport().get_visible_rect()
+	if not is_inside_tree():
+		return
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var r := viewport.get_visible_rect()
 	position = r.position
 	size = r.size
 
@@ -71,11 +76,24 @@ func setup(draw_btn: Control, discard_btn: Control, exhaust_btn: Control = null)
 
 
 func _sync_card_to_hand_if_missing(hand: Hand, card: Card) -> void:
-	if not is_instance_valid(hand) or card == null:
+	if card == null:
 		return
-	if hand.has_card_resource(card):
+	var ph := _get_player_handler(hand)
+	if ph != null:
+		ph.add_card_to_hand_or_discard(card)
+		return
+	if not is_instance_valid(hand) or hand.has_card_resource(card):
 		return
 	hand.add_card(card)
+
+
+func _get_player_handler(from: Node) -> PlayerHandler:
+	if from == null:
+		return null
+	var tree := from.get_tree()
+	if tree == null:
+		return null
+	return tree.get_first_node_in_group("player_handler") as PlayerHandler
 
 
 func animate_draw_to_hand(card: Card, hand: Hand, start_delay: float = 0.0) -> void:
@@ -111,6 +129,30 @@ func animate_draw_to_hand(card: Card, hand: Hand, start_delay: float = 0.0) -> v
 	if is_instance_valid(ghost):
 		ghost.queue_free()
 	_sync_card_to_hand_if_missing(hand, card)
+
+
+## 抽牌时手牌已满：从抽牌堆飞向弃牌堆（牌已在 PlayerHandler 逻辑中归入弃牌堆）。
+func animate_draw_to_discard(card: Card, start_delay: float = 0.0) -> void:
+	if card == null:
+		return
+	if start_delay > 0.0:
+		await get_tree().create_timer(start_delay).timeout
+	if Events.is_combat_ended():
+		return
+	if not draw_pile_button or not discard_pile_button:
+		return
+	var ghost := _make_ghost(card)
+	var from := _control_global_center(draw_pile_button)
+	var to := _control_global_center(discard_pile_button)
+	var mid := _bezier_control_draw_bulge_up(from, to)
+	await _prepare_ghost_for_motion(ghost)
+	if Events.is_combat_ended() or not _is_fx_in_tree():
+		if is_instance_valid(ghost):
+			ghost.queue_free()
+		return
+	await _tween_ghost_curve_scale(ghost, from, to, DRAW_DURATION, false, mid, SK_SCALE_EXPAND)
+	if is_instance_valid(ghost):
+		ghost.queue_free()
 
 
 func animate_played_card(card: Card, start_center: Vector2, kind: PlayedKind) -> void:

@@ -11,7 +11,7 @@ static func notify_ghost_consumed(player: Player) -> void:
 	if not is_instance_valid(player) or not player.status_handler:
 		return
 	var st := player.status_handler.get_status_by_id("haunted")
-	if st == null or st.stacks <= 0:
+	if st == null or st.stacks <= 0 or st.awaits_turn_start:
 		return
 	var dmg: int = st.stacks
 	player.take_damage(dmg, Modifier.Type.DMG_TAKEN)

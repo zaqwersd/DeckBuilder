@@ -731,7 +731,11 @@ func _cmd_card(arg: String) -> String:
 			"deck", "draw", "discard", "exhaust":
 				pile.add_card(inst)
 			"hand":
-				hand.add_card(inst)
+				var ph_dbg := bt.get_tree().get_first_node_in_group("player_handler") as PlayerHandler
+				if ph_dbg != null:
+					ph_dbg.add_card_to_hand_or_discard(inst)
+				else:
+					hand.add_card(inst)
 
 	if where == "deck":
 		return "已向牌库添加 %d×「%s」（%s）；战斗中本场抽牌堆不变，之后场次生效。" % [count, cname, path]

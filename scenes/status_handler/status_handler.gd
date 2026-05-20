@@ -18,7 +18,7 @@ func apply_statuses_by_type(type: Status.Type) -> void:
 		
 	var status_queue: Array[Status] = _get_all_statuses().filter(
 		func(status: Status):
-			return status.type == type
+			return status.type == type and not status.awaits_turn_start
 	)
 	print("[DEBUG] Status queue size: ", status_queue.size())
 	if status_queue.is_empty():
@@ -59,7 +59,8 @@ func add_status(status: Status) -> void:
 		new_status_ui.mouse_exited.connect(_on_status_ui_mouse_exited)
 		new_status_ui.status = status
 		new_status_ui.status.status_applied.connect(_on_status_applied)
-		new_status_ui.status.initialize_status(status_owner)
+		if not new_status_ui.status.awaits_turn_start:
+			new_status_ui.status.initialize_status(status_owner)
 		_emit_player_hand_cost_context_if_needed()
 		return
 
@@ -114,6 +115,17 @@ func get_status_by_id(status_id: String) -> Status:
 	return _get_status(status_id)
 
 
+func remove_status_by_id(status_id: String) -> void:
+	for status_ui: StatusUI in get_children():
+		if status_ui.status == null or status_ui.status.id != status_id:
+			continue
+		if status_ui.status.has_method("deactivate_status"):
+			status_ui.status.deactivate_status(status_owner)
+		status_ui.queue_free()
+		_emit_player_hand_cost_context_if_needed()
+		return
+
+
 func _get_all_statuses() -> Array[Status]:
 	var statuses: Array[Status] = []
 	for status_ui: StatusUI in get_children():
@@ -122,7 +134,23 @@ func _get_all_statuses() -> Array[Status]:
 	return statuses
 
 
+func activate_awaiting_statuses() -> void:
+	if not status_owner is Player:
+		return
+	for status_ui: StatusUI in get_children():
+		var st := status_ui.status
+		if st == null or not st.awaits_turn_start:
+			continue
+		st.awaits_turn_start = false
+		st.skip_next_start_of_turn_tick = true
+		st.initialize_status(status_owner)
+		st.status_changed.emit()
+
+
 func _on_status_applied(status: Status) -> void:
+	if status.skip_next_start_of_turn_tick:
+		status.skip_next_start_of_turn_tick = false
+		return
 	if status.can_expire:
 		status.duration -= 1
 

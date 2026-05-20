@@ -32,6 +32,9 @@ var current_action: EnemyAction : set = set_current_action
 ## 由本节点统一驱动意图 tooltip（悬停碰撞体或意图条矩形均可）。
 var _intent_hover_tooltip_active: bool = false
 
+var _art_frame_index: int = 0
+var _art_anim_timer: Timer
+
 
 func _ready() -> void:
 	status_handler.status_owner = self
@@ -225,7 +228,7 @@ func update_enemy() -> void:
 	if not is_inside_tree(): 
 		await ready
 	
-	sprite_2d.texture = stats.art
+	_apply_enemy_art()
 	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
 	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
 	_sync_hitbox_to_sprite()
@@ -368,17 +371,20 @@ func update_intent() -> void:
 
 
 func do_turn() -> void:
-	print("[DEBUG] Enemy do_turn called on: ", name)
 	if not is_instance_valid(stats):
-		print("[DEBUG] Early return - stats invalid")
 		return
 	stats.block = 0
+	_hide_intent_hover_tooltip_if_active()
 
 	if not current_action:
-		print("[DEBUG] Early return - current_action is null")
 		return
 
-	print("[DEBUG] Performing action: ", current_action.name if current_action.name else "unnamed")
+	if is_instance_valid(intent_ui) and intent_ui.visible and intent_ui.get_child_count() > 0:
+		await intent_ui.play_action_start_animation()
+
+	if not is_instance_valid(self) or not is_instance_valid(current_action):
+		return
+
 	current_action.perform_action()
 
 
@@ -413,7 +419,62 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	)
 
 
+func set_display_texture(tex: Texture2D) -> void:
+	if not is_instance_valid(sprite_2d) or tex == null:
+		return
+	_stop_art_animation()
+	sprite_2d.texture = tex
+	_sync_hitbox_to_sprite()
+	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
+	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
+
+
+func _apply_enemy_art() -> void:
+	if stats.art_frames.size() >= 2:
+		_art_frame_index = 0
+		sprite_2d.texture = stats.art_frames[0]
+		_start_art_animation()
+	else:
+		_stop_art_animation()
+		sprite_2d.texture = stats.art
+
+
+func _ensure_art_anim_timer() -> void:
+	if _art_anim_timer:
+		return
+	_art_anim_timer = Timer.new()
+	_art_anim_timer.one_shot = false
+	_art_anim_timer.timeout.connect(_on_art_anim_timer_timeout)
+	add_child(_art_anim_timer)
+
+
+func _start_art_animation() -> void:
+	if stats == null or stats.art_frames.size() < 2:
+		return
+	_ensure_art_anim_timer()
+	_art_anim_timer.wait_time = stats.art_frame_interval
+	if not _art_anim_timer.is_stopped():
+		_art_anim_timer.stop()
+	_art_anim_timer.start()
+
+
+func _stop_art_animation() -> void:
+	if _art_anim_timer and not _art_anim_timer.is_stopped():
+		_art_anim_timer.stop()
+
+
+func _on_art_anim_timer_timeout() -> void:
+	if stats == null or stats.art_frames.size() < 2:
+		return
+	_art_frame_index = (_art_frame_index + 1) % stats.art_frames.size()
+	sprite_2d.texture = stats.art_frames[_art_frame_index]
+	_sync_hitbox_to_sprite()
+	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
+	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
+
+
 func _exit_tree() -> void:
+	_stop_art_animation()
 	set_process(false)
 	_hide_intent_hover_tooltip_if_active()
 

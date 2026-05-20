@@ -1,42 +1,40 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene format=3 uid="uid://cpqiarqapp3td"]
 
-[ext_resource type="Script" path="res://enemies/bat/bat_enemy_ai.gd" id="1_batai"]
-[ext_resource type="Script" path="res://enemies/bat/bat_attack_action.gd" id="2_ki6rs"]
-[ext_resource type="Script" path="res://enemies/bat/bat_block_action.gd" id="3_lasj1"]
-[ext_resource type="Script" path="res://enemies/bat/bat_buff_action.gd" id="4_buff"]
-[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_a486a"]
-[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_r8rjx"]
-[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_8hq17"]
+[ext_resource type="Script" uid="uid://best8we66g425" path="res://enemies/bat/bat_enemy_ai.gd" id="1_batai"]
+[ext_resource type="Script" uid="uid://dsymma8isk0et" path="res://enemies/bat/bat_attack_action.gd" id="2_ki6rs"]
+[ext_resource type="Script" uid="uid://dflcfmwjmx0xi" path="res://enemies/bat/bat_block_action.gd" id="3_lasj1"]
+[ext_resource type="Script" uid="uid://dxgwh7ui04omh" path="res://custom_resources/intent.gd" id="4_a486a"]
+[ext_resource type="Script" uid="uid://c233i1nv3ud3l" path="res://enemies/bat/bat_buff_action.gd" id="4_buff"]
+[ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="5_r8rjx"]
+[ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="8_8hq17"]
 
 [sub_resource type="Resource" id="Resource_5y0u8"]
 script = ExtResource("4_a486a")
-kind = 0
 base_text = "2×%s"
 
 [sub_resource type="Resource" id="Resource_1xroc"]
 script = ExtResource("4_a486a")
 kind = 1
-base_text = ""
 
 [sub_resource type="Resource" id="Resource_buff"]
 script = ExtResource("4_a486a")
 kind = 2
 base_text = "+%d 力量"
 
-[node name="BatEnemyAI" type="Node"]
+[node name="BatEnemyAI" type="Node" unique_id=2070068029]
 script = ExtResource("1_batai")
 
-[node name="BatAttackAction" type="Node" parent="."]
+[node name="BatAttackAction" type="Node" parent="." unique_id=625073613]
 script = ExtResource("2_ki6rs")
 intent = SubResource("Resource_5y0u8")
 sound = ExtResource("5_r8rjx")
 
-[node name="BatBlockAction" type="Node" parent="."]
+[node name="BatBlockAction" type="Node" parent="." unique_id=867100870]
 script = ExtResource("3_lasj1")
 intent = SubResource("Resource_1xroc")
 sound = ExtResource("8_8hq17")
 
-[node name="BatBuffAction" type="Node" parent="."]
+[node name="BatBuffAction" type="Node" parent="." unique_id=2129920731]
 script = ExtResource("4_buff")
 intent = SubResource("Resource_buff")
 sound = ExtResource("8_8hq17")

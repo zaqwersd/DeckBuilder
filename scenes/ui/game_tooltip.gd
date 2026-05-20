@@ -440,7 +440,10 @@ func _layout_vbox_richtext_sizes(gen: int) -> void:
 
 func _position_panel(near_to: Variant, placement: Placement) -> void:
 	panel_root.reset_size()
-	var vp := get_viewport().get_visible_rect()
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var vp := viewport.get_visible_rect()
 	var sz := panel_root.size
 	if sz.x < 2.0 or sz.y < 2.0:
 		sz = panel_root.get_combined_minimum_size()

@@ -35,8 +35,19 @@ func set_status(new_status: Status) -> void:
 	
 	var is_overwhelming := status.id == "overwhelming"
 	var is_flow := status.id == "flow_state"
+	var is_alert := status.id == "alert"
 	
-	if (is_overwhelming or is_flow) and superscript != null and subscript != null:
+	if is_alert and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		if superscript != null:
+			superscript.visible = false
+		subscript.visible = true
+		var alert := status as AlertStatus
+		var n := alert.turns_until_wake if alert else 0
+		subscript.text = str(n)
+		_apply_negative_value_color(subscript, n)
+	elif (is_overwhelming or is_flow) and superscript != null and subscript != null:
 		duration.visible = false
 		stacks.visible = false
 		if is_overwhelming:
@@ -73,8 +84,19 @@ func _on_status_changed() -> void:
 
 	var is_overwhelming := status.id == "overwhelming"
 	var is_flow := status.id == "flow_state"
+	var is_alert := status.id == "alert"
 	
-	if is_overwhelming and superscript != null and subscript != null:
+	if is_alert and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		if superscript != null:
+			superscript.visible = false
+		subscript.visible = true
+		var alert := status as AlertStatus
+		var n := alert.turns_until_wake if alert else 0
+		subscript.text = str(n)
+		_apply_negative_value_color(subscript, n)
+	elif is_overwhelming and superscript != null and subscript != null:
 		var overwhelming := status as OverwhelmingStatus
 		if overwhelming:
 			superscript.visible = true

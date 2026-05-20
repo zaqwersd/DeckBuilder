@@ -6,6 +6,7 @@ const BATTLE_REWARD_SCENE := preload("res://scenes/battle_reward/battle_reward.t
 const CAMPFIRE_SCENE := preload("res://scenes/campfire/campfire.tscn")
 const SHOP_SCENE := preload("res://scenes/shop/shop.tscn")
 const TREASURE_SCENE = preload("res://scenes/treasure/treasure.tscn")
+const RELIC_REWARD_POOL := preload("res://relics/relic_reward_pool.tres")
 const WIN_SCREEN_SCENE := preload("res://scenes/win_screen/win_screen.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
@@ -134,18 +135,26 @@ func _load_run() -> void:
 					cf.restore_leave_pending_campfire_ui()
 			)
 		elif save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:
-			_load_relics_from_save_data()
 			_setup_top_bar()
-			RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 			
-			## 检查是否有领取中的遗物需要回退（玩家在领取过程中退出）
-			if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
-				print("[Run] 检测到遗物领取中状态，恢复快照...")
-				save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+			## 回到「战斗刚结束、尚未领取任何奖励」的状态（精英/普通战/宝箱后续奖励栏均适用）
+			if save_data.battle_reward_entry_staged:
+				save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
 				save_data.clear_battle_reward_pending_staging()
-				## 快照恢复后重新加载遗物显示
-				relic_handler.clear_relics()
-				_load_relics_from_save_data()
+				stats = save_data.run_stats
+				RNG.set_from_save_data(
+					save_data.battle_reward_entry_pre_rng_seed,
+					save_data.battle_reward_entry_pre_rng_state
+				)
+				_setup_top_bar()
+			else:
+				## 旧存档：遗物领取异步中途退出
+				if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
+					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+					save_data.clear_battle_reward_pending_staging()
+				else:
+					_load_relics_from_save_data()
+				RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 			
 			var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
 			reward_scene.run_stats = stats
@@ -443,10 +452,50 @@ func can_restore_battle_reward_cards() -> bool:
 
 
 ## 保存完整的战斗奖励画面初始状态（金币、遗物、卡牌）
+func _is_pending_battle_reward() -> bool:
+	return save_data != null and save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD
+
+
+## 战斗奖励栏「保存并退出」：回到进入奖励栏时的状态，不保留未确认的领取
+func _persist_battle_reward_quit_snapshot() -> void:
+	if save_data == null:
+		return
+	if save_data.battle_reward_entry_staged:
+		save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
+		stats = save_data.run_stats
+	save_data.clear_battle_reward_pending_staging()
+	save_data.battle_reward_gold_taken = false
+	save_data.battle_reward_cards_taken = false
+	for i: int in range(save_data.battle_reward_relics_taken.size()):
+		save_data.battle_reward_relics_taken[i] = 0
+	save_data.pending_room_kind = SaveGame.PENDING_BATTLE_REWARD
+	save_data.was_on_map = false
+	save_data.rng_seed = save_data.battle_reward_entry_pre_rng_seed
+	save_data.rng_state = save_data.battle_reward_entry_pre_rng_state
+	RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+	save_data.char_stats = character
+	save_data.current_deck = character.deck
+	save_data.current_health = character.health
+	save_data.relics = relic_handler.get_all_relics()
+	save_data.run_stats = stats
+	save_data.map_data = map.map_data.duplicate()
+	save_data.floors_climbed = map.floors_climbed
+	save_data.last_room = map.last_room
+	save_data.act_number = current_act
+	save_data.save_data()
+
+
 func persist_battle_reward_full_state(gold: int, relics: Array[Relic]) -> void:
 	if save_data == null:
 		return
+	save_data.run_stats = stats
 	save_data.pending_room_kind = SaveGame.PENDING_BATTLE_REWARD
+	save_data.stage_battle_reward_entry_snapshot(
+		character,
+		relic_handler,
+		RNG.instance.seed,
+		RNG.instance.state
+	)
 	save_data.battle_reward_gold = gold
 	save_data.battle_reward_gold_taken = false
 	save_data.battle_reward_relic_ids = PackedStringArray()
@@ -542,6 +591,25 @@ func play_deck_remove_card_shrink_remove_and_wait(card: Card) -> void:
 func play_deck_remove_two_cards_fade_and_wait(card1: Card, card2: Card) -> void:
 	if run_card_fx:
 		await run_card_fx.animate_two_cards_center_fade_remove(card1, card2)
+
+
+func _show_elite_battle_rewards() -> void:
+	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
+	reward_scene.run_stats = stats
+	reward_scene.character_stats = character
+	reward_scene.relic_handler = relic_handler
+	reward_scene.setup_from_run(false)
+	
+	if map.last_room != null and map.last_room.battle_stats != null:
+		reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward())
+	else:
+		reward_scene.add_gold_reward(RNG.instance.randi_range(80, 105))
+	
+	var relic: Relic = RELIC_REWARD_POOL.roll_reward(character, relic_handler)
+	if relic:
+		reward_scene.add_relic_reward(relic)
+	
+	reward_scene.save_initial_state()
 
 
 func _show_regular_battle_rewards() -> void:
@@ -710,8 +778,9 @@ func _on_event_room_entered(room: Room, is_reload: bool = false) -> void:
 	event_room.set("run_stats", stats)
 	if event_room.has_method("set_run_reload"):
 		event_room.call("set_run_reload", is_reload)
+	# 须在节点 _ready（@onready）之后执行，否则事件按钮回调未绑定会点不动。
 	if event_room.has_method("setup"):
-		event_room.call("setup")
+		event_room.call_deferred("setup")
 
 
 func debug_enter_event(id: String) -> String:
@@ -777,6 +846,8 @@ func _on_battle_won() -> void:
 			var win_screen := _change_view(WIN_SCREEN_SCENE) as WinScreen
 			win_screen.character = character
 			SaveGame.delete_data()
+	elif map.last_room != null and map.last_room.type == Room.Type.ELITE:
+		_show_elite_battle_rewards()
 	else:
 		## 普通战斗，显示常规奖励
 		_show_regular_battle_rewards()
@@ -784,14 +855,20 @@ func _on_battle_won() -> void:
 
 func _on_pause_save_and_quit() -> void:
 	if save_data:
-		# 如果在战斗中退出，保持现有的战斗快照（不覆盖为当前状态）
-		_save_run(map.visible)
+		if _is_pending_battle_reward():
+			_persist_battle_reward_quit_snapshot()
+		else:
+			# 如果在战斗中退出，保持现有的战斗快照（不覆盖为当前状态）
+			_save_run(map.visible)
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
 
 func _on_window_close_requested() -> void:
 	if save_data:
-		_save_run(map.visible)
+		if _is_pending_battle_reward():
+			_persist_battle_reward_quit_snapshot()
+		else:
+			_save_run(map.visible)
 
 
 func _on_map_exited(room: Room, is_reload: bool = false) -> void:
@@ -802,7 +879,7 @@ func _on_map_exited(room: Room, is_reload: bool = false) -> void:
 		_save_scene_entry_snapshot(room)
 	
 	match room.type:
-		Room.Type.MONSTER:
+		Room.Type.MONSTER, Room.Type.ELITE:
 			_on_battle_room_entered(room, is_reload)
 		Room.Type.TREASURE:
 			_on_treasure_room_entered(is_reload)

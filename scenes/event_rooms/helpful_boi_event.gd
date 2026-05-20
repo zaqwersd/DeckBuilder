@@ -5,16 +5,19 @@ extends EventRoom
 @onready var plus_max_hp_button: EventRoomButton = %PlusMaxHPButton
 
 
-func _ready() -> void:
-	duplicate_last_card_button.event_button_callback = duplicate_last_card
-	plus_max_hp_button.event_button_callback = plus_max_hp
-
-
 func setup() -> void:
+	_bind_event_buttons()
 	# 如果是重载，重置按钮为可用状态（场景快照已恢复角色状态）
 	if _is_run_reload:
 		duplicate_last_card_button.disabled = false
 		plus_max_hp_button.disabled = false
+
+
+func _bind_event_buttons() -> void:
+	if not is_instance_valid(duplicate_last_card_button) or not is_instance_valid(plus_max_hp_button):
+		return
+	duplicate_last_card_button.event_button_callback = duplicate_last_card
+	plus_max_hp_button.event_button_callback = plus_max_hp
 
 
 func duplicate_last_card() -> void:

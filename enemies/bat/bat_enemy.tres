@@ -1,13 +1,16 @@
 [gd_resource type="Resource" script_class="BatEnemyStats" format=3 uid="uid://bbo24od4aavfj"]
 
 [ext_resource type="Script" uid="uid://bj7xhj07d8m7f" path="res://enemies/bat/bat_enemy_stats.gd" id="1_1akn0"]
-[ext_resource type="PackedScene" path="res://enemies/bat/bat_enemy_ai.tscn" id="1_oeu8d"]
-[ext_resource type="Texture2D" uid="uid://con6y7mc74c5a" path="res://art/tile_0120.png" id="1_xdrl7"]
+[ext_resource type="PackedScene" uid="uid://cpqiarqapp3td" path="res://enemies/bat/bat_enemy_ai.tscn" id="1_oeu8d"]
+[ext_resource type="Texture2D" uid="uid://cdi5gbn6bxdlr" path="res://art/bat1.png" id="2_bat1"]
+[ext_resource type="Texture2D" uid="uid://dwsy2lrm1s25s" path="res://art/bat2.png" id="3_bat2"]
 
 [resource]
 script = ExtResource("1_1akn0")
 ai = ExtResource("1_oeu8d")
+art_frames = Array[Texture]([ExtResource("2_bat1"), ExtResource("3_bat2")])
 health_bar_width = 108
-status_bar_offset = Vector2(50, 30)
+status_bar_offset = Vector2(50, 20)
+intent_ui_offset = Vector2(0, -20)
 max_health = 21
-art = ExtResource("1_xdrl7")
+art = ExtResource("2_bat1")

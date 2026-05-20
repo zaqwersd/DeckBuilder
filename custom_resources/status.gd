@@ -21,6 +21,11 @@ enum StackType {NONE, INTENSITY, DURATION}
 @export var name: String = ""
 @export_multiline var tooltip: String
 
+## 敌人回合挂上：状态栏先显示图标，等持有者下一回合开始再 `initialize_status` 生效。
+var awaits_turn_start: bool = false
+## 激活当回合跳过首次 START_OF_TURN 扣 duration，使 duration=1 覆盖完整玩家回合。
+var skip_next_start_of_turn_tick: bool = false
+
 
 func get_display_name() -> String:
 	var n := name.strip_edges()

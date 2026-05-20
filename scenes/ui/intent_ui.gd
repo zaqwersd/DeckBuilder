@@ -2,6 +2,8 @@ class_name IntentUI
 extends HBoxContainer
 
 const INTENT_SLOT := preload("res://scenes/ui/intent_slot.tscn")
+const ACTION_START_POP_DURATION := 0.2
+const ACTION_START_POP_SCALE_END := 1.2
 
 
 ## 将意图悬停 tooltip 接到 Run 顶栏（战斗内调用一次即可）。
@@ -46,3 +48,38 @@ func update_intent(single: Intent) -> void:
 		update_intents([single])
 	else:
 		update_intents([])
+
+
+## 敌人开始行动时：意图图标 1→1.2 倍放大并淡出（0.2s）。
+func play_action_start_animation() -> void:
+	if not is_instance_valid(self) or get_child_count() == 0:
+		return
+
+	var slots: Array[Control] = []
+	for child in get_children():
+		if child is Control:
+			slots.append(child as Control)
+	if slots.is_empty():
+		return
+
+	var tw := create_tween()
+	tw.set_parallel(true)
+	for slot in slots:
+		slot.scale = Vector2.ONE
+		slot.modulate = Color.WHITE
+		_apply_slot_pivot_center(slot)
+		tw.tween_property(
+			slot, "scale", Vector2.ONE * ACTION_START_POP_SCALE_END, ACTION_START_POP_DURATION
+		)
+		tw.tween_property(slot, "modulate:a", 0.0, ACTION_START_POP_DURATION)
+	await tw.finished
+	hide()
+
+
+func _apply_slot_pivot_center(slot: Control) -> void:
+	var sz := slot.size
+	if sz.x < 4.0 or sz.y < 4.0:
+		sz = slot.get_combined_minimum_size()
+	if sz.x < 4.0:
+		sz = Vector2(48.0, 48.0)
+	slot.pivot_offset = sz * 0.5

@@ -1,6 +1,6 @@
 extends Control
 
-const CHAR_SELECTOR_SCENE := preload("res://scenes/ui/character_selector.tscn")
+const CHAR_SELECTOR_PATH := "res://scenes/ui/character_selector.tscn"
 const RUN_SCENE = preload("res://scenes/run/run.tscn")
 const COMPENDIUM_HUB_SCENE := preload("res://scenes/ui/compendium_hub_menu.tscn")
 const CARD_COMPENDIUM_SCENE := preload("res://scenes/ui/card_compendium_view.tscn")
@@ -69,7 +69,7 @@ func _on_continue_pressed() -> void:
 
 
 func _on_new_run_pressed() -> void:
-	get_tree().change_scene_to_packed(CHAR_SELECTOR_SCENE)
+	get_tree().change_scene_to_file(CHAR_SELECTOR_PATH)
 
 
 func _on_compendium_pressed() -> void:

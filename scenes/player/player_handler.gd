@@ -1,4 +1,5 @@
 # Player turn order:
+# 0. 激活敌人上回合挂上但未生效的状态（图标已显示）
 # 1. START_OF_TURN Relics 
 # 2. START_OF_TURN Statuses
 # 3. Draw Hand
@@ -18,6 +19,7 @@ const BATTLE_DRAW_ANIM_DURATION := 0.26
 const BATTLE_DISCARD_ANIM_DURATION := 0.24
 ## 固有牌与首回合抽牌：手牌张数上限（与固有「填满手牌」规则一致）
 const HAND_CARDS_MAX := 10
+const DRAW_CARD_SFX := preload("res://art/draw_card.ogg")
 
 @export var relics: RelicHandler
 @export var player: Player
@@ -33,6 +35,8 @@ var _defer_flow_for_eot_discard: bool = false
 var _eot_flow_accum_draws: int = 0
 var _eot_flow_accum_mana: int = 0
 var _carry_mana_to_next_turn_start: int = 0
+## 本场战斗是否已在首次 start_turn 抽牌前发放「战斗开始入手牌」类遗物牌。
+var _battle_start_hand_cards_granted: bool = false
 
 
 func _ready() -> void:
@@ -43,6 +47,7 @@ func _ready() -> void:
 ## 否则首次抽牌时 `BattleCardFx.draw_pile_button` 为空 → 飞入动画被跳过。
 func start_battle_prep(char_stats: CharacterStats) -> void:
 	character = char_stats
+	_battle_start_hand_cards_granted = false
 	_intrinsic_draw_priority = true
 	var raw_pile := character.deck.custom_duplicate()
 	for c: Card in raw_pile.cards:
@@ -85,6 +90,11 @@ func start_turn() -> void:
 	if _carry_mana_to_next_turn_start != 0:
 		character.mana += _carry_mana_to_next_turn_start
 		_carry_mana_to_next_turn_start = 0
+	if is_instance_valid(player.status_handler):
+		player.status_handler.activate_awaiting_statuses()
+	if not _battle_start_hand_cards_granted:
+		_battle_start_hand_cards_granted = true
+		_grant_battle_start_hand_cards()
 	relics.activate_relics_by_type(Relic.Type.START_OF_TURN)
 
 
@@ -93,12 +103,56 @@ func end_turn() -> void:
 	relics.activate_relics_by_type(Relic.Type.END_OF_TURN)
 
 
+func get_hand_card_count() -> int:
+	return _count_cards_in_hand()
+
+
+func is_hand_full() -> bool:
+	return get_hand_card_count() >= HAND_CARDS_MAX
+
+
+## 尝试加入手牌；已满或已在手牌中则进入弃牌堆。返回 true 表示已进入手牌 UI。
+## `insert_at_start`：插入手牌最左侧（战斗开始遗物牌等）。
+func add_card_to_hand_or_discard(card: Card, insert_at_start: bool = false) -> bool:
+	if card == null or not is_instance_valid(hand) or character == null:
+		return false
+	if hand.has_card_resource(card):
+		return true
+	if is_hand_full():
+		character.discard.add_card(card)
+		return false
+	if insert_at_start:
+		hand.add_card(card, 0)
+	else:
+		hand.add_card(card)
+	return true
+
+
+func _grant_battle_start_hand_cards() -> void:
+	if not is_instance_valid(relics):
+		return
+	for relic: Relic in relics.get_all_relics():
+		if relic == null:
+			continue
+		var card := relic.create_battle_start_hand_card()
+		if card:
+			add_card_to_hand_or_discard(card, true)
+
+
 func _flush_drawn_cards_to_hand(drawn: Array[Card]) -> void:
 	if not is_instance_valid(hand):
 		return
 	for c in drawn:
-		if c and not hand.has_card_resource(c):
-			hand.add_card(c)
+		if c:
+			add_card_to_hand_or_discard(c)
+
+
+func _flush_drawn_cards_to_discard(drawn: Array[Card]) -> void:
+	if character == null:
+		return
+	for c in drawn:
+		if c:
+			character.discard.add_card(c)
 
 
 func _sync_discard_entire_hand() -> void:
@@ -116,7 +170,7 @@ func _sync_discard_entire_hand() -> void:
 		if c.ethereal:
 			character.add_card_to_exhaust(c)
 			hand.discard_card(cui)
-		else:
+		elif not c.retains:
 			character.discard.add_card(c)
 			hand.discard_card(cui)
 
@@ -130,6 +184,19 @@ func _count_cards_in_hand() -> int:
 		if cui and cui.card:
 			n += 1
 	return n
+
+
+func _play_draw_card_sfx(index: int) -> void:
+	var delay := HAND_SEQUENCE_STAGGER * float(index)
+	if delay <= 0.0:
+		SFXPlayer.play(DRAW_CARD_SFX)
+		return
+	var tree := get_tree()
+	if tree == null:
+		SFXPlayer.play(DRAW_CARD_SFX)
+		return
+	var timer := tree.create_timer(delay)
+	timer.timeout.connect(func() -> void: SFXPlayer.play(DRAW_CARD_SFX), CONNECT_ONE_SHOT)
 
 
 func _pop_draw_card() -> Card:
@@ -158,38 +225,54 @@ func _finish_discard_cards_defer() -> void:
 func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_enable: bool = false) -> void:
 	if Events.is_combat_ended():
 		return
-	var space := HAND_CARDS_MAX - _count_cards_in_hand()
-	amount = clampi(amount, 0, maxi(0, space))
-	var drawn_cards: Array[Card] = []
+	amount = maxi(0, amount)
+	var to_hand: Array[Card] = []
+	var to_discard: Array[Card] = []
+	var pending_hand_count := _count_cards_in_hand()
+	var drawn_sfx_index := 0
 	for _i in range(amount):
 		if Events.is_combat_ended():
-			_flush_drawn_cards_to_hand(drawn_cards)
+			_flush_drawn_cards_to_hand(to_hand)
+			_flush_drawn_cards_to_discard(to_discard)
 			return
 		reshuffle_deck_from_discard()
 		if character.draw_pile.empty():
 			break
-		drawn_cards.append(_pop_draw_card())
+		var c := _pop_draw_card()
+		_play_draw_card_sfx(drawn_sfx_index)
+		drawn_sfx_index += 1
+		if pending_hand_count >= HAND_CARDS_MAX:
+			to_discard.append(c)
+		else:
+			to_hand.append(c)
+			pending_hand_count += 1
 		reshuffle_deck_from_discard()
 
 	if Events.is_combat_ended():
-		_flush_drawn_cards_to_hand(drawn_cards)
+		_flush_drawn_cards_to_hand(to_hand)
+		_flush_drawn_cards_to_discard(to_discard)
 		if is_start_of_turn_draw:
 			Events.player_hand_drawn.emit()
 		return
 
 	if battle_card_fx and is_instance_valid(battle_card_fx):
-		for i in range(drawn_cards.size()):
+		for i in range(to_hand.size()):
 			var delay := HAND_SEQUENCE_STAGGER * float(i)
-			battle_card_fx.animate_draw_to_hand(drawn_cards[i], hand, delay)
-		var max_t := HAND_SEQUENCE_STAGGER * float(maxi(0, drawn_cards.size() - 1)) + BATTLE_DRAW_ANIM_DURATION + 0.05
+			battle_card_fx.animate_draw_to_hand(to_hand[i], hand, delay)
+		for i in range(to_discard.size()):
+			var delay := HAND_SEQUENCE_STAGGER * float(i)
+			battle_card_fx.animate_draw_to_discard(to_discard[i], delay)
+		var max_n := maxi(to_hand.size(), to_discard.size())
+		var max_t := HAND_SEQUENCE_STAGGER * float(maxi(0, max_n - 1)) + BATTLE_DRAW_ANIM_DURATION + 0.05
 		await get_tree().create_timer(max_t).timeout
-		_flush_drawn_cards_to_hand(drawn_cards)
+		_flush_drawn_cards_to_hand(to_hand)
+		_flush_drawn_cards_to_discard(to_discard)
 	else:
-		for c in drawn_cards:
+		for c in to_hand:
 			if Events.is_combat_ended():
 				break
-			if is_instance_valid(hand) and not hand.has_card_resource(c):
-				hand.add_card(c)
+			add_card_to_hand_or_discard(c)
+		_flush_drawn_cards_to_discard(to_discard)
 
 	if not is_instance_valid(hand):
 		return
@@ -202,11 +285,11 @@ func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_
 func discard_cards() -> void:
 	if Events.is_combat_ended():
 		_sync_discard_entire_hand()
-		Events.player_hand_discarded.emit()
+		_emit_player_hand_discarded_after_layout()
 		return
 
 	if not is_instance_valid(hand) or hand.get_child_count() == 0:
-		Events.player_hand_discarded.emit()
+		_emit_player_hand_discarded_after_layout()
 		return
 
 	_defer_flow_for_eot_discard = true
@@ -217,7 +300,7 @@ func discard_cards() -> void:
 	var pending_non: Array[Dictionary] = []
 	for slot in hand.get_children():
 		var card_ui_a := hand.get_card_ui_in_slot(slot)
-		if card_ui_a and card_ui_a.card and not card_ui_a.card.ethereal:
+		if card_ui_a and card_ui_a.card and not card_ui_a.card.ethereal and not card_ui_a.card.retains:
 			pending_non.append({
 				"ui": card_ui_a,
 				"card": card_ui_a.card,
@@ -243,7 +326,7 @@ func discard_cards() -> void:
 			_eot_flow_accum_draws = 0
 			_eot_flow_accum_mana = 0
 			_finish_discard_cards_defer()
-			Events.player_hand_discarded.emit()
+			_emit_player_hand_discarded_after_layout()
 			return
 
 		for d1 in pending_non:
@@ -260,7 +343,7 @@ func discard_cards() -> void:
 			_eot_flow_accum_draws = 0
 			_eot_flow_accum_mana = 0
 			_finish_discard_cards_defer()
-			Events.player_hand_discarded.emit()
+			_emit_player_hand_discarded_after_layout()
 			return
 		var found_ethereal := false
 		for slot in hand.get_children():
@@ -277,7 +360,7 @@ func discard_cards() -> void:
 					_eot_flow_accum_draws = 0
 					_eot_flow_accum_mana = 0
 					_finish_discard_cards_defer()
-					Events.player_hand_discarded.emit()
+					_emit_player_hand_discarded_after_layout()
 					return
 				await get_tree().create_timer(HAND_ETH_DISCARD_INTERVAL).timeout
 				break
@@ -314,8 +397,14 @@ func discard_cards() -> void:
 					slot.queue_free()
 
 	print("[DEBUG] About to emit player_hand_discarded (normal path)")
-	Events.player_hand_discarded.emit()
+	_emit_player_hand_discarded_after_layout()
 	print("[DEBUG] player_hand_discarded emitted (normal path)")
+
+
+func _emit_player_hand_discarded_after_layout() -> void:
+	if is_instance_valid(hand):
+		hand.finalize_end_turn_hand_layout()
+	Events.player_hand_discarded.emit()
 
 
 func reshuffle_deck_from_discard() -> void:

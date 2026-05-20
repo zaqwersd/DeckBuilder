@@ -5,7 +5,7 @@ extends Control
 const HAND_PICK_DELEGATE_META := &"hand_pick_delegate"
 
 ## 手牌内鼠标悬停时卡牌上移的像素
-const HAND_HOVER_LIFT_PX := 80.0
+const HAND_HOVER_LIFT_PX := 180.0
 const HAND_HOVER_Z := 10
 
 signal reparent_requested(which_card_ui: CardUI)
@@ -19,7 +19,7 @@ const HOVER_STYLEBOX := preload("res://scenes/card_ui/card_hover_stylebox.tres")
 @export var char_stats: CharacterStats : set = _set_char_stats
 
 @onready var card_visuals: CardVisualsBase = $CardVisuals
-@onready var drop_point_detector: Area2D = $DropPointDetector
+@onready var drop_point_detector: Area2D = $CardVisuals/DropPointDetector
 @onready var card_state_machine: CardStateMachine = $CardStateMachine
 @onready var targets: Array[Node] = []
 
@@ -36,6 +36,7 @@ var disabled := true
 ## 由 `sync_hand_hover_presentation` 维护
 var _hand_hover_visual_active := false
 var _hover_lift_target_y := 0.0
+var _hand_hover_target_visual_y := 0.0
 
 
 func _ready() -> void:
@@ -45,11 +46,14 @@ func _ready() -> void:
 	Events.card_aim_ended.connect(_on_card_drag_or_aim_ended)
 	card_state_machine.init(self)
 	if is_instance_valid(card_visuals):
-		# IGNORE 时上移后的卡图会超出 CardUI 的命中框，点击「抬起区域」收不到 gui_input，导致有抬起却无法出牌
 		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 		if not card_visuals.gui_input.is_connected(_on_card_visuals_gui_input):
 			card_visuals.gui_input.connect(_on_card_visuals_gui_input)
 		card_visuals.number_bbcode_style = Card.NumberBbcodeStyle.COMBAT_PILES_AND_HAND
+	if is_instance_valid(drop_point_detector):
+		drop_point_detector.input_pickable = true
+		if not drop_point_detector.input_event.is_connected(_on_drop_point_detector_input_event):
+			drop_point_detector.input_event.connect(_on_drop_point_detector_input_event)
 
 
 func _on_card_visuals_gui_input(event: InputEvent) -> void:
@@ -76,11 +80,50 @@ func _on_card_visuals_mouse_exited() -> void:
 func _on_card_visuals_clicked() -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		return
-	# 创建一个模拟的鼠标点击事件
+	if not _is_hand_interaction_foremost():
+		return
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT
 	ev.pressed = true
 	_on_gui_input(ev)
+
+
+func _on_drop_point_detector_input_event(
+	_viewport: Node,
+	event: InputEvent,
+	_shape_idx: int
+) -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	if not _is_hand_interaction_foremost():
+		return
+	if event is InputEventMouseButton:
+		_on_gui_input(event)
+
+
+func is_hand_hover_visual_active() -> bool:
+	return _hand_hover_visual_active
+
+
+func _is_hand_interaction_foremost() -> bool:
+	if not is_instance_valid(hand_slot) or get_parent() != hand_slot:
+		return true
+	var hp := hand_slot.get_parent()
+	if not (hp is Hand):
+		return true
+	return (hp as Hand).get_mouse_foremost_hand_card() == self
+
+
+func is_in_hand_combat_layout() -> bool:
+	if has_meta(HAND_PICK_DELEGATE_META):
+		return false
+	if not is_instance_valid(hand_slot) or get_parent() != hand_slot:
+		return false
+	return hand_slot.get_parent() is Hand
+
+
+func forward_hand_gui_input(event: InputEvent) -> void:
+	_on_gui_input(event)
 
 
 func _input(event: InputEvent) -> void:
@@ -115,22 +158,31 @@ func allows_hand_drag_preview() -> bool:
 
 func reset_hand_hover_lift_instant() -> void:
 	_hand_hover_visual_active = false
+	_hand_hover_target_visual_y = 0.0
 	if _hover_lift_tween and _hover_lift_tween.is_running():
 		_hover_lift_tween.kill()
 		_hover_lift_tween = null
-	## 强制 CardVisuals 回到基准位置（y = 0）
 	if is_instance_valid(card_visuals):
 		card_visuals.position.y = 0.0
+	sync_hand_interaction_collision_from_layout()
 
 
 ## 禁用手牌等：收起抬起并恢复底板样式（不依赖状态机）。
+func _restore_hand_slot_fan_rotation() -> void:
+	if not is_instance_valid(hand_slot):
+		return
+	if hand_slot.has_meta(Hand.META_SLOT_FAN_ROTATION):
+		hand_slot.rotation = hand_slot.get_meta(Hand.META_SLOT_FAN_ROTATION) as float
+
+
 func force_hand_hover_visuals_off() -> void:
 	z_index = 0
 	z_as_relative = true
 	if is_instance_valid(card_visuals):
 		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_base)
-		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 	reset_hand_hover_lift_instant()
+	_restore_hand_slot_fan_rotation()
+	_sync_hand_area_input_pickable(false)
 
 
 ## 手牌悬停：卡面仅在「正常(0)」与「抬起(-HAND_HOVER_LIFT_PX)」两档，用 0.1s tween 动画连接。
@@ -146,11 +198,7 @@ func _tween_hand_hover_offset(target_y: float, duration: float = 0.1) -> void:
 	## 获取当前实际位置
 	var current_y := card_visuals.position.y
 	
-	## 安全处理：如果当前值异常（不在 0 或 -HAND_HOVER_LIFT_PX 附近），强制重置为 0
-	var is_current_valid := (
-		is_equal_approx(current_y, 0.0) 
-		or is_equal_approx(current_y, -HAND_HOVER_LIFT_PX)
-	)
+	var is_current_valid := is_equal_approx(current_y, 0.0) or is_equal_approx(current_y, target_y)
 	if not is_current_valid:
 		card_visuals.position.y = 0.0
 		current_y = 0.0
@@ -174,6 +222,7 @@ func _on_hover_lift_tween_finished() -> void:
 	if not is_instance_valid(card_visuals):
 		return
 	card_visuals.position.y = _hover_lift_target_y
+	sync_hand_interaction_collision_from_layout()
 
 
 func _exit_tree() -> void:
@@ -210,23 +259,183 @@ func sync_hand_hover_presentation() -> void:
 		if is_instance_valid(card_visuals):
 			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
 		return
+	if is_in_hand_combat_layout():
+		var is_foremost := _is_hand_interaction_foremost()
+		_sync_hand_area_input_pickable(is_foremost)
+		_set_hand_hover_visual_active(is_foremost)
+		return
 	_apply_hand_visual_mouse_pick_filter()
-	_set_hand_hover_visual_active(is_hand_pointer_over_this_card())
+	_set_hand_hover_visual_active(_is_hand_interaction_foremost())
 
 
 func _hand_hover_visual_offsets_not_snapped() -> bool:
 	if not is_instance_valid(card_visuals):
 		return false
-	## 有正在运行的抬起动画时，视为未对齐到最终状态
 	if _hover_lift_tween and _hover_lift_tween.is_running():
 		return true
 	var y := card_visuals.position.y
-	## 检查是否在有效位置（0 或 -HAND_HOVER_LIFT_PX）
 	if is_equal_approx(y, 0.0):
 		return false
-	if is_equal_approx(y, -HAND_HOVER_LIFT_PX):
+	if is_equal_approx(y, _hand_hover_target_visual_y):
 		return false
 	return true
+
+
+func _get_scaled_hit_size() -> Vector2:
+	var hit_w := custom_minimum_size.x
+	var hit_h := custom_minimum_size.y
+	if hit_w <= 0.001 or hit_h <= 0.001:
+		if is_instance_valid(hand_slot) and hand_slot.get_parent() is Hand:
+			var s := (hand_slot.get_parent() as Hand).display_scale
+			hit_w = roundf(Hand.CARD_UI_BASE_SIZE.x * s)
+			hit_h = roundf(Hand.CARD_UI_BASE_SIZE.y * s)
+		else:
+			hit_w = Hand.CARD_UI_BASE_SIZE.x
+			hit_h = Hand.CARD_UI_BASE_SIZE.y
+	return Vector2(hit_w, hit_h)
+
+
+func _get_card_face_global_transform() -> Transform2D:
+	if not is_inside_tree():
+		return Transform2D.IDENTITY
+	if is_instance_valid(card_visuals) and card_visuals.is_inside_tree():
+		return card_visuals.get_global_transform()
+	var local_vis := Transform2D.IDENTITY
+	if is_instance_valid(card_visuals):
+		local_vis = Transform2D(0.0, card_visuals.position)
+	return get_global_transform() * local_vis
+
+
+func _current_hand_hover_lift_px() -> float:
+	if not is_instance_valid(card_visuals):
+		return 0.0
+	var lift := maxf(0.0, -card_visuals.position.y)
+	if _hand_hover_visual_active:
+		lift = maxf(lift, maxf(0.0, -_hand_hover_target_visual_y))
+	elif _hover_lift_tween and _hover_lift_tween.is_running():
+		lift = maxf(lift, maxf(0.0, -_hand_hover_target_visual_y))
+	return lift
+
+
+func _global_rect_from_card_visuals_local(lift_px: float) -> Rect2:
+	if not is_instance_valid(card_visuals) or not is_inside_tree():
+		return get_global_rect()
+	var hit := _get_scaled_hit_size()
+	var xf: Transform2D = _get_card_face_global_transform()
+	var visuals_y := card_visuals.position.y
+	if absf(visuals_y) > 0.001:
+		xf.origin -= xf.y * visuals_y
+	var top_y := -lift_px
+	var bottom_y := hit.y
+	var global_pts: Array[Vector2] = [
+		xf * Vector2(0.0, bottom_y),
+		xf * Vector2(hit.x, bottom_y),
+		xf * Vector2(hit.x, top_y),
+		xf * Vector2(0.0, top_y),
+	]
+	var min_x := global_pts[0].x
+	var max_x := global_pts[0].x
+	var min_y := global_pts[0].y
+	var max_y := global_pts[0].y
+	for i in range(1, 4):
+		min_x = minf(min_x, global_pts[i].x)
+		max_x = maxf(max_x, global_pts[i].x)
+		min_y = minf(min_y, global_pts[i].y)
+		max_y = maxf(max_y, global_pts[i].y)
+	return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
+
+
+func get_hand_base_pick_global_rect() -> Rect2:
+	if not is_instance_valid(card_visuals) or not card_visuals.is_inside_tree():
+		return get_global_rect()
+	var gr := card_visuals.get_global_rect()
+	var ly := card_visuals.position.y
+	if absf(ly) > 0.001:
+		var xf := card_visuals.get_global_transform()
+		gr.position -= xf.y * ly
+	return gr
+
+
+func get_hand_active_pick_global_rect() -> Rect2:
+	var lift_px := _current_hand_hover_lift_px()
+	if lift_px <= 0.001:
+		return get_hand_base_pick_global_rect()
+	return _global_rect_from_card_visuals_local(lift_px)
+
+
+func _compute_unified_hand_hover_visual_y() -> float:
+	if not is_instance_valid(hand_slot) or not is_instance_valid(card_visuals):
+		return -HAND_HOVER_LIFT_PX
+	var hp := hand_slot.get_parent()
+	if not (hp is Hand):
+		return -HAND_HOVER_LIFT_PX
+	var cur_top := get_hand_base_pick_global_rect().position.y
+	var target_top := (hp as Hand).get_hand_hover_unified_global_top()
+	return target_top - cur_top
+
+
+func sync_hand_interaction_collision_from_layout(base_size: Vector2 = Vector2.ZERO) -> void:
+	if not is_instance_valid(card_visuals):
+		return
+	var hit := base_size
+	if hit.x <= 0.001 or hit.y <= 0.001:
+		hit = _get_scaled_hit_size()
+	var lift_px := 0.0
+	if _hand_hover_visual_active and _is_hand_interaction_foremost():
+		lift_px = _current_hand_hover_lift_px()
+	elif _hover_lift_tween and _hover_lift_tween.is_running():
+		lift_px = _current_hand_hover_lift_px()
+	var total_h := hit.y + lift_px
+	var shape_center := Vector2(hit.x * 0.5, (hit.y - lift_px) * 0.5)
+	if is_instance_valid(drop_point_detector):
+		_apply_rect_pick_shape(drop_point_detector, Vector2(hit.x, total_h), shape_center)
+	if is_instance_valid(card_visuals.area_2d):
+		_apply_rect_pick_shape(card_visuals.area_2d, Vector2(hit.x, total_h), shape_center)
+
+
+func _apply_rect_pick_shape(area: Area2D, size: Vector2, center: Vector2) -> void:
+	if area == null:
+		return
+	var shape_node := area.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_node == null:
+		return
+	var rect_shape: RectangleShape2D
+	if shape_node.shape is RectangleShape2D:
+		rect_shape = shape_node.shape as RectangleShape2D
+	else:
+		rect_shape = RectangleShape2D.new()
+		shape_node.shape = rect_shape
+	rect_shape.size = size
+	shape_node.position = center
+
+
+func _sync_hand_area_input_pickable(foremost: bool) -> void:
+	if has_meta(HAND_PICK_DELEGATE_META):
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		if is_instance_valid(card_visuals):
+			card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP
+		if is_instance_valid(card_visuals.area_2d):
+			card_visuals.area_2d.input_pickable = true
+		if is_instance_valid(drop_point_detector):
+			drop_point_detector.input_pickable = true
+		return
+	if is_in_hand_combat_layout():
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if is_instance_valid(card_visuals):
+			card_visuals.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if is_instance_valid(card_visuals.area_2d):
+			card_visuals.area_2d.input_pickable = false
+		if is_instance_valid(drop_point_detector):
+			drop_point_detector.input_pickable = false
+		return
+	var pickable := foremost and not disabled
+	mouse_filter = Control.MOUSE_FILTER_STOP if pickable else Control.MOUSE_FILTER_IGNORE
+	if is_instance_valid(card_visuals.area_2d):
+		card_visuals.area_2d.input_pickable = pickable
+	if is_instance_valid(drop_point_detector):
+		drop_point_detector.input_pickable = pickable
+	if is_instance_valid(card_visuals):
+		card_visuals.mouse_filter = Control.MOUSE_FILTER_STOP if pickable else Control.MOUSE_FILTER_IGNORE
 
 
 func _set_hand_hover_visual_active(active: bool) -> void:
@@ -236,17 +445,19 @@ func _set_hand_hover_visual_active(active: bool) -> void:
 		return
 	_hand_hover_visual_active = active
 	if active:
-		z_index = HAND_HOVER_Z
-		z_as_relative = true
 		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_hover)
 		refresh_combat_description()
+		if is_instance_valid(hand_slot):
+			hand_slot.rotation = 0.0
+		_hand_hover_target_visual_y = _compute_unified_hand_hover_visual_y()
 	else:
-		z_index = 0
-		z_as_relative = true
 		card_visuals.panel.set("theme_override_styles/panel", card_visuals.main_panel_style_base)
-	## 0.1s tween 动画切换到目标位置：突出(-HAND_HOVER_LIFT_PX) 或 正常(0)
-	## 动画进行中时如果状态再次变化，必须等当前动画完成或强制结束后再开始新动画
-	var target_y := -HAND_HOVER_LIFT_PX if active else 0.0
+		_restore_hand_slot_fan_rotation()
+		_hand_hover_target_visual_y = 0.0
+	var target_y := _hand_hover_target_visual_y if active else 0.0
+	if not is_in_hand_combat_layout():
+		_sync_hand_area_input_pickable(active and _is_hand_interaction_foremost())
+	sync_hand_interaction_collision_from_layout()
 	_tween_hand_hover_offset(target_y, 0.1)
 
 
@@ -258,18 +469,10 @@ func _apply_hand_visual_mouse_pick_filter() -> void:
 		return
 	var hp := hand_slot.get_parent()
 	if not (hp is Hand):
-		# 不在手牌中：允许所有交互
-		_set_card_visuals_mouse_filter_recursive(true)
+		_sync_hand_area_input_pickable(true)
 		return
-	var fo := (hp as Hand).get_mouse_foremost_hand_card()
-	var overlapping := is_hand_hover_hit_overlapping()
-	var is_foremost := (fo == self)
-	if overlapping and fo != null and not is_foremost:
-		# 非主目标：设为 IGNORE，但保持 description_label 可接收事件
-		_set_card_visuals_mouse_filter_recursive(false, true)
-	else:
-		# 主目标：允许所有交互
-		_set_card_visuals_mouse_filter_recursive(true, true)
+	var is_foremost := _is_hand_interaction_foremost()
+	_sync_hand_area_input_pickable(is_foremost)
 
 
 ## 递归设置 card_visuals 及其子控件的 mouse_filter
@@ -402,24 +605,18 @@ func is_hovered() -> bool:
 	return get_hand_hover_hit_global_rect().has_point(get_global_mouse_position())
 
 
-## 手牌悬停抬起后视觉在控件矩形上方，与 tooltip 一致：用「扩展矩形」判断是否仍算指着这张牌。
-## 命中区与 CardVisuals 内 Area2D/CollisionShape2D 一致（与卡图点击判定同源）。
 func get_hand_hover_hit_global_rect() -> Rect2:
-	if not is_instance_valid(card_visuals):
-		return get_global_rect()
-	var r := card_visuals.get_pick_collision_global_rect()
-	if r.size.x > 0.001 and r.size.y > 0.001:
-		return r
-	return get_global_rect()
+	if is_in_hand_combat_layout() and _is_hand_interaction_foremost():
+		return get_hand_active_pick_global_rect()
+	return get_hand_base_pick_global_rect()
 
 
 func is_hand_hover_hit_overlapping() -> bool:
 	if disabled:
 		return false
-	return get_hand_hover_hit_global_rect().has_point(get_global_mouse_position())
+	return get_hand_base_pick_global_rect().has_point(get_global_mouse_position())
 
 
-## 手牌内：须为本条手里「主目标」牌；使用固定命中区域（不考虑当前是否抬起）
 func is_hand_pointer_over_this_card() -> bool:
 	if disabled or not is_instance_valid(hand_slot) or get_parent() != hand_slot:
 		return false
@@ -428,8 +625,7 @@ func is_hand_pointer_over_this_card() -> bool:
 		return false
 	if (hp as Hand).get_mouse_foremost_hand_card() != self:
 		return false
-	## 使用扩展命中区（包含抬起区域），不依赖当前动画状态
-	return is_hand_hover_hit_overlapping()
+	return get_hand_active_pick_global_rect().has_point(get_global_mouse_position())
 
 
 func refresh_combat_description() -> void:
@@ -518,6 +714,8 @@ func _set_playable(value: bool) -> void:
 ## 与碰撞盒合并时保留完整纵向范围（自选结束会由 Hand 再次写回槽尺寸）。
 func sync_gui_rect_to_pick_collision() -> void:
 	if not has_meta(HAND_PICK_DELEGATE_META):
+		return
+	if not is_instance_valid(hand_slot) or get_parent() != hand_slot:
 		return
 	if not is_instance_valid(card_visuals):
 		return

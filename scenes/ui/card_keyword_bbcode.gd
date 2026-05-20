@@ -37,6 +37,12 @@ const TOOLTIP_BODY_INTRINSIC := (
 	"[color=#ffdd33][b]固有[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
 )
 
+const TOOLTIP_BODY_RETAIN_WITH_LINKS := (
+	"[color=#ffdd33][b]保留[/b][/color]\n"
+	+ "保留的牌在回合结束时不会自动进入弃牌堆。"
+)
+const TOOLTIP_BODY_RETAIN_PLAIN := TOOLTIP_BODY_RETAIN_WITH_LINKS
+
 const TOOLTIP_BODY_MANA_WITH_LINKS := (
 	"[color=#ffdd33][b]能量[/b][/color]\n你需要花费能量来打出卡牌。"
 )
@@ -55,6 +61,7 @@ const TOOLTIP_BODY_COLOR_GRAY := (
 
 ## 自动为中文词包 `[url=kw:id]`；顺序靠前者先包，避免子串冲突。
 const _AUTO_WRAP: Array[Dictionary] = [
+	{"word": "保留", "id": "retain"},
 	{"word": "虚无", "id": "ethereal"},
 	{"word": "变化", "id": "transform"},
 	{"word": "消耗", "id": "exhaust"},
@@ -139,6 +146,8 @@ static func collect_tooltip_ids_from_raw_description(raw: String) -> PackedStrin
 		return from_urls
 	var ids: PackedStringArray = PackedStringArray()
 	var has_exhaust := false
+	if raw.find("保留") != -1:
+		ids.append("retain")
 	if raw.find("虚无") != -1:
 		ids.append("ethereal")
 		ids.append("exhaust")
@@ -204,6 +213,8 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_STRENGTH_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_STRENGTH_PLAIN
 		"intrinsic":
 			return TOOLTIP_BODY_INTRINSIC
+		"retain":
+			return TOOLTIP_BODY_RETAIN_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_RETAIN_PLAIN
 		"mana":
 			return TOOLTIP_BODY_MANA_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_MANA_PLAIN
 		"color_yellow":

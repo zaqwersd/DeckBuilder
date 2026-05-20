@@ -59,11 +59,11 @@ size_flags_vertical = 3
 mouse_filter = 2
 
 [node name="SelectionCenter" type="CenterContainer" parent="Root/PickColumn/MainVBox/SelectionBand" unique_id=1808749848]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2

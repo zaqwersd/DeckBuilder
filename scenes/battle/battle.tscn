@@ -47,7 +47,7 @@ position = Vector2(576, 225)
 shape = SubResource("RectangleShape2D_xyg5u")
 debug_color = Color(0, 0.6, 0.701961, 0.117647)
 
-[node name="EnemyHandler" type="Node2D" parent="." unique_id=1527801599]
+[node name="EnemyHandler" type="Node2D" parent="." unique_id=1527801599 groups=["enemy_handler"]]
 position = Vector2(0, -40)
 script = ExtResource("4_41vpn")
 
@@ -78,7 +78,7 @@ battle_card_fx = NodePath("../BattleUI/CardFxLayer")
 [node name="BattleUI" type="CanvasLayer" parent="." unique_id=1554332039 groups=["ui_layer"]]
 script = ExtResource("7_18vit")
 
-[node name="Hand" type="HBoxContainer" parent="BattleUI" unique_id=1201669563 node_paths=PackedStringArray("player")]
+[node name="Hand" type="Control" parent="BattleUI" unique_id=1201669563 node_paths=PackedStringArray("player")]
 unique_name_in_owner = true
 anchors_preset = 7
 anchor_left = 0.5
@@ -91,7 +91,6 @@ offset_right = 337.5
 offset_bottom = -53.0
 grow_horizontal = 0
 grow_vertical = 0
-alignment = 1
 script = ExtResource("2_uaw60")
 player = NodePath("../../Player")
 

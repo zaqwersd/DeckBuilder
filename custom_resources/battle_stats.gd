@@ -1,8 +1,8 @@
 class_name BattleStats
 extends Resource
 
-## battle_tier：0 = 弱怪池（地图前 5 层小怪）；1 = 强怪池（第 6 层起小怪）；2 = Boss 战
-@export_range(0, 2) var battle_tier: int
+## battle_tier：0 = 弱怪；1 = 强怪；2 = 精英；3 = Boss
+@export_range(0, 3) var battle_tier: int
 @export_range(0.0, 10.0) var weight: float
 @export var gold_reward_min: int
 @export var gold_reward_max: int

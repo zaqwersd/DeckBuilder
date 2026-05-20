@@ -10,8 +10,12 @@ const MAP_WIDTH := 7
 const PATHS := 6
 const MONSTER_ROOM_WEIGHT := 12.0
 const EVENT_ROOM_WEIGHT := 5.0
+const ELITE_ROOM_WEIGHT := 5.0
 const SHOP_ROOM_WEIGHT := 2.5
 const CAMPFIRE_ROOM_WEIGHT := 4.0
+## 精英房可出现的最小/最大地图行（含）；第 5–13 层
+const ELITE_ROW_MIN := 4
+const ELITE_ROW_MAX := 12
 
 @export var battle_stats_pool: BattleStatsPool
 @export var event_room_pool: EventRoomPool
@@ -20,6 +24,7 @@ var random_room_type_weights = {
 	Room.Type.MONSTER: 0.0,
 	Room.Type.CAMPFIRE: 0.0,
 	Room.Type.SHOP: 0.0,
+	Room.Type.ELITE: 0.0,
 	Room.Type.EVENT: 0.0
 }
 var random_room_type_total_weight := 0
@@ -139,14 +144,15 @@ func _setup_boss_room() -> void:
 			current_room.next_rooms.append(boss_room)
 			
 	boss_room.type = Room.Type.BOSS
-	boss_room.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 2)
+	boss_room.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 3)
 
 
 func _setup_random_room_weights() -> void:
 	random_room_type_weights[Room.Type.MONSTER] = MONSTER_ROOM_WEIGHT
 	random_room_type_weights[Room.Type.CAMPFIRE] = MONSTER_ROOM_WEIGHT + CAMPFIRE_ROOM_WEIGHT
 	random_room_type_weights[Room.Type.SHOP] = MONSTER_ROOM_WEIGHT + CAMPFIRE_ROOM_WEIGHT + SHOP_ROOM_WEIGHT
-	random_room_type_weights[Room.Type.EVENT] = random_room_type_weights[Room.Type.SHOP] + EVENT_ROOM_WEIGHT
+	random_room_type_weights[Room.Type.ELITE] = random_room_type_weights[Room.Type.SHOP] + ELITE_ROOM_WEIGHT
+	random_room_type_weights[Room.Type.EVENT] = random_room_type_weights[Room.Type.ELITE] + EVENT_ROOM_WEIGHT
 	
 	random_room_type_total_weight = random_room_type_weights[Room.Type.EVENT]
 
@@ -181,30 +187,39 @@ func _set_room_randomly(room_to_set: Room) -> void:
 	var consecutive_campfire := true
 	var consecutive_shop := true
 	var campfire_on_13 := true
+	var elite_row_invalid := true
+	var consecutive_elite := true
 	
 	var type_candidate: Room.Type
 	
-	while campfire_below_4 or consecutive_campfire or consecutive_shop or campfire_on_13:
+	while campfire_below_4 or consecutive_campfire or consecutive_shop or campfire_on_13 or elite_row_invalid or consecutive_elite:
 		type_candidate = _get_random_room_type_by_weight()
 		
 		var is_campfire := type_candidate == Room.Type.CAMPFIRE
 		var has_campfire_parent := _room_has_parent_of_type(room_to_set, Room.Type.CAMPFIRE)
 		var is_shop := type_candidate == Room.Type.SHOP
 		var has_shop_parent := _room_has_parent_of_type(room_to_set, Room.Type.SHOP)
+		var is_elite := type_candidate == Room.Type.ELITE
+		var has_elite_parent := _room_has_parent_of_type(room_to_set, Room.Type.ELITE)
 		
 		campfire_below_4 = is_campfire and room_to_set.row < 3
 		consecutive_campfire = is_campfire and has_campfire_parent
 		consecutive_shop = is_shop and has_shop_parent
 		campfire_on_13 = is_campfire and room_to_set.row == FLOORS - 3
+		elite_row_invalid = is_elite and (room_to_set.row < ELITE_ROW_MIN or room_to_set.row > ELITE_ROW_MAX)
+		consecutive_elite = is_elite and has_elite_parent
 		
 	room_to_set.type = type_candidate
 
 	if type_candidate == Room.Type.MONSTER:
-		## 第 1–5 层（row 0–4）：弱怪池 tier 0；第 6 层起小怪：强怪池 tier 1；Boss 仍为 tier 2
+		## 第 1–5 层（row 0–4）：弱怪 tier 0；第 6 层起小怪 tier 1
 		var tier_for_monster_rooms := 0
 		if room_to_set.row >= 5:
 			tier_for_monster_rooms = 1
 		room_to_set.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, tier_for_monster_rooms)
+	
+	if type_candidate == Room.Type.ELITE:
+		room_to_set.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 2)
 	
 	if type_candidate == Room.Type.EVENT:
 		room_to_set.event_scene = event_room_pool.get_random_for_act(current_act)

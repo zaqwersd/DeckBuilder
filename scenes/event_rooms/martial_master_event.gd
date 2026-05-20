@@ -74,31 +74,31 @@ func _iron_preview_hover_out_deferred() -> void:
 
 
 func setup() -> void:
-	# 重载时回到初始状态（场景快照已恢复角色状态）
-	if _is_run_reload:
-		option_strike_block.disabled = not _deck_has_strike_and_block()
-		option_two_pick.disabled = not _can_roll_attack_and_skill()
-		if option_strike_block.disabled and is_instance_valid(_iron_preview_menu):
-			_iron_preview_menu.hide()
-		# 清除待处理的事件奖励状态
-		var run := get_tree().get_first_node_in_group("run") as Run
-		if run != null:
-			run.clear_room_pending_and_save()
-		return
-	
+	_wire_option_buttons()
 	option_strike_block.disabled = not _deck_has_strike_and_block()
 	option_two_pick.disabled = not _can_roll_attack_and_skill()
 	if option_strike_block.disabled and is_instance_valid(_iron_preview_menu):
 		_iron_preview_menu.hide()
+
+	# 重载时回到初始状态（场景快照已恢复角色状态）
+	if _is_run_reload:
+		var run_reload := get_tree().get_first_node_in_group("run") as Run
+		if run_reload != null:
+			run_reload.clear_room_pending_and_save()
+		return
+
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null and run.matches_pending_event(scene_file_path, "option_two"):
+		_restore_option_two_rewards(run.get_pending_card_templates())
+
+
+func _wire_option_buttons() -> void:
+	if not is_instance_valid(option_strike_block) or not is_instance_valid(option_two_pick):
+		return
 	if not option_strike_block.pressed.is_connected(_on_option_strike_block):
 		option_strike_block.pressed.connect(_on_option_strike_block)
 	if not option_two_pick.pressed.is_connected(_on_option_two_pick):
 		option_two_pick.pressed.connect(_on_option_two_pick)
-	var run := get_tree().get_first_node_in_group("run") as Run
-	var scene_path := scene_file_path
-	if run != null and run.matches_pending_event(scene_path, "option_two"):
-		_restore_option_two_rewards(run.get_pending_card_templates())
-		return
 
 
 func _deck_has_strike_and_block() -> bool:

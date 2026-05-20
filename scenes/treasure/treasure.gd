@@ -3,7 +3,7 @@ extends Control
 
 const TREASURE_OPEN_SFX := preload("res://art/treasure.ogg")
 
-@export var treasure_relic_pool: Array[Relic]
+@export var relic_reward_pool: RelicRewardPool
 @export var relic_handler: RelicHandler
 @export var char_stats: CharacterStats
 
@@ -51,13 +51,8 @@ func _setup_background() -> void:
 
 
 func generate_relic() -> void:
-	var available_relics := treasure_relic_pool.filter(
-		func(relic: Relic):
-			var can_appear := relic.can_appear_as_reward(char_stats)
-			var already_had_it := relic_handler.has_relic(relic.id)
-			return can_appear and not already_had_it
-	)
-	found_relic = RNG.array_pick_random(available_relics)
+	if relic_reward_pool:
+		found_relic = relic_reward_pool.roll_reward(char_stats, relic_handler)
 
 
 # Called from the AnimationPlayer, at the

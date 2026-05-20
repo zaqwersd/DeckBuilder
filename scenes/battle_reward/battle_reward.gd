@@ -425,7 +425,7 @@ func _on_relic_reward_taken(relic: Relic, index: int) -> void:
 	## 3. 执行遗物效果（可能涉及异步UI流程，如无上宝石的选牌升级）
 	await relic_handler.add_relic_async(relic)
 	
-	## 4. 效果完成，确认领取并清除快照
+	## 4. 效果完成，确认领取（保留 entry 快照直至离开奖励栏/保存退出回滚）
 	run.take_battle_reward_relic(index)
 	run.save_data.clear_battle_reward_pending_staging()
 	run._save_run(false)

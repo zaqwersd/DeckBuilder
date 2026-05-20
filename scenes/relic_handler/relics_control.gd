@@ -34,8 +34,9 @@ func _ready() -> void:
 		relic_ui.free()
 
 	relics.child_order_changed.connect(_on_relics_child_order_changed)
-	if not get_viewport().size_changed.is_connected(_on_viewport_size_changed):
-		get_viewport().size_changed.connect(_on_viewport_size_changed)
+	var vp := get_viewport()
+	if vp != null and not vp.size_changed.is_connected(_on_viewport_size_changed):
+		vp.size_changed.connect(_on_viewport_size_changed)
 	resized.connect(_on_self_resized)
 	call_deferred("_apply_viewport_layout")
 
@@ -49,7 +50,10 @@ func _on_self_resized() -> void:
 
 
 func _get_viewport_bar_width() -> float:
-	return get_viewport().get_visible_rect().size.x
+	var vp := get_viewport()
+	if vp == null:
+		return 1280.0
+	return vp.get_visible_rect().size.x
 
 
 func _get_target_relics_strip_width() -> float:
@@ -72,7 +76,7 @@ func _calc_separation(strip_w: float, per_page: int) -> float:
 
 
 func _apply_viewport_layout() -> void:
-	if _layout_applying or not is_instance_valid(relics):
+	if _layout_applying or not is_instance_valid(relics) or not is_inside_tree():
 		return
 	_layout_applying = true
 

@@ -118,8 +118,10 @@ func _tab_style_for(cat: Category, active: bool) -> StyleBoxFlat:
 			s.bg_color = Color(0.0, 150.0 / 255.0, 136.0 / 255.0, 1.0) if active else Color(0.0, 118.0 / 255.0, 106.0 / 255.0, 1.0)
 			s.border_color = Color(0.55, 0.95, 0.88, 1.0) if active else Color(0.12, 0.35, 0.32, 1.0)
 		Category.COMMON:
-			s.bg_color = Color(97.0 / 255.0, 97.0 / 255.0, 97.0 / 255.0, 1.0) if active else Color(72.0 / 255.0, 72.0 / 255.0, 72.0 / 255.0, 1.0)
-			s.border_color = Color(0.75, 0.75, 0.75, 1.0) if active else Color(0.35, 0.35, 0.35, 1.0)
+			var pub_bg := CardVisualsBase.COMMON_PUBLIC_PANEL_BG
+			var pub_border := Card.RARITY_COLORS[Card.Rarity.SPECIAL]
+			s.bg_color = pub_bg if active else pub_bg.darkened(0.18)
+			s.border_color = pub_border if active else pub_border.darkened(0.35)
 	s.set_border_width_all(3 if active else 1)
 	return s
 

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3 uid="uid://b5esmqau3id5d"]
+
+[ext_resource type="Texture2D" uid="uid://cycrhvv5qih8c" path="res://art/lycoris.png" id="1_u3wrq"]
+[ext_resource type="Script" uid="uid://bp8t1y008yi7o" path="res://relics/lycoris.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "彼岸花"
+id = "lycoris"
+type = 1
+character_type = 2
+starter_relic = true
+icon = ExtResource("1_u3wrq")
+tooltip = "每场战斗开始时，将一张[color=#5dff7a]气息[/color]加入你的手牌。"

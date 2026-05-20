@@ -45,6 +45,11 @@ func get_tooltip() -> String:
 	return tooltip
 
 
+## 非 null 时：本场战斗首次 `start_turn`、抽牌前加入手牌最左侧（每场一次）。
+func create_battle_start_hand_card() -> Card:
+	return null
+
+
 func can_appear_as_reward(character: CharacterStats) -> bool:
 	if starter_relic:
 		return false

@@ -30,6 +30,11 @@ func enter() -> void:
 
 
 func exit() -> void:
+	if is_instance_valid(card_ui.hand_slot) and card_ui.hand_slot.has_meta(Hand.META_SLOT_DRAG_TEMP_EMPTY):
+		card_ui.hand_slot.remove_meta(Hand.META_SLOT_DRAG_TEMP_EMPTY)
+		var h := card_ui.hand_slot.get_parent()
+		if h is Hand:
+			(h as Hand)._request_reflow_hand_bar()
 	Events.card_drag_ended.emit(card_ui)
 
 

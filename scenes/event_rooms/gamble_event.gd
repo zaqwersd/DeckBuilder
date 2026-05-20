@@ -6,16 +6,22 @@ extends EventRoom
 
 
 func setup() -> void:
-	# 如果是重载，重置按钮为初始状态（场景快照已恢复金币）
+	_bind_event_buttons()
+	var low_gold := run_stats != null and run_stats.gold < 50
 	if _is_run_reload:
-		fifty_button.disabled = false
-		thirty_button.disabled = false
-		skip_button.visible = false
+		# 读档重进：恢复可点状态，并沿用与首次进入相同的显隐规则
+		fifty_button.disabled = low_gold
+		thirty_button.disabled = low_gold
+		skip_button.visible = low_gold
 	else:
-		skip_button.visible = run_stats.gold < 50
-		fifty_button.disabled = run_stats.gold < 50
-		thirty_button.disabled = run_stats.gold < 50
-	
+		skip_button.visible = low_gold
+		fifty_button.disabled = low_gold
+		thirty_button.disabled = low_gold
+
+
+func _bind_event_buttons() -> void:
+	if not is_instance_valid(fifty_button) or not is_instance_valid(thirty_button):
+		return
 	fifty_button.event_button_callback = bet_50
 	thirty_button.event_button_callback = bet_30
 

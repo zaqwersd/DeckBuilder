@@ -32,7 +32,12 @@ func _on_viewport_size_changed() -> void:
 
 
 func _fit_to_viewport() -> void:
-	var r := get_viewport().get_visible_rect()
+	if not is_inside_tree():
+		return
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	var r := viewport.get_visible_rect()
 	position = r.position
 	size = r.size
 

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" format=3 uid="uid://dtyhpgt3lv2kf"]
+
+[ext_resource type="Texture2D" uid="uid://bancigr4gbfvu" path="res://art/scent.png" id="1_68i80"]
+[ext_resource type="Script" uid="uid://di1k66nrhgjtc" path="res://common_cards/scent.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_snd"]
+
+[resource]
+script = ExtResource("2_script")
+id = "scent"
+type = 1
+rarity = 4
+exhausts = true
+retains = true
+card_name = "气息"
+icon = ExtResource("1_68i80")
+description = "[center]保留。[br]回复6点生命。[br]消耗。[/center]"
+tooltip_text = "[center]保留。[br]回复%s点生命。[br]消耗。[/center]"
+sound = ExtResource("3_snd")

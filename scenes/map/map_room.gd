@@ -15,6 +15,7 @@ const ICONS := {
 	Room.Type.SHOP: [preload("res://art/gold.png"), Vector2(0.6, 0.6)],
 	Room.Type.BOSS: [preload("res://art/tile_0105.png"), Vector2(1.25, 1.25)],
 	Room.Type.EVENT: [preload("res://art/rarity.png"), Vector2(0.9, 0.9)],
+	Room.Type.ELITE: [preload("res://art/tile_0118.png"), Vector2.ONE],
 }
 
 @onready var sprite_2d: Sprite2D = $Visuals/Sprite2D

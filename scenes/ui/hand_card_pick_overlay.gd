@@ -13,13 +13,19 @@ signal selection_finished(confirmed: bool, selected_cards: Array[Card])
 
 const DIM_COLOR := Color(0, 0, 0, 0.65098)
 const CARD_SPACING_PX := 220.0
-const FLY_SEC := 0.28
 ## 选满并显示「确定」时，手牌条在 HandHost 内相对基准位置下移
 const HAND_DROP_WHEN_CONFIRM_PX := 50.0
+## MainPanel 在 210×220 内边距 (12,29,4,8)：可见卡面中心比 CardUI 框中心偏 (+4, +10.5)
+const SELECTION_MAIN_PANEL_INSETS := Vector4(12.0, 29.0, 4.0, 8.0)
+## 抵消场景里 SelectionCenter.offset_top = 40 造成的整体下移
+const SELECTION_CENTER_LAYOUT_OFFSET := Vector2(-10.0, -40.0)
+## 在自动居中后再微调：负 x 向左，负 y 向上
+const SELECTION_BAND_FINE_NUDGE := Vector2(-10.0, -150.0)
 
 @onready var _root: Control = $Root
 @onready var _dim: ColorRect = $Root/Dim
 @onready var _title: Label = %TitleLabel
+@onready var _selection_center: CenterContainer = %SelectionCenter
 @onready var _selection_row: HBoxContainer = %SelectionRow
 @onready var _confirm_wrap: MarginContainer = %ConfirmWrap
 @onready var _confirm: Button = %ConfirmButton
@@ -44,12 +50,13 @@ var _saved_cui_visible: Dictionary = {}
 
 var _pointer_registered := false
 var _closed := false
-var _pending_layout_animate := false
+var _selection_band_nudge: Vector2 = Vector2.ZERO
 var _allow_cancel: bool = true  ## 是否允许ESC取消，默认为true
 var _direct_execute: bool = false  ## 是否直接执行（跳过选牌界面）
 
 
 func _ready() -> void:
+	add_to_group("hand_card_pick_overlay")
 	layer = 5
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	_dim.color = DIM_COLOR
@@ -182,6 +189,9 @@ func start_pick(
 		_finalize_teardown(false, [])
 		return
 
+	_selection_band_nudge = Vector2.ZERO
+	if is_instance_valid(_selection_center):
+		_selection_center.position = Vector2.ZERO
 	show()
 	_schedule_pick_column_layout(false)
 
@@ -267,7 +277,7 @@ func _select_card_ui(cui: CardUI) -> void:
 	_selection_row.add_child(cui)
 	cui.visible = true
 	_selected.append(cui)
-	cui.sync_gui_rect_to_pick_collision()
+	_layout_card_ui_in_selection_row(cui)
 	if _selected.size() >= _required:
 		call_deferred("_deferred_show_confirm_and_layout")
 	else:
@@ -308,10 +318,9 @@ func _deselect_card_ui(cui: CardUI) -> void:
 	_schedule_pick_column_layout(false)
 
 
-func _schedule_pick_column_layout(animate: bool) -> void:
+func _schedule_pick_column_layout(_animate: bool = false) -> void:
 	if _closed:
 		return
-	_pending_layout_animate = animate
 	call_deferred("_layout_pick_column_pass1")
 
 
@@ -324,27 +333,94 @@ func _layout_pick_column_pass1() -> void:
 func _layout_pick_column_execute() -> void:
 	if _closed or not is_instance_valid(_hand):
 		return
-	_layout_pick_column_impl(_pending_layout_animate)
+	_layout_pick_column_impl()
+	call_deferred("_deferred_align_selection_to_viewport_center")
 
 
-func _layout_pick_column_impl(animate: bool) -> void:
+## MainPanel 几何中心相对 CardUI 外框中心的偏移（应加在 card_visuals.position 上，往左上拉）。
+func _selection_visual_correction(card_size: Vector2) -> Vector2:
+	var panel_size := Vector2(
+		card_size.x - SELECTION_MAIN_PANEL_INSETS.x - SELECTION_MAIN_PANEL_INSETS.z,
+		card_size.y - SELECTION_MAIN_PANEL_INSETS.y - SELECTION_MAIN_PANEL_INSETS.w
+	)
+	var panel_center := Vector2(SELECTION_MAIN_PANEL_INSETS.x, SELECTION_MAIN_PANEL_INSETS.y) + panel_size * 0.5
+	return card_size * 0.5 - panel_center
+
+
+## 勾选区：用与场景一致的 210×220，CardVisuals 同尺寸，避免 0.7 手牌缩放后子节点仍 210×220 被裁切/挤扁。
+func _layout_card_ui_in_selection_row(cui: CardUI) -> void:
+	if not is_instance_valid(cui):
+		return
+	var sz := Hand.CARD_UI_BASE_SIZE
+	cui.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	cui.position = Vector2.ZERO
+	cui.scale = Vector2.ONE
+	cui.rotation = 0.0
+	cui.pivot_offset = Vector2.ZERO
+	cui.offset_left = 0.0
+	cui.offset_top = 0.0
+	cui.offset_right = sz.x
+	cui.offset_bottom = sz.y
+	cui.custom_minimum_size = sz
+	cui.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cui.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if not is_instance_valid(cui.card_visuals):
+		return
+	var cv := cui.card_visuals
+	cv.scale = Vector2.ONE
+	cv.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	cv.offset_left = 0.0
+	cv.offset_top = 0.0
+	cv.offset_right = sz.x
+	cv.offset_bottom = sz.y
+	cv.position = _selection_visual_correction(sz)
+
+
+func _apply_selection_center_layout_offset() -> void:
+	if not is_instance_valid(_selection_center):
+		return
+	_selection_center.offset_left = SELECTION_CENTER_LAYOUT_OFFSET.x
+	_selection_center.offset_top = SELECTION_CENTER_LAYOUT_OFFSET.y
+	_selection_center.offset_right = SELECTION_CENTER_LAYOUT_OFFSET.x
+	_selection_center.offset_bottom = SELECTION_CENTER_LAYOUT_OFFSET.y
+
+
+func _deferred_align_selection_to_viewport_center() -> void:
+	if _closed or _selected.is_empty() or not is_instance_valid(_selection_row) or not is_inside_tree():
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	var vp_c := vp.get_visible_rect().get_center()
+	var row_r := _selection_row.get_global_rect()
+	if row_r.size.x < 1.0 or row_r.size.y < 1.0:
+		return
+	_selection_band_nudge = vp_c - row_r.get_center() + SELECTION_BAND_FINE_NUDGE
+	if is_instance_valid(_selection_center):
+		_selection_center.position = _selection_band_nudge
+
+
+func _layout_pick_column_impl() -> void:
 	if _closed or not is_instance_valid(_hand):
 		return
+	_apply_selection_center_layout_offset()
 	_hand._request_reflow_hand_bar()
 
-	var cw := Hand.CARD_UI_BASE_SIZE.x * _hand.display_scale
-	_selection_row.add_theme_constant_override("separation", maxi(0, int(round(CARD_SPACING_PX - cw))))
+	_selection_row.add_theme_constant_override(
+		"separation",
+		maxi(0, int(round(CARD_SPACING_PX - Hand.CARD_UI_BASE_SIZE.x)))
+	)
 
 	for cui_sel in _selected:
 		if not is_instance_valid(cui_sel):
 			continue
-		if animate:
-			cui_sel.scale = Vector2(0.94, 0.94)
-			var tw := cui_sel.create_tween().set_trans(Tween.TRANS_CIRC).set_ease(Tween.EASE_OUT)
-			tw.tween_property(cui_sel, "scale", Vector2.ONE, FLY_SEC)
-		else:
-			cui_sel.scale = Vector2.ONE
-		cui_sel.sync_gui_rect_to_pick_collision()
+		_layout_card_ui_in_selection_row(cui_sel)
+	_sync_hand_pick_confirm_offset()
+
+
+func request_hand_global_realign() -> void:
+	if _closed or not visible or not is_instance_valid(_hand):
+		return
 	_sync_hand_pick_confirm_offset()
 
 
@@ -373,15 +449,15 @@ func _align_hand_to_saved_global_rect(extra_drop_y: float = 0.0) -> void:
 		return
 	var saved := _hand_saved_global_rect
 	saved.position.y += extra_drop_y
+	var sz := _hand.size
+	if sz.x < 1.0 or sz.y < 1.0:
+		sz = _hand.get_combined_minimum_size()
 	var saved_center_x := saved.position.x + saved.size.x * 0.5
 	var saved_bottom_y := saved.end.y
-	var cur := _hand.get_global_rect()
-	var delta := Vector2(
-		saved_center_x - (cur.position.x + cur.size.x * 0.5),
-		saved_bottom_y - cur.end.y
+	_hand.global_position = Vector2(
+		saved_center_x - sz.x * 0.5,
+		saved_bottom_y - sz.y
 	)
-	if not delta.is_zero_approx():
-		_hand.global_position += delta
 
 
 func _on_confirm_pressed() -> void:
@@ -429,6 +505,7 @@ func _save_hand_layout_for_pick() -> void:
 func _apply_hand_in_pick_overlay() -> void:
 	if not is_instance_valid(_hand):
 		return
+	_hand.begin_pick_overlay_external_positioning()
 	_hand.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_hand.anchor_left = 0.0
 	_hand.anchor_top = 0.0
@@ -437,12 +514,19 @@ func _apply_hand_in_pick_overlay() -> void:
 	_hand.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_hand.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_hand.scale = Vector2.ONE
+	_hand.offset_left = 0.0
+	_hand.offset_top = 0.0
+	_hand.offset_right = 0.0
+	_hand.offset_bottom = 0.0
 	_hand._request_reflow_hand_bar()
 	_schedule_hand_global_align(0.0)
 
 
 func _restore_hand_layout_after_pick() -> void:
-	if not is_instance_valid(_hand) or _hand_saved_layout.is_empty():
+	if not is_instance_valid(_hand):
+		return
+	_hand.end_pick_overlay_external_positioning()
+	if _hand_saved_layout.is_empty():
 		return
 	_hand.anchor_left = float(_hand_saved_layout.get("anchor_left", _hand.anchor_left))
 	_hand.anchor_top = float(_hand_saved_layout.get("anchor_top", _hand.anchor_top))

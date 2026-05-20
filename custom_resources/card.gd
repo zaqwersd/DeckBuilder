@@ -39,7 +39,7 @@ const RARITY_COLORS := {
 	Card.Rarity.COMMON: Color(0.9, 0.9, 0.9),
 	Card.Rarity.UNCOMMON: Color(129.0 / 255.0, 212.0 / 255.0, 250.0 / 255.0),
 	Card.Rarity.RARE: Color.GOLD,
-	Card.Rarity.SPECIAL: Color(243.0 / 255.0, 108.0 / 255.0, 96.0 / 255.0),
+	Card.Rarity.SPECIAL: Color(175.0 / 255.0, 191.0 / 255.0, 255.0 / 255.0),
 }
 
 ## 不可打出（如恶灵）
@@ -104,6 +104,8 @@ func should_show_intrinsic_keyword_in_combat_description() -> bool:
 @export var target: Target
 @export var cost: int
 @export var exhausts: bool = false
+## 保留：回合结束时仍留在手牌，不进入弃牌堆
+@export var retains: bool = false
 ## 虚无：回合结束时若仍在手牌中则消耗（不进弃牌堆），与打出消耗 exhausts 不同
 @export var ethereal: bool = false
 ## 固有：每场战斗开始时优先入手；弃牌堆洗回牌库后与普通牌相同（见词条说明）。
