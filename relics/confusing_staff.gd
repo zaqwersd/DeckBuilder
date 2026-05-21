@@ -9,7 +9,8 @@ func initialize_relic(owner: RelicUI) -> void:
 
 
 func deactivate_relic(_owner: RelicUI) -> void:
-	Events.player_hand_drawn.disconnect(_on_player_hand_drawn)
+	if Events.player_hand_drawn.is_connected(_on_player_hand_drawn):
+		Events.player_hand_drawn.disconnect(_on_player_hand_drawn)
 
 
 func _on_player_hand_drawn() -> void:

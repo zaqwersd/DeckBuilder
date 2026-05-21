@@ -129,8 +129,7 @@ func _get_default_background_for_act(act: int) -> Texture2D:
 			## 第1层使用专属背景图
 			return preload("res://art/act1_background.png")
 		2:
-			## 第2层使用默认背景图
-			return preload("res://art/background.png")
+			return preload("res://art/act2_background.png")
 		3:
 			## 第3层使用专属背景图
 			return preload("res://art/act3_background.png")

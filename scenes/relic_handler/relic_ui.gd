@@ -6,6 +6,7 @@ signal relic_pressed(relic: Relic)
 @export var relic: Relic : set = set_relic
 
 @onready var icon: TextureRect = $Icon
+@onready var subscript_label: Label = $Subscript
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 
 
@@ -20,6 +21,18 @@ func set_relic(new_relic: Relic) -> void:
 
 	relic = new_relic
 	icon.texture = relic.icon
+	set_counter_subscript(-1)
+
+
+## value < 0 时隐藏；否则在图标右下角显示下标计数（如木剑已打出技能牌数）。
+func set_counter_subscript(value: int) -> void:
+	if not is_node_ready():
+		await ready
+	if value < 0:
+		subscript_label.visible = false
+		return
+	subscript_label.visible = true
+	subscript_label.text = str(value)
 
 
 func flash() -> void:

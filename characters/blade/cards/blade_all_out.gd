@@ -16,11 +16,15 @@ func _formula_tier() -> int:
 
 
 func _damage_mult() -> int:
-	return 9 if _formula_tier() == 0 else 12
-
-
-func _damage_x_offset() -> int:
-	return 1 if _formula_tier() >= 2 else 0
+	match _formula_tier():
+		0:
+			return 9
+		1:
+			return 12
+		2:
+			return 16
+		_:
+			return 9
 
 
 func _formula_display_plain() -> String:
@@ -30,16 +34,16 @@ func _formula_display_plain() -> String:
 		1:
 			return "12X"
 		2:
-			return "12(X+1)"
+			return "16X"
 		_:
 			return "9X"
 
 
 func _intrinsic_damage_for_x(x: int) -> int:
-	return _damage_mult() * (x + _damage_x_offset())
+	return _damage_mult() * x
 
 
-## 整条公式（9X / 12X / 12(X+1)）同色：战斗一律白字；局外可升级黄字，满级默认字色。
+## 整条公式（9X / 12X / 16X）同色：战斗一律白字；局外可升级黄字，满级默认字色。
 func _formula_bbcode_colored() -> String:
 	var text := _formula_display_plain()
 	if is_visual_number_bbcode_combat():

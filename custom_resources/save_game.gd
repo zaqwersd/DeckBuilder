@@ -53,6 +53,8 @@ const PENDING_BATTLE_REWARD := 4
 @export var pending_room_kind: int = PENDING_NONE
 @export var pending_event_scene_path: String = ""
 @export var pending_event_key: String = ""
+## 事件内已消耗的选项（如 gamble 已下注），读档后保持按钮禁用。
+@export var pending_event_flags: PackedStringArray = PackedStringArray()
 @export var pending_card_template_ids: PackedStringArray = PackedStringArray()
 @export var pending_relic_ids: PackedStringArray = PackedStringArray()
 ## 商店：前 3 项卡牌价、后 3 项遗物价、再 3 项卡牌售出(0/1)、再 3 项遗物售出(0/1)。
@@ -64,6 +66,7 @@ const PENDING_BATTLE_REWARD := 4
 @export var battle_reward_relic_ids: PackedStringArray = PackedStringArray()
 @export var battle_reward_relics_taken: PackedInt32Array = PackedInt32Array()  ## 0/1 表示每个遗物是否已领取
 @export var battle_reward_cards_taken: bool = false  ## 卡牌奖励是否已领取
+@export var battle_reward_card_offered: bool = false  ## 是否有「添加新卡牌」按钮（未必已 roll 出三张）
 
 ## 战斗奖励：遗物领取暂存状态（类似营火的 pending 机制）
 const BATTLE_REWARD_PENDING_NONE := 0
@@ -93,6 +96,7 @@ func clear_room_pending() -> void:
 	pending_room_kind = PENDING_NONE
 	pending_event_scene_path = ""
 	pending_event_key = ""
+	pending_event_flags = PackedStringArray()
 	pending_card_template_ids = PackedStringArray()
 	pending_relic_ids = PackedStringArray()
 	pending_shop_ints = PackedInt32Array()
@@ -102,6 +106,7 @@ func clear_room_pending() -> void:
 	battle_reward_relic_ids = PackedStringArray()
 	battle_reward_relics_taken = PackedInt32Array()
 	battle_reward_cards_taken = false
+	battle_reward_card_offered = false
 	clear_battle_reward_entry_staging()
 	clear_battle_reward_pending_staging()
 
@@ -263,6 +268,13 @@ func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: 
 	ch.stats_changed.emit()
 	## 恢复RNG状态
 	RNG.set_from_save_data(battle_reward_pending_pre_rng_seed, battle_reward_pending_pre_rng_state)
+	## 遗物拾取未完成：该格奖励视为未领取
+	if (
+		battle_reward_pending_kind == BATTLE_REWARD_PENDING_RELIC
+		and battle_reward_pending_relic_index >= 0
+		and battle_reward_pending_relic_index < battle_reward_relics_taken.size()
+	):
+		battle_reward_relics_taken[battle_reward_pending_relic_index] = 0
 
 
 func save_data() -> void:

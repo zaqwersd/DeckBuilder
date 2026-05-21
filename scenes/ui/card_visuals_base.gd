@@ -102,8 +102,17 @@ func _ensure_description_meta_signals() -> void:
 	_desc_meta_signals_wired = true
 
 
+func _tooltip_anchor_control() -> Control:
+	var n: Node = self
+	while n != null:
+		if n is CardUI or n is CardMenuUI or n is ManaUI:
+			return n as Control
+		n = n.get_parent()
+	return self
+
+
 ## 描述区 meta 悬停开始
-## 注意：不再直接显示 tooltip，而是标记状态，由 Hand._process 统一显示所有词条
+## 手牌 CardUI：由 Hand._process 统一显示；列表 CardMenuUI / 升级流程：直接 show
 func _on_description_meta_hover_started(meta: Variant) -> void:
 	var s := str(meta)
 	if not s.begins_with(CardKeywordBbcode.META_KW_PREFIX):
@@ -117,11 +126,13 @@ func _on_description_meta_hover_started(meta: Variant) -> void:
 	var ids := get_keyword_tooltip_ids()
 	if not ids.is_empty():
 		if _upgrade_pick_bbcode_override.is_empty():
-			# 非升级模式：发送信号给 Hand 处理
-			Events.card_keyword_tooltip_refresh_requested.emit(self)
+			var anchor := _tooltip_anchor_control()
+			if anchor is CardMenuUI:
+				Events.card_keyword_tooltip_show.emit(ids, anchor)
+			else:
+				Events.card_keyword_tooltip_refresh_requested.emit(self)
 		else:
-			# 升级模式：直接显示 tooltip
-			Events.card_keyword_tooltip_show.emit(ids, self)
+			Events.card_keyword_tooltip_show.emit(ids, _tooltip_anchor_control())
 
 
 ## 描述区 meta 悬停结束

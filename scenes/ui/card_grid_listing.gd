@@ -11,7 +11,7 @@ func get_card_listing_grid() -> GridContainer:
 	return null
 
 
-func configure_listing_grid_defaults(grid: GridContainer) -> void:
+static func configure_listing_grid_defaults(grid: GridContainer) -> void:
 	if grid == null:
 		return
 	grid.columns = LISTING_GRID_COLUMNS

@@ -570,6 +570,8 @@ func _run_command_with_async(text: String) -> String:
 			return _cmd_card(arg)
 		"\\health":
 			return _cmd_health(arg)
+		"\\money":
+			return _cmd_money(arg)
 		"\\event":
 			return _cmd_event(arg)
 		"\\relic":
@@ -598,6 +600,8 @@ func _run_command(text: String) -> String:
 			return _cmd_card(arg)
 		"\\health":
 			return _cmd_health(arg)
+		"\\money":
+			return _cmd_money(arg)
 		"\\event":
 			return _cmd_event(arg)
 		"\\relic":
@@ -824,6 +828,22 @@ func _cmd_health(arg: String) -> String:
 	return "生命值已设为 %d / %d" % [cs.health, cs.max_health]
 
 
+func _cmd_money(arg: String) -> String:
+	if arg.is_empty():
+		return "\\money 需要整数，例如 100"
+	_ensure_run()
+	if _run == null or not is_instance_valid(_run):
+		return "未找到 Run，无法改金币。"
+	var rs: RunStats = _run.stats
+	if rs == null:
+		return "无 RunStats。"
+	if not arg.is_valid_int():
+		return "金币必须是整数：%s" % arg
+	var v := maxi(int(arg), 0)
+	rs.set_gold(v)
+	return "金币已设为 %d" % rs.gold
+
+
 func _cmd_win(_arg: String) -> String:
 	## 检查是否在战斗中
 	var bt := _current_battle()
@@ -843,7 +863,7 @@ func _cmd_win(_arg: String) -> String:
 func _cmd_help() -> String:
 	return """可用指令：
 战斗中：\\enemy <id> | \\card <位置> <id> [数量] | \\health <数值> | \\win
-任意时刻：\\event <id> | \\relic add/delete <id> | \\jump [on/off] | \\help"""
+任意时刻：\\money <数值> | \\event <id> | \\relic add/delete <id> | \\jump [on/off] | \\help"""
 
 
 var _jump_mode: bool = false

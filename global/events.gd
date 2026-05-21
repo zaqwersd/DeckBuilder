@@ -46,7 +46,7 @@ func is_combat_ended() -> bool:
 
 
 ## 全屏/叠层 UI：仅栈顶子树响应「几何悬停」类交互（手牌抬起、列表 1.1 倍、列表词条 tooltip）。
-## 由 CardPileView / CardUpgradeFlow / DeckPickerOverlay / CardRewards 等在显示时 push，关闭时 pop。
+## 由 CardPileView / CardUpgradeFlow / DeckPickerOverlay / CardPickOverlay 等在显示时 push，关闭时 pop。
 var _pointer_exclusive_stack: Array[Node] = []
 
 

@@ -99,7 +99,17 @@ func _process(_delta: float) -> void:
 		Events.card_keyword_tooltip_hide.emit()
 	var menus := gather_listing_card_menus_for_keyword_tooltip()
 	for m in menus:
-		if m != null and is_instance_valid(m.visuals) and m.visuals.is_description_kw_meta_active():
+		if m == null or not is_instance_valid(m) or not is_instance_valid(m.visuals):
+			continue
+		if not m.visuals.is_description_kw_meta_active():
+			continue
+		if not m.is_listing_pointer_over_visuals():
+			continue
+		var meta_ids := m.visuals.get_keyword_tooltip_ids()
+		if CardKeywordBbcode.is_combat_tooltip_anchor(m):
+			meta_ids = CardKeywordBbcode.without_color_tooltip_ids(meta_ids)
+		if not meta_ids.is_empty():
+			_sync_keyword_tooltip(m, meta_ids)
 			return
 	var winner: CardMenuUI = null
 	var tip_ids: PackedStringArray = PackedStringArray()

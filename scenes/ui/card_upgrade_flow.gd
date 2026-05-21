@@ -40,6 +40,8 @@ var _menu_left: CardMenuUI
 var _menu_right: CardMenuUI
 ## 与 call_deferred 的升级选词条 UI 配套：阶段切换后丢弃过期回调。
 var _pick_ui_stamp: int = 0
+## Phase1 刚打开时忽略同帧/误触的词条点击（避免选牌确认键连带进预览）。
+var _upgrade_pick_input_enabled := false
 ## 防止重复 push pointer_exclusive
 var _pointer_exclusive_pushed := false
 
@@ -152,6 +154,7 @@ func _apply_mode_ui() -> void:
 func _show_phase1() -> void:
 	_pick_ui_stamp += 1
 	_picked_track = ""
+	_upgrade_pick_input_enabled = false
 	_phase2.visible = false
 	_phase1.visible = true
 	for c: Node in _center_left.get_children():
@@ -177,9 +180,21 @@ func _show_phase1() -> void:
 	_menu_center.card = _card
 	_menu_center.use_listing_hover_zoom = false
 	_apply_upgrade_pick_or_normal_description(_menu_center, _card)
+	call_deferred("_enable_upgrade_pick_input")
+
+
+func _enable_upgrade_pick_input() -> void:
+	if not is_inside_tree():
+		return
+	## 等一帧，避免上一界面「确认」的按下/抬起落在本层词条 meta 上
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	_upgrade_pick_input_enabled = true
 
 
 func _show_phase2(track_id: String) -> void:
+	_upgrade_pick_input_enabled = true
 	_pick_ui_stamp += 1
 	if is_instance_valid(_menu_center) and is_instance_valid(_menu_center.visuals):
 		_disconnect_menu_upgrade_pick(_menu_center)
@@ -370,6 +385,8 @@ func _on_right_preview_meta_clicked(meta: Variant) -> void:
 
 
 func _on_upgrade_pick_meta_clicked(meta: Variant) -> void:
+	if not _upgrade_pick_input_enabled:
+		return
 	var s := str(meta)
 	const PFX := "ugp:"
 	if not s.begins_with(PFX):

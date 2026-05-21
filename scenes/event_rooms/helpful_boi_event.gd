@@ -7,10 +7,12 @@ extends EventRoom
 
 func setup() -> void:
 	_bind_event_buttons()
-	# 如果是重载，重置按钮为可用状态（场景快照已恢复角色状态）
+	var run := get_tree().get_first_node_in_group("run") as Run
+	var used_dup := run != null and run.has_event_flag("helpful_boi_dup")
+	var used_hp := run != null and run.has_event_flag("helpful_boi_hp")
 	if _is_run_reload:
-		duplicate_last_card_button.disabled = false
-		plus_max_hp_button.disabled = false
+		duplicate_last_card_button.disabled = used_dup
+		plus_max_hp_button.disabled = used_hp
 
 
 func _bind_event_buttons() -> void:
@@ -27,8 +29,10 @@ func duplicate_last_card() -> void:
 	var dup: Card = last.duplicate(true) as Card
 	var run := _find_run()
 	if run:
+		run.mark_event_flag("helpful_boi_dup")
 		run.play_deck_gain_card_visual(dup, Vector2.ZERO)
 	character_stats.deck.add_card(dup)
+	duplicate_last_card_button.disabled = true
 
 
 func _find_run() -> Run:
@@ -41,4 +45,8 @@ func _find_run() -> Run:
 
 
 func plus_max_hp() -> void:
+	var run := _find_run()
+	if run != null:
+		run.mark_event_flag("helpful_boi_hp")
 	character_stats.max_health += 5
+	plus_max_hp_button.disabled = true

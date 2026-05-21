@@ -73,19 +73,21 @@ func add_relic(relic: Relic, apply_persistent_pickup: bool = true) -> void:
 
 
 ## 异步添加遗物，等待 persistent_pickup 效果完成（用于战斗奖励领取流程）
+## 效果全部完成后再挂到遗物栏，避免「保存退出/读档」时栏上已有遗物但效果未确认。
 func add_relic_async(relic: Relic) -> void:
+	if has_relic(relic.id):
+		return
+	
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run:
+		await relic.apply_persistent_pickup_on_acquire_async(run)
+	
 	if has_relic(relic.id):
 		return
 	
 	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
 	relics.add_child(new_relic_ui)
 	new_relic_ui.relic = relic
-	
-	## 执行 persistent_pickup 效果（可能是异步的）
-	var run := get_tree().get_first_node_in_group("run") as Run
-	if run:
-		await relic.apply_persistent_pickup_on_acquire_async(run)
-	
 	new_relic_ui.relic.initialize_relic(new_relic_ui)
 
 
@@ -147,9 +149,6 @@ func clear_relics() -> void:
 func clear_relics_immediate() -> void:
 	var children := relics.get_children().duplicate()
 	for child in children:
-		var relic_ui := child as RelicUI
-		if not is_instance_valid(relic_ui):
-			continue
-		if relic_ui.relic:
-			relic_ui.relic.deactivate_relic(relic_ui)
-		relic_ui.free()
+		if is_instance_valid(child):
+			## 仅 free；deactivate 由 child_exiting_tree 触发一次，避免重复 disconnect
+			child.free()

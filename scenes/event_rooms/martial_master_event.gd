@@ -1,7 +1,7 @@
 extends EventRoom
 
+const EVENT_SCENE_PATH := "res://scenes/event_rooms/martial_master_event.tscn"
 const DECK_OVERLAY := preload("res://scenes/ui/deck_picker_overlay.tscn")
-const CARD_REWARDS := preload("res://scenes/ui/card_rewards.tscn")
 const CARD_MENU_UI := preload("res://scenes/ui/card_menu_ui.tscn")
 const IRON_WAVE := preload("res://common_cards/iron_wave.tres")
 const IRON_PREVIEW_SCALE := 0.8
@@ -80,16 +80,11 @@ func setup() -> void:
 	if option_strike_block.disabled and is_instance_valid(_iron_preview_menu):
 		_iron_preview_menu.hide()
 
-	# 重载时回到初始状态（场景快照已恢复角色状态）
+	## 读档/保存退出：Run 已清 pending 并关 overlay，只显示事件主界面（勿自动进选牌层）
 	if _is_run_reload:
-		var run_reload := get_tree().get_first_node_in_group("run") as Run
-		if run_reload != null:
-			run_reload.clear_room_pending_and_save()
 		return
 
-	var run := get_tree().get_first_node_in_group("run") as Run
-	if run != null and run.matches_pending_event(scene_file_path, "option_two"):
-		_restore_option_two_rewards(run.get_pending_card_templates())
+	## 同一会话内再次点「选项二」时由 _on_option_two_pick 用 pending 恢复同一批 roll
 
 
 func _wire_option_buttons() -> void:
@@ -198,16 +193,28 @@ func _on_option_strike_block() -> void:
 	call_deferred("_finish_event_and_leave")
 
 
+func _matches_option_two_pending(run: Run) -> bool:
+	return (
+		run.matches_pending_event(EVENT_SCENE_PATH, "option_two")
+		or run.matches_pending_event(scene_file_path, "option_two")
+	)
+
+
 func _on_option_two_pick() -> void:
 	if option_two_pick.disabled or character_stats == null:
 		return
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null and _matches_option_two_pending(run):
+		var restored := run.get_pending_card_templates()
+		if not restored.is_empty():
+			_show_option_two_rewards(restored)
+			return
 	var pair := _pick_attack_and_skill_templates()
 	if pair.is_empty():
 		return
-	var run := get_tree().get_first_node_in_group("run") as Run
 	if run != null:
 		var ids := PackedStringArray([pair[0].id, pair[1].id])
-		run.persist_event_card_reward_pending(scene_file_path, "option_two", ids)
+		run.persist_event_card_reward_pending(EVENT_SCENE_PATH, "option_two", ids)
 	_show_option_two_rewards(pair)
 
 
@@ -220,13 +227,27 @@ func _restore_option_two_rewards(pair: Array[Card]) -> void:
 func _show_option_two_rewards(pair: Array[Card]) -> void:
 	option_two_pick.disabled = true
 	option_strike_block.disabled = true
-	var rewards := CARD_REWARDS.instantiate() as CardRewards
-	rewards.rewards = pair
-	rewards.card_reward_selected.connect(_on_option_two_reward_picked, CONNECT_ONE_SHOT)
-	get_tree().root.add_child(rewards)
+	var overlay := CardPickOverlay.present(pair)
+	overlay.card_pick_selected.connect(_on_option_two_reward_selected, CONNECT_ONE_SHOT)
+	overlay.card_pick_skipped.connect(_on_option_two_reward_skipped, CONNECT_ONE_SHOT)
+	overlay.card_pick_back.connect(_on_option_two_reward_back, CONNECT_ONE_SHOT)
 
 
-func _on_option_two_reward_picked(menu: Variant, from_global: Vector2) -> void:
+func _on_option_two_reward_back() -> void:
+	option_two_pick.disabled = not _can_roll_attack_and_skill()
+	option_strike_block.disabled = not _deck_has_strike_and_block()
+
+
+func _on_option_two_reward_skipped() -> void:
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.clear_room_pending_and_save()
+	call_deferred("_finish_event_and_leave")
+
+
+func _on_option_two_reward_selected(menu: Variant, from_global: Vector2) -> void:
+	if menu == null or not (menu is CardMenuUI):
+		return
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run != null:
 		run.clear_room_pending_and_save()

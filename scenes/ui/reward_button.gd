@@ -9,6 +9,8 @@ extends Button
 
 ## 若为遗物奖励，悬停时显示遗物说明（与 RelicUI 一致）。
 var hover_relic: Relic
+## 为 false 时点击后不销毁自身（如「添加新卡牌」需先进入选牌层，返回后仍可再点）。
+@export var remove_on_press: bool = true
 
 
 func _ready() -> void:
@@ -46,4 +48,5 @@ func set_reward_text(new_text: String) -> void:
 func _on_pressed() -> void:
 	if hover_relic:
 		Events.relic_tooltip_hover_hide.emit()
-	queue_free()
+	if remove_on_press:
+		queue_free()

@@ -49,12 +49,14 @@ func populate_shop(is_reload: bool = false) -> void:
 
 	var run := get_tree().get_first_node_in_group("run") as Run
 	
-	# 重载时：生成全新的商店商品，不恢复售出状态
-	# 玩家状态（金币、遗物、卡牌）已由场景进入快照恢复
+	# 读档：玩家状态由场景进入快照恢复；商品列表用 pending，不重新 roll（售出标记不恢复，等同未购买）
 	if is_reload:
-		var shop_card_array := _pick_shop_cards()
-		var shop_relics_array := _pick_shop_relics()
-		_build_shop_slots(shop_card_array, shop_relics_array, PackedInt32Array(), PackedInt32Array(), true)
+		if run != null and run.can_restore_shop_pending():
+			_build_shop_from_pending(run.get_shop_pending_data(), true)
+			return
+		var shop_card_array_reload := _pick_shop_cards()
+		var shop_relics_array_reload := _pick_shop_relics()
+		_build_shop_slots(shop_card_array_reload, shop_relics_array_reload, PackedInt32Array(), PackedInt32Array(), true)
 		return
 
 	var shop_card_array := _pick_shop_cards()

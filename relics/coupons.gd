@@ -12,7 +12,8 @@ func initialize_relic(owner: RelicUI) -> void:
 
 
 func deactivate_relic(_owner: RelicUI) -> void:
-	Events.shop_entered.disconnect(add_shop_modifier)
+	if Events.shop_entered.is_connected(add_shop_modifier):
+		Events.shop_entered.disconnect(add_shop_modifier)
 
 
 func add_shop_modifier(shop: Shop) -> void:

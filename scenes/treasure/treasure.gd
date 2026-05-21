@@ -43,7 +43,7 @@ func _setup_background() -> void:
 		1:
 			bg_rect.texture = preload("res://art/act1_background.png")
 		2:
-			bg_rect.texture = preload("res://art/background.png")
+			bg_rect.texture = preload("res://art/act2_background.png")
 		3:
 			bg_rect.texture = preload("res://art/act3_background.png")
 		_:

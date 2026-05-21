@@ -8,10 +8,12 @@ extends EventRoom
 func setup() -> void:
 	_bind_event_buttons()
 	var low_gold := run_stats != null and run_stats.gold < 50
+	var run := get_tree().get_first_node_in_group("run") as Run
+	var used_fifty := run != null and run.has_event_flag("gamble_fifty")
+	var used_thirty := run != null and run.has_event_flag("gamble_thirty")
 	if _is_run_reload:
-		# 读档重进：恢复可点状态，并沿用与首次进入相同的显隐规则
-		fifty_button.disabled = low_gold
-		thirty_button.disabled = low_gold
+		fifty_button.disabled = low_gold or used_fifty
+		thirty_button.disabled = low_gold or used_thirty
 		skip_button.visible = low_gold
 	else:
 		skip_button.visible = low_gold
@@ -28,6 +30,9 @@ func _bind_event_buttons() -> void:
 
 func bet_30() -> void:
 	thirty_button.disabled = true
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.mark_event_flag("gamble_thirty")
 	run_stats.gold -= 50
 	
 	if RNG.instance.randf() < 0.3:
@@ -36,6 +41,9 @@ func bet_30() -> void:
 
 func bet_50() -> void:
 	fifty_button.disabled = true
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.mark_event_flag("gamble_fifty")
 	run_stats.gold -= 50
 	
 	if RNG.instance.randf() < 0.5:

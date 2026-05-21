@@ -1,7 +1,6 @@
 class_name BattleReward
 extends Control
 
-const CARD_REWARDS = preload("res://scenes/ui/card_rewards.tscn")
 const REWARD_BUTTON = preload("res://scenes/ui/reward_button.tscn")
 const GOLD_ICON := preload("res://art/gold.png")
 const GOLD_TEXT := "%s 金币"
@@ -22,6 +21,7 @@ var _gold_taken: bool = false
 var _relics: Array[Relic] = []
 var _relics_taken: Array[bool] = []
 var _cards_taken: bool = false
+var _card_reward_offered: bool = false
 var _card_reward_ids: PackedStringArray = PackedStringArray()
 var _is_reload: bool = false
 
@@ -57,7 +57,7 @@ func _setup_background() -> void:
 		1:
 			bg_rect.texture = preload("res://art/act1_background.png")
 		2:
-			bg_rect.texture = preload("res://art/background.png")
+			bg_rect.texture = preload("res://art/act2_background.png")
 		3:
 			bg_rect.texture = preload("res://art/act3_background.png")
 		_:
@@ -74,7 +74,10 @@ func save_initial_state() -> void:
 	for r: Relic in _relics:
 		relics_to_save.append(r)
 	print("[BattleReward] 保存初始奖励状态: gold=", _gold_amount, " relics=", relics_to_save.size())
-	run.persist_battle_reward_full_state(_gold_amount, relics_to_save)
+	## 保存并退出需能恢复「有选牌按钮」；普通战在点按钮前也要先 roll 并写入 pending，避免读档丢奖励。
+	if _card_reward_offered and _card_reward_ids.is_empty():
+		_roll_or_restore_card_rewards()
+	run.persist_battle_reward_full_state(_gold_amount, relics_to_save, _card_reward_offered)
 
 
 ## 从存档恢复奖励状态
@@ -88,6 +91,9 @@ func _restore_reward_state_from_save() -> void:
 	
 	_gold_amount = state.get("gold", 0)
 	_card_reward_ids = state.get("card_ids", PackedStringArray())
+	_card_reward_offered = bool(state.get("card_offered", false))
+	if not _card_reward_offered and not _card_reward_ids.is_empty():
+		_card_reward_offered = true
 	
 	## 恢复遗物列表（但强制标记为未领取，实现"回到战斗刚结束"的效果）
 	var relic_ids: PackedStringArray = state.get("relic_ids", PackedStringArray())
@@ -131,28 +137,30 @@ func _rebuild_reward_ui() -> void:
 			_add_relic_reward_button(_relics[i], i)
 	
 	## 添加卡牌奖励（如果未领取）
-	if not _cards_taken and not _card_reward_ids.is_empty():
+	if not _cards_taken and (_card_reward_offered or not _card_reward_ids.is_empty()):
 		_add_card_reward_button()
 
 
 ## 确保选牌界面关闭，回到奖励栏主界面
 ## 重进时不需要恢复选牌界面，只需确保奖励栏按钮显示正确
 func restore_card_picker_if_pending() -> void:
-	## 关闭任何可能存在的子界面（如选牌界面）
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.dismiss_reward_flow_overlays()
 	_close_any_sub_overlays()
 
 
 ## 关闭所有子覆盖层
 func _close_any_sub_overlays() -> void:
-	## 查找并关闭 CardRewards 子界面
-	for child: Node in get_children():
-		if child is CardRewards:
+	## 查找并关闭选牌层（通常挂在 root 上）
+	for child: Node in get_tree().root.get_children():
+		if child is CardPickOverlay:
 			child.queue_free()
 
 
 ## 用户点击卡牌奖励按钮时显示选牌界面
 func _show_card_rewards() -> void:
-	if not run_stats or not character_stats:
+	if not run_stats or not character_stats or _cards_taken:
 		return
 	var card_reward_array := _roll_or_restore_card_rewards()
 	if card_reward_array.is_empty():
@@ -172,6 +180,7 @@ func _add_gold_reward_button(amount: int) -> void:
 ## 添加卡牌奖励按钮
 func _add_card_reward_button() -> void:
 	var card_reward := REWARD_BUTTON.instantiate() as RewardButton
+	card_reward.remove_on_press = false
 	card_reward.reward_icon = CARD_ICON
 	card_reward.reward_text = CARD_TEXT
 	card_reward.pressed.connect(_show_card_rewards)
@@ -201,6 +210,7 @@ func add_gold_reward(amount: int) -> void:
 ## 公共方法：添加卡牌奖励
 func add_card_reward() -> void:
 	if not _is_reload:
+		_card_reward_offered = true
 		_add_card_reward_button()
 
 
@@ -236,10 +246,12 @@ func add_rare_card_reward() -> void:
 		for c: Card in selected_cards:
 			ids.append(c.id)
 		_card_reward_ids = ids
+		_card_reward_offered = true
 		run.persist_battle_reward_cards_pending(ids)
 	
 	## 添加稀有卡牌奖励按钮（使用标准描述）
 	var card_reward := REWARD_BUTTON.instantiate() as RewardButton
+	card_reward.remove_on_press = false
 	card_reward.reward_icon = CARD_ICON
 	card_reward.reward_text = CARD_TEXT  ## 使用标准常量"添加新卡牌"
 	card_reward.pressed.connect(_show_card_rewards)
@@ -356,17 +368,44 @@ func _roll_or_restore_card_rewards() -> Array[Card]:
 		for c: Card in card_reward_array:
 			ids.append(c.id)
 		_card_reward_ids = ids
+		_card_reward_offered = true
 		run.persist_battle_reward_cards_pending(ids)
 	return card_reward_array
 
 
 ## 打开卡牌奖励覆盖层
 func _open_card_rewards_overlay(card_reward_array: Array[Card]) -> void:
-	var card_rewards := CARD_REWARDS.instantiate() as CardRewards
-	card_rewards.card_reward_selected.connect(_on_card_reward_taken, CONNECT_ONE_SHOT)
-	card_rewards.rewards = card_reward_array
-	get_tree().root.add_child(card_rewards)
-	card_rewards.show()
+	var overlay := CardPickOverlay.present(card_reward_array)
+	overlay.card_pick_selected.connect(_on_card_reward_selected, CONNECT_ONE_SHOT)
+	overlay.card_pick_skipped.connect(_on_card_reward_skipped, CONNECT_ONE_SHOT)
+	overlay.card_pick_back.connect(_on_card_reward_back, CONNECT_ONE_SHOT)
+
+
+## 返回：未处理卡牌奖励，保留「添加新卡牌」入口与已 roll 的候选
+func _on_card_reward_back() -> void:
+	pass
+
+
+## 跳过：放弃本次卡牌奖励，视为已处理
+func _on_card_reward_skipped() -> void:
+	_resolve_card_reward_without_pick()
+
+
+func _on_card_reward_selected(picked_menu: Variant, from_global: Vector2) -> void:
+	if picked_menu == null or not (picked_menu is CardMenuUI):
+		return
+	_on_card_reward_taken(picked_menu, from_global)
+
+
+## 跳过或选牌后：标记已领取并刷新奖励栏（移除选牌按钮）
+func _resolve_card_reward_without_pick() -> void:
+	if _cards_taken:
+		return
+	_cards_taken = true
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.take_battle_reward_cards()
+	_rebuild_reward_ui()
 
 
 ## 金币奖励被领取
@@ -403,6 +442,7 @@ func _on_card_reward_taken(picked_menu: Variant, from_global: Vector2) -> void:
 		run.play_deck_gain_card_visual_with_pick(menu, from_global)
 	
 	character_stats.deck.add_card(card)
+	_rebuild_reward_ui()
 
 
 ## 遗物奖励被领取
@@ -424,6 +464,15 @@ func _on_relic_reward_taken(relic: Relic, index: int) -> void:
 	
 	## 3. 执行遗物效果（可能涉及异步UI流程，如无上宝石的选牌升级）
 	await relic_handler.add_relic_async(relic)
+	
+	## 玩家在效果 UI 中取消或保存退出：遗物未真正入栏，恢复该格奖励按钮
+	if not relic_handler.has_relic(relic.id):
+		if index >= 0 and index < _relics_taken.size():
+			_relics_taken[index] = false
+		_rebuild_reward_ui()
+		run.save_data.clear_battle_reward_pending_staging()
+		run._save_run(false)
+		return
 	
 	## 4. 效果完成，确认领取（保留 entry 快照直至离开奖励栏/保存退出回滚）
 	run.take_battle_reward_relic(index)
@@ -469,6 +518,7 @@ func _save_battle_reward_pending_snapshot(run: Run, relic_index: int) -> void:
 		sd.battle_reward_pending_pre_relic_ids.size(),
 		sd.battle_reward_pending_pre_deck_cards.size()
 	])
+	run._save_run(false)
 
 
 ## 返回按钮被按下

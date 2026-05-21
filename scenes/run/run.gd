@@ -136,10 +136,15 @@ func _load_run() -> void:
 			)
 		elif save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:
 			_setup_top_bar()
+			dismiss_reward_flow_overlays()
 			
 			## 回到「战斗刚结束、尚未领取任何奖励」的状态（精英/普通战/宝箱后续奖励栏均适用）
 			if save_data.battle_reward_entry_staged:
-				save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
+				if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
+					## 点了遗物但拾取效果未完成：回滚到点击前（含牌组/遗物栏），而非整屏奖励重置
+					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+				else:
+					save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
 				save_data.clear_battle_reward_pending_staging()
 				stats = save_data.run_stats
 				RNG.set_from_save_data(
@@ -191,6 +196,7 @@ func _load_run() -> void:
 					# 应用场景进入快照，恢复到刚进入场景时的状态
 					# 注意：apply_scene_entry_snapshot 已经恢复了遗物和RNG状态
 					save_data.apply_scene_entry_snapshot(character, relic_handler)
+					_reset_scene_room_reload_state()
 					_setup_top_bar()
 					_on_map_exited(save_data.last_room, true)
 				else:
@@ -198,12 +204,39 @@ func _load_run() -> void:
 					_load_relics_from_save_data()
 					_setup_top_bar()
 					RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+					## 旧存档可能无 scene_entry_snapshot，仍须清掉事件/商店内未完成的选牌 pending
+					_reset_scene_room_reload_state()
 					_on_map_exited(save_data.last_room, true)
 	else:
 		# 在地图上
 		_load_relics_from_save_data()
 		_setup_top_bar()
 		RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+
+
+## 关闭遗物拾取效果可能打开的模态层（无上宝石选牌/升级、三选一等）
+func dismiss_reward_flow_overlays() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	var to_close: Array[Node] = []
+	for node: Node in tree.root.get_children():
+		if (
+			node is DeckPickerOverlay
+			or node is HandCardPickOverlay
+			or node is CardPickOverlay
+			or node is CardUpgradeFlow
+		):
+			to_close.append(node)
+	for node: Node in to_close:
+		node.queue_free()
+
+
+## 读档/保存退出回到事件、商店、宝藏「刚进房间」：关掉选牌层并丢弃未完成 pending。
+func _reset_scene_room_reload_state() -> void:
+	dismiss_reward_flow_overlays()
+	if save_data != null:
+		save_data.clear_room_pending()
 
 
 func _load_relics_from_save_data() -> void:
@@ -373,6 +406,20 @@ func matches_pending_event(scene_path: String, key: String) -> bool:
 	)
 
 
+func has_event_flag(flag: String) -> bool:
+	if save_data == null or flag.is_empty():
+		return false
+	return save_data.pending_event_flags.has(flag)
+
+
+func mark_event_flag(flag: String) -> void:
+	if save_data == null or flag.is_empty():
+		return
+	if not save_data.pending_event_flags.has(flag):
+		save_data.pending_event_flags.append(flag)
+	_save_run(false)
+
+
 func get_pending_card_templates() -> Array[Card]:
 	if save_data == null:
 		return []
@@ -456,16 +503,52 @@ func _is_pending_battle_reward() -> bool:
 	return save_data != null and save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD
 
 
+## 商店/事件/宝藏等：保存并退出时回到进入房间时的状态（与读档 apply_scene_entry_snapshot 一致）
+func _persist_scene_room_quit_snapshot() -> void:
+	if save_data == null:
+		return
+	if not save_data.has_scene_entry_snapshot:
+		_reset_scene_room_reload_state()
+		_save_run(map.visible if map != null else false)
+		return
+	save_data.apply_scene_entry_snapshot(character, relic_handler)
+	stats = save_data.run_stats
+	RNG.set_from_save_data(save_data.scene_entry_rng_seed, save_data.scene_entry_rng_state)
+	_reset_scene_room_reload_state()
+	save_data.was_on_map = false
+	save_data.char_stats = character
+	save_data.current_deck = character.deck
+	save_data.current_health = character.health
+	save_data.relics = relic_handler.get_all_relics()
+	save_data.run_stats = stats
+	save_data.map_data = map.map_data.duplicate()
+	save_data.floors_climbed = map.floors_climbed
+	save_data.last_room = map.last_room
+	save_data.act_number = current_act
+	save_data.save_data()
+
+
+func _reset_shop_pending_sold_flags() -> void:
+	if save_data == null or save_data.pending_shop_ints.size() < 12:
+		return
+	var ints := save_data.pending_shop_ints.duplicate()
+	for i: int in range(6, 12):
+		ints[i] = 0
+	save_data.pending_shop_ints = ints
+
+
 ## 战斗奖励栏「保存并退出」：回到进入奖励栏时的状态，不保留未确认的领取
 func _persist_battle_reward_quit_snapshot() -> void:
 	if save_data == null:
 		return
+	dismiss_reward_flow_overlays()
 	if save_data.battle_reward_entry_staged:
 		save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
 		stats = save_data.run_stats
 	save_data.clear_battle_reward_pending_staging()
 	save_data.battle_reward_gold_taken = false
 	save_data.battle_reward_cards_taken = false
+	## 保留 card_offered / pending_card_template_ids，读档仍能看见选牌入口与同一批候选
 	for i: int in range(save_data.battle_reward_relics_taken.size()):
 		save_data.battle_reward_relics_taken[i] = 0
 	save_data.pending_room_kind = SaveGame.PENDING_BATTLE_REWARD
@@ -485,7 +568,7 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	save_data.save_data()
 
 
-func persist_battle_reward_full_state(gold: int, relics: Array[Relic]) -> void:
+func persist_battle_reward_full_state(gold: int, relics: Array[Relic], card_offered: bool = false) -> void:
 	if save_data == null:
 		return
 	save_data.run_stats = stats
@@ -496,6 +579,7 @@ func persist_battle_reward_full_state(gold: int, relics: Array[Relic]) -> void:
 		RNG.instance.seed,
 		RNG.instance.state
 	)
+	save_data.battle_reward_card_offered = card_offered
 	save_data.battle_reward_gold = gold
 	save_data.battle_reward_gold_taken = false
 	save_data.battle_reward_relic_ids = PackedStringArray()
@@ -542,6 +626,7 @@ func get_battle_reward_state() -> Dictionary:
 		"relics_taken": save_data.battle_reward_relics_taken,
 		"card_ids": save_data.pending_card_template_ids,
 		"cards_taken": save_data.battle_reward_cards_taken,
+		"card_offered": save_data.battle_reward_card_offered,
 	}
 
 
@@ -772,7 +857,10 @@ func _on_event_room_entered(room: Room, is_reload: bool = false) -> void:
 		## 回退到显示地图，避免游戏卡住
 		_show_map()
 		return
-	
+
+	if is_reload:
+		_reset_scene_room_reload_state()
+
 	var event_room: Node = _change_view(room.event_scene)
 	event_room.set("character_stats", character)
 	event_room.set("run_stats", stats)
@@ -853,12 +941,24 @@ func _on_battle_won() -> void:
 		_show_regular_battle_rewards()
 
 
+func _should_persist_scene_room_quit() -> bool:
+	if save_data == null or save_data.was_on_map:
+		return false
+	if save_data.combat_snapshot != null:
+		return false
+	if _is_pending_battle_reward():
+		return false
+	return save_data.has_scene_entry_snapshot
+
+
 func _on_pause_save_and_quit() -> void:
 	if save_data:
 		if _is_pending_battle_reward():
 			_persist_battle_reward_quit_snapshot()
+		elif _should_persist_scene_room_quit():
+			_persist_scene_room_quit_snapshot()
 		else:
-			# 如果在战斗中退出，保持现有的战斗快照（不覆盖为当前状态）
+			# 战斗中：保持 combat_snapshot，不覆盖为当前状态
 			_save_run(map.visible)
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
@@ -867,6 +967,8 @@ func _on_window_close_requested() -> void:
 	if save_data:
 		if _is_pending_battle_reward():
 			_persist_battle_reward_quit_snapshot()
+		elif _should_persist_scene_room_quit():
+			_persist_scene_room_quit_snapshot()
 		else:
 			_save_run(map.visible)
 

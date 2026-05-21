@@ -2,7 +2,7 @@ class_name WinScreen
 extends Control
 
 const MAIN_MENU_PATH = "res://scenes/ui/main_menu.tscn"
-const MESSAGE := "%s\n获胜！"
+const MESSAGE := "胜利！"
 
 @export var character: CharacterStats : set = set_character
 
@@ -12,7 +12,7 @@ const MESSAGE := "%s\n获胜！"
 
 func set_character(new_character: CharacterStats) -> void:
 	character = new_character
-	message.text = MESSAGE % character.character_name
+	message.text = MESSAGE
 	character_portrait.texture = character.portrait
 
 
