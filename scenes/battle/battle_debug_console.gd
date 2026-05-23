@@ -627,7 +627,7 @@ func _cmd_event(arg: String) -> String:
 
 func _cmd_enemy(arg: String) -> String:
 	if arg.is_empty():
-		return "\\enemy 需要参数，例如 tier_0_crab 或 res://battles/tier_1_bat_crab.tres"
+		return "\\enemy 需要参数，例如 crab 或 res://battles/shadow_samurai.tres"
 	var bt := _current_battle()
 	if bt == null:
 		return "当前不在战斗，无法切换敌人布局。"

@@ -183,14 +183,29 @@ func _show_phase1() -> void:
 	call_deferred("_enable_upgrade_pick_input")
 
 
+func _await_pointer_buttons_released() -> void:
+	while is_inside_tree():
+		var any_pressed := false
+		for btn: MouseButton in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
+			if Input.is_mouse_button_pressed(btn):
+				any_pressed = true
+				break
+		if not any_pressed:
+			break
+		await get_tree().process_frame
+
+
 func _enable_upgrade_pick_input() -> void:
 	if not is_inside_tree():
 		return
-	## 等一帧，避免上一界面「确认」的按下/抬起落在本层词条 meta 上
+	## 营火选牌「点选即确认」后，同一次点击的抬起常会落在刚出现的词条/费用上
+	await _await_pointer_buttons_released()
 	await get_tree().process_frame
-	if not is_inside_tree():
+	if not is_inside_tree() or not _phase1.visible:
 		return
 	_upgrade_pick_input_enabled = true
+	if is_instance_valid(_menu_center) and _card != null and _card.has_any_upgradeable_track():
+		_connect_menu_upgrade_pick_handlers(_menu_center, _card)
 
 
 func _show_phase2(track_id: String) -> void:
@@ -279,6 +294,13 @@ func _deferred_apply_upgrade_pick_ui(menu: CardMenuUI, for_card: Card, stamp: in
 	if not for_card.has_any_upgradeable_track():
 		return
 	menu.visuals.set_upgrade_pick_description(for_card.get_upgrade_pick_description_bbcode())
+
+
+func _connect_menu_upgrade_pick_handlers(menu: CardMenuUI, for_card: Card) -> void:
+	if menu == null or menu.visuals == null or for_card == null:
+		return
+	if not for_card.has_any_upgradeable_track():
+		return
 	_connect_desc_meta(menu.visuals.description_label)
 	_configure_cost_upgrade_pick_for_menu(menu, for_card)
 

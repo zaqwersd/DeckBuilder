@@ -73,6 +73,20 @@ custom_minimum_size = Vector2(160, 48)
 layout_mode = 2
 text = "取消"
 
+[node name="BackPick" type="Button" parent="VBox/BottomBar"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "返回"
+
+[node name="SkipPick" type="Button" parent="VBox/BottomBar"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "跳过"
+
 [node name="ConfirmPick" type="Button" parent="VBox/BottomBar"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(160, 48)

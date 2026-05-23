@@ -12,6 +12,12 @@ extends Resource
 ## 进入战斗时的RNG状态，确保重进后抽牌结果相同
 @export var rng_seed: int
 @export var rng_state: int
+## 影武士四回合循环（3 攻击随机序 + 强化）的 RNG 洗牌结果；读档回到战斗开始时，步进从第 1 个意图开始。
+@export var shadow_samurai_cycle_slots: PackedInt32Array = PackedInt32Array()
+
+
+func has_shadow_samurai_cycle() -> bool:
+	return shadow_samurai_cycle_slots.size() == 4
 
 ## 遗物资源缓存（静态，用于在创建和恢复之间传递）
 static var _relics_cache: Array[Relic] = []

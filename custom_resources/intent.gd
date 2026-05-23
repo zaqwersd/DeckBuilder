@@ -2,12 +2,14 @@ class_name Intent
 extends Resource
 
 ## 与策划一致：攻击/格挡/强化/减益/侵蚀（塞牌等污染牌库）
-enum Kind { ATTACK, BLOCK, BUFF, DEBUFF, EROSION, SLEEP }
+enum Kind { ATTACK, BLOCK, BUFF, DEBUFF, EROSION, SLEEP, STUNNED }
 
 ## 非攻击格挡时用此占位，不显示数字格
 const NUMBER_HIDDEN := -999999
 const SLEEP_PHRASE_PART := "这个回合不会行动"
 const SLEEP_PHRASE_FULL := "这个敌人这个回合不会行动。"
+const STUNNED_PHRASE_PART := "这个回合不会行动"
+const STUNNED_PHRASE_FULL := "这名敌人本回合无法行动。"
 
 @export var kind: Kind = Kind.ATTACK
 ## 留空则使用 `kind` 的默认占位图标（可在工程中替换默认图路径）
@@ -59,6 +61,8 @@ static func _default_icon_for_kind(k: Kind) -> Texture2D:
 			return preload("res://art/erosion.png") as Texture2D
 		Kind.SLEEP:
 			return preload("res://art/sleep.png") as Texture2D
+		Kind.STUNNED:
+			return preload("res://art/stunned.png") as Texture2D
 		_:
 			return preload("res://art/tile_0106.png") as Texture2D
 
@@ -67,11 +71,17 @@ static func _default_icon_for_kind(k: Kind) -> Texture2D:
 static func build_intent_hover_sentence(intents: Array[Intent]) -> String:
 	if intents.size() == 1:
 		var intent := intents[0]
-		if intent != null and intent.kind == Kind.SLEEP:
-			return SLEEP_PHRASE_FULL
+		if intent != null:
+			if intent.kind == Kind.STUNNED:
+				return STUNNED_PHRASE_FULL
+			if intent.kind == Kind.SLEEP:
+				return SLEEP_PHRASE_FULL
 	var parts: PackedStringArray = PackedStringArray()
 	for intent in intents:
 		if intent == null:
+			continue
+		if intent.kind == Kind.STUNNED:
+			parts.append(STUNNED_PHRASE_PART)
 			continue
 		if intent.kind == Kind.SLEEP:
 			parts.append(SLEEP_PHRASE_PART)
@@ -105,6 +115,8 @@ static func _phrase_for_intent_hover(intent: Intent) -> String:
 		Kind.EROSION:
 			return "对你的卡牌实施干扰"
 		Kind.SLEEP:
+			return ""
+		Kind.STUNNED:
 			return ""
 		_:
 			return ""

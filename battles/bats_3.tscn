@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_lkioa"]
+[ext_resource type="Resource" path="res://enemies/bat/bat_enemy.tres" id="2_set13"]
+
+[node name="Bats3" type="Node2D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1_lkioa")]
+position = Vector2(864, 171)
+stats = ExtResource("2_set13")
+
+[node name="Enemy2" parent="." instance=ExtResource("1_lkioa")]
+position = Vector2(1008, 270)
+stats = ExtResource("2_set13")
+
+[node name="Enemy3" parent="." instance=ExtResource("1_lkioa")]
+position = Vector2(864, 378)
+stats = ExtResource("2_set13")

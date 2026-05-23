@@ -44,14 +44,17 @@ func set_room(new_data: Room) -> void:
 
 
 func show_selected() -> void:
-	line_2d.modulate = Color.WHITE
+	line_2d.modulate = Color(1, 1, 1, 1)
+
+
+func hide_selected() -> void:
+	line_2d.modulate = Color(1, 1, 1, 0)
 
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if not available or not event.is_action_pressed("left_mouse"):
 		return
 
-	room.selected = true
 	clicked.emit(room)
 	animation_player.play("select")
 

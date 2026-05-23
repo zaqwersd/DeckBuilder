@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_tkkev"]
+[ext_resource type="Resource" path="res://enemies/crab/crab_enemy.tres" id="2_f3jel"]
+
+[node name="Crab" type="Node2D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1_tkkev")]
+position = Vector2(945, 373.5)
+stats = ExtResource("2_f3jel")

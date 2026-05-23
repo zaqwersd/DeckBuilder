@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SwiftStatus" format=3]
+
+[ext_resource type="Texture2D" path="res://art/swift.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/swift.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "swift"
+type = 2
+icon = ExtResource("1_icon")
+name = "迅捷"
+tooltip = "你每打出 3 张牌，该敌人会立刻执行一次意图并切换下一意图。"

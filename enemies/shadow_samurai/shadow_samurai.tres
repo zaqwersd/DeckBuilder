@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EnemyStats" format=3 uid="uid://dwy1mgaxtv2mj"]
+
+[ext_resource type="PackedScene" uid="uid://bh824whh3qob1" path="res://enemies/shadow_samurai/shadow_samurai_ai.tscn" id="1_ai"]
+[ext_resource type="Script" uid="uid://cqw6nj5nsigxl" path="res://custom_resources/enemy_stats.gd" id="1_stats"]
+[ext_resource type="Texture2D" uid="uid://b8es0iqpqs3ch" path="res://art/shadow_samurai.png" id="2_art"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("1_ai")
+art_scale = Vector2(4, 4)
+health_bar_width = 210
+status_bar_offset = Vector2(0, 80)
+intent_ui_offset = Vector2(0, 40)
+max_health = 297
+art = ExtResource("2_art")

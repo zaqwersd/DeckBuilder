@@ -187,11 +187,12 @@ func has_any_upgradeable_track() -> bool:
 	return false
 
 
-## 营火升级：不由玩家点选词条，随机升一条仍可升的轨（如生死流转）。
+## 营火升级：为 true 时跳过玩家点选、随机升一条仍可升的轨（默认 false）。
 func uses_random_upgrade_track_pick() -> bool:
 	return false
 
 
+## 战斗等效果：在目标卡牌上随机选一条仍可升的轨（如生死流转变化后的牌）。
 func pick_random_upgrade_track() -> String:
 	var upgradeable: Array[String] = []
 	for tid: String in get_upgrade_track_ids():
@@ -358,6 +359,8 @@ func play(targets: Array[Node], char_stats: CharacterStats, modifiers: ModifierH
 		if not char_stats.discard.cards.has(self):
 			char_stats.discard.add_card(self)
 
+	Events.card_play_finished.emit(self)
+
 
 func _execute_card_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	var wrap_attack := type == Type.ATTACK
@@ -375,6 +378,8 @@ func replay_effects_without_payment(targets: Array[Node], modifiers: ModifierHan
 		await _execute_card_effects(targets, modifiers)
 	else:
 		await _execute_card_effects(_get_targets(targets), modifiers)
+	## 故障机器等无费重放：效果结算完毕，与正常 play() 一样计入迅捷等「打牌完成」逻辑。
+	Events.card_play_finished.emit(self)
 
 
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:

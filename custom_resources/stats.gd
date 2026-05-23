@@ -20,10 +20,17 @@ signal healing_applied(amount: int)
 
 var health: int : set = set_health
 var block: int : set = set_block
+## take_damage 内部改血时避免 set_health 重复发出 unblocked_damage_taken
+var _suppress_unblocked_damage_signal := false
 
 
 func set_health(value : int) -> void:
+	var prev := health
 	health = clampi(value, 0, max_health)
+	if not _suppress_unblocked_damage_signal:
+		var lost := maxi(0, prev - health)
+		if lost > 0:
+			unblocked_damage_taken.emit(lost)
 	stats_changed.emit()
 
 
@@ -50,7 +57,9 @@ func take_damage(damage : int) -> void:
 	var initial_damage = damage
 	damage = clampi(damage - block, 0, damage)
 	block = clampi(block - initial_damage, 0, block)
+	_suppress_unblocked_damage_signal = true
 	health -= damage
+	_suppress_unblocked_damage_signal = false
 	if damage > 0:
 		unblocked_damage_taken.emit(damage)
 	stats_changed.emit()

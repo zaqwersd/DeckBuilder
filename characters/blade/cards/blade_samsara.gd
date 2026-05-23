@@ -22,10 +22,6 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 			return PackedInt32Array()
 
 
-func uses_random_upgrade_track_pick() -> bool:
-	return true
-
-
 func _intrinsic_cost() -> int:
 	return get_upgrade_value_at("cost")
 

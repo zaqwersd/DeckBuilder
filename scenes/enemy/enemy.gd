@@ -34,6 +34,7 @@ var _intent_hover_tooltip_active: bool = false
 
 var _art_frame_index: int = 0
 var _art_anim_timer: Timer
+var _awaiting_interrupt_action: bool = false
 
 
 func _ready() -> void:
@@ -167,6 +168,9 @@ func _disconnect_stats_combat_signals(s: Stats) -> void:
 
 func _on_stats_unblocked_damage_taken(amount: int) -> void:
 	FloatingCombatNumber.spawn(self, _floating_number_anchor_local(), amount, Color.WHITE)
+	var heavy_armor := HeavyArmorStatus.get_on_enemy(self)
+	if heavy_armor != null and amount > 0:
+		heavy_armor.register_damage_taken(amount, self)
 
 
 func _on_stats_healing_applied(amount: int) -> void:
@@ -229,6 +233,8 @@ func update_enemy() -> void:
 		await ready
 	
 	_apply_enemy_art()
+	if stats is EnemyStats:
+		sprite_2d.scale = stats.art_scale
 	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
 	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
 	_sync_hitbox_to_sprite()
@@ -388,6 +394,51 @@ func do_turn() -> void:
 	current_action.perform_action()
 
 
+## 玩家回合内迅捷等插队：播放意图动画并等待本次 `perform_action` 结束。
+func execute_current_action_interrupt() -> void:
+	if not is_instance_valid(current_action):
+		return
+	if is_instance_valid(intent_ui) and intent_ui.visible and intent_ui.get_child_count() > 0:
+		await intent_ui.play_action_start_animation()
+	if not is_instance_valid(self) or not is_instance_valid(current_action):
+		return
+	_awaiting_interrupt_action = true
+	if not Events.enemy_action_completed.is_connected(_on_interrupt_action_completed):
+		Events.enemy_action_completed.connect(_on_interrupt_action_completed)
+	current_action.perform_action()
+	if _awaiting_interrupt_action:
+		await _await_interrupt_action_done()
+	if Events.enemy_action_completed.is_connected(_on_interrupt_action_completed):
+		Events.enemy_action_completed.disconnect(_on_interrupt_action_completed)
+
+
+func _on_interrupt_action_completed(completed_enemy: Enemy) -> void:
+	if completed_enemy == self:
+		_awaiting_interrupt_action = false
+
+
+func _await_interrupt_action_done() -> void:
+	while _awaiting_interrupt_action and is_instance_valid(self) and not Events.is_combat_ended():
+		if is_instance_valid(stats) and stats.health <= 0:
+			_awaiting_interrupt_action = false
+			return
+		await Events.enemy_action_completed
+
+
+func _await_self_action_completed() -> void:
+	while is_instance_valid(self) and not Events.is_combat_ended():
+		if is_instance_valid(stats) and stats.health <= 0:
+			return
+		var completed_enemy: Enemy = await Events.enemy_action_completed
+		if completed_enemy == self:
+			return
+
+
+func _apply_damage_to_stats(damage: int) -> void:
+	if is_instance_valid(stats):
+		stats.take_damage(damage)
+
+
 func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	if stats.health <= 0:
 		return
@@ -402,9 +453,14 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 		if p:
 			modified_damage = OverwhelmingStatus.apply_multiplier_to_final_attack_damage(p, modified_damage)
 	
+	var damage_to_apply := modified_damage
+	var heavy_armor := HeavyArmorStatus.get_on_enemy(self)
+	if heavy_armor != null:
+		damage_to_apply = heavy_armor.clamp_incoming_damage(modified_damage, stats.block)
+	
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
-	tween.tween_callback(stats.take_damage.bind(modified_damage))
+	tween.tween_callback(_apply_damage_to_stats.bind(damage_to_apply))
 	tween.tween_interval(0.17)
 
 	tween.finished.connect(

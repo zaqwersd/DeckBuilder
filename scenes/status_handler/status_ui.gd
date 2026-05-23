@@ -36,8 +36,21 @@ func set_status(new_status: Status) -> void:
 	var is_overwhelming := status.id == "overwhelming"
 	var is_flow := status.id == "flow_state"
 	var is_alert := status.id == "alert"
+	var is_heavy_armor := status.id == "heavy_armor"
+	var is_swift := status.id == "swift"
 	
-	if is_alert and subscript != null:
+	if is_heavy_armor and superscript != null and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		var armor := status as HeavyArmorStatus
+		if armor:
+			superscript.visible = true
+			subscript.visible = true
+			superscript.text = str(armor.threshold_n)
+			subscript.text = str(armor.accumulated_m)
+			_apply_negative_value_color(superscript, armor.threshold_n)
+			_apply_negative_value_color(subscript, armor.accumulated_m)
+	elif is_alert and subscript != null:
 		duration.visible = false
 		stacks.visible = false
 		if superscript != null:
@@ -47,6 +60,16 @@ func set_status(new_status: Status) -> void:
 		var n := alert.turns_until_wake if alert else 0
 		subscript.text = str(n)
 		_apply_negative_value_color(subscript, n)
+	elif is_swift and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		if superscript != null:
+			superscript.visible = false
+		subscript.visible = true
+		var swift := status as SwiftStatus
+		var count := swift.cards_toward_trigger if swift else 0
+		subscript.text = str(count)
+		_apply_negative_value_color(subscript, count)
 	elif (is_overwhelming or is_flow) and superscript != null and subscript != null:
 		duration.visible = false
 		stacks.visible = false
@@ -85,8 +108,21 @@ func _on_status_changed() -> void:
 	var is_overwhelming := status.id == "overwhelming"
 	var is_flow := status.id == "flow_state"
 	var is_alert := status.id == "alert"
+	var is_heavy_armor := status.id == "heavy_armor"
+	var is_swift := status.id == "swift"
 	
-	if is_alert and subscript != null:
+	if is_heavy_armor and superscript != null and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		var armor := status as HeavyArmorStatus
+		if armor:
+			superscript.visible = true
+			subscript.visible = true
+			superscript.text = str(armor.threshold_n)
+			subscript.text = str(armor.accumulated_m)
+			_apply_negative_value_color(superscript, armor.threshold_n)
+			_apply_negative_value_color(subscript, armor.accumulated_m)
+	elif is_alert and subscript != null:
 		duration.visible = false
 		stacks.visible = false
 		if superscript != null:
@@ -96,6 +132,16 @@ func _on_status_changed() -> void:
 		var n := alert.turns_until_wake if alert else 0
 		subscript.text = str(n)
 		_apply_negative_value_color(subscript, n)
+	elif is_swift and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		if superscript != null:
+			superscript.visible = false
+		subscript.visible = true
+		var swift_status := status as SwiftStatus
+		var swift_count := swift_status.cards_toward_trigger if swift_status else 0
+		subscript.text = str(swift_count)
+		_apply_negative_value_color(subscript, swift_count)
 	elif is_overwhelming and superscript != null and subscript != null:
 		var overwhelming := status as OverwhelmingStatus
 		if overwhelming:

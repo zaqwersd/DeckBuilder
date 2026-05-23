@@ -6,6 +6,8 @@ const GOLD_ICON := preload("res://art/gold.png")
 const GOLD_TEXT := "%s 金币"
 const CARD_ICON := preload("res://art/rarity.png")
 const CARD_TEXT := "添加新卡牌"
+const UPGRADE_ICON := preload("res://art/tile_0074.png")
+const UPGRADE_TEXT := "升级一张牌"
 
 ## 卡牌奖励升级概率（已移至 RunStats 动态计算）
 
@@ -23,6 +25,9 @@ var _relics_taken: Array[bool] = []
 var _cards_taken: bool = false
 var _card_reward_offered: bool = false
 var _card_reward_ids: PackedStringArray = PackedStringArray()
+var _upgrade_offered: bool = false
+var _upgrade_taken: bool = false
+var _upgrade_flow_active: bool = false
 var _is_reload: bool = false
 
 
@@ -77,7 +82,9 @@ func save_initial_state() -> void:
 	## 保存并退出需能恢复「有选牌按钮」；普通战在点按钮前也要先 roll 并写入 pending，避免读档丢奖励。
 	if _card_reward_offered and _card_reward_ids.is_empty():
 		_roll_or_restore_card_rewards()
-	run.persist_battle_reward_full_state(_gold_amount, relics_to_save, _card_reward_offered)
+	run.persist_battle_reward_full_state(
+		_gold_amount, relics_to_save, _card_reward_offered, _upgrade_offered
+	)
 
 
 ## 从存档恢复奖励状态
@@ -94,6 +101,9 @@ func _restore_reward_state_from_save() -> void:
 	_card_reward_offered = bool(state.get("card_offered", false))
 	if not _card_reward_offered and not _card_reward_ids.is_empty():
 		_card_reward_offered = true
+	_upgrade_offered = bool(state.get("upgrade_offered", false))
+	if _upgrade_offered and not _deck_has_upgradeable_card():
+		_auto_skip_card_upgrade_reward_if_deck_fully_upgraded()
 	
 	## 恢复遗物列表（但强制标记为未领取，实现"回到战斗刚结束"的效果）
 	var relic_ids: PackedStringArray = state.get("relic_ids", PackedStringArray())
@@ -110,10 +120,12 @@ func _restore_reward_state_from_save() -> void:
 	## 强制重置所有奖励为未领取状态
 	_gold_taken = false
 	_cards_taken = false
+	_upgrade_taken = false
 	
 	## 重置存档中的领取状态，确保下次保存也是未领取
 	run.save_data.battle_reward_gold_taken = false
 	run.save_data.battle_reward_cards_taken = false
+	run.save_data.battle_reward_upgrade_taken = false
 	for i: int in range(run.save_data.battle_reward_relics_taken.size()):
 		run.save_data.battle_reward_relics_taken[i] = 0
 	
@@ -139,6 +151,11 @@ func _rebuild_reward_ui() -> void:
 	## 添加卡牌奖励（如果未领取）
 	if not _cards_taken and (_card_reward_offered or not _card_reward_ids.is_empty()):
 		_add_card_reward_button()
+	
+	if not _upgrade_taken and _upgrade_offered and _deck_has_upgradeable_card():
+		_add_card_upgrade_reward_button()
+	elif _upgrade_offered and not _deck_has_upgradeable_card():
+		_auto_skip_card_upgrade_reward_if_deck_fully_upgraded()
 
 
 ## 确保选牌界面关闭，回到奖励栏主界面
@@ -156,6 +173,9 @@ func _close_any_sub_overlays() -> void:
 	for child: Node in get_tree().root.get_children():
 		if child is CardPickOverlay:
 			child.queue_free()
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.dismiss_reward_flow_overlays()
 
 
 ## 用户点击卡牌奖励按钮时显示选牌界面
@@ -205,6 +225,169 @@ func add_gold_reward(amount: int) -> void:
 	_gold_taken = false
 	if not _is_reload:
 		_add_gold_reward_button(amount)
+
+
+func _deck_has_upgradeable_card() -> bool:
+	if character_stats == null or character_stats.deck == null:
+		return false
+	for c: Card in character_stats.deck.cards:
+		if c != null and c.has_any_upgradeable_track():
+			return true
+	return false
+
+
+## 公共方法：添加「升级一张牌」奖励（精英战）
+func add_card_upgrade_reward() -> void:
+	if not _deck_has_upgradeable_card():
+		return
+	_upgrade_offered = true
+	if not _is_reload:
+		_add_card_upgrade_reward_button()
+
+
+func _add_card_upgrade_reward_button() -> void:
+	var upgrade_reward := REWARD_BUTTON.instantiate() as RewardButton
+	upgrade_reward.remove_on_press = false
+	upgrade_reward.reward_icon = UPGRADE_ICON
+	upgrade_reward.reward_text = UPGRADE_TEXT
+	upgrade_reward.pressed.connect(_on_card_upgrade_reward_pressed)
+	rewards.add_child.call_deferred(upgrade_reward)
+
+
+func _on_card_upgrade_reward_pressed() -> void:
+	if _upgrade_taken or _upgrade_flow_active or not character_stats:
+		return
+	_show_card_upgrade_flow()
+
+
+func _auto_skip_card_upgrade_reward_if_deck_fully_upgraded() -> void:
+	if _upgrade_taken or not _upgrade_offered:
+		return
+	_resolve_upgrade_reward_skipped()
+
+
+func _bind_deck_picker_nav_wait(overlay: DeckPickerOverlay, captured: Dictionary) -> void:
+	if not is_instance_valid(overlay):
+		return
+	var on_confirm := func(indices: Array) -> void:
+		captured["kind"] = "confirm"
+		captured["indices"] = indices
+	overlay.pick_confirmed.connect(on_confirm, CONNECT_ONE_SHOT)
+	overlay.pick_back.connect(func() -> void: captured["kind"] = "back", CONNECT_ONE_SHOT)
+
+
+func _wait_deck_picker_nav(overlay: DeckPickerOverlay, captured: Dictionary) -> void:
+	while (
+		String(captured.get("kind", "")) == ""
+		and is_instance_valid(overlay)
+		and overlay.is_inside_tree()
+	):
+		await get_tree().process_frame
+
+
+func _close_upgrade_reward_overlays(run: Run, overlay: Node) -> void:
+	if is_instance_valid(overlay):
+		overlay.queue_free()
+	if run != null:
+		run.dismiss_reward_flow_overlays()
+
+
+func _show_card_upgrade_flow() -> void:
+	if not character_stats or character_stats.deck == null:
+		return
+	if not _deck_has_upgradeable_card():
+		_auto_skip_card_upgrade_reward_if_deck_fully_upgraded()
+		return
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null:
+		return
+	_upgrade_flow_active = true
+	var overlay := DeckPickerOverlay.open_on_tree(get_tree())
+	overlay.setup(
+		character_stats.deck,
+		1,
+		Callable(),
+		"点击卡牌进入升级。",
+		PackedStringArray(),
+		Callable(),
+		Callable(self, "_deck_has_upgradeable_card_for_pick"),
+		true,
+		true,
+		true
+	)
+	var captured: Dictionary = {"kind": "", "indices": []}
+	while true:
+		captured["kind"] = ""
+		captured["indices"] = []
+		if not is_instance_valid(overlay) or not overlay.is_inside_tree():
+			break
+		_bind_deck_picker_nav_wait(overlay, captured)
+		await _wait_deck_picker_nav(overlay, captured)
+		var kind: String = String(captured.get("kind", ""))
+		if kind == "back":
+			_upgrade_flow_active = false
+			_close_upgrade_reward_overlays(run, overlay)
+			return
+		if kind != "confirm":
+			_upgrade_flow_active = false
+			_close_upgrade_reward_overlays(run, overlay)
+			return
+		var indices: Array = captured.get("indices", [])
+		if indices.is_empty():
+			_upgrade_flow_active = false
+			_close_upgrade_reward_overlays(run, overlay)
+			return
+		var idx := int(indices[0])
+		## 点选即确认（defer_free）：选牌层保持打开，升级层叠在上
+		var flow := CardUpgradeFlow.open_on_tree(get_tree())
+		flow.begin(character_stats.deck, idx)
+		var result: int = await flow.finished
+		if result == CardUpgradeFlow.Result.BACK_TO_PICK:
+			if is_instance_valid(overlay):
+				overlay.clear_selection()
+			continue
+		_close_upgrade_reward_overlays(run, overlay)
+		if result == CardUpgradeFlow.Result.CANCELLED:
+			_upgrade_flow_active = false
+			return
+		if result == CardUpgradeFlow.Result.UPGRADED:
+			_resolve_card_upgrade_reward(idx)
+			_upgrade_flow_active = false
+			return
+	_upgrade_flow_active = false
+
+
+func _deck_has_upgradeable_card_for_pick(c: Card) -> bool:
+	return c != null and c.has_any_upgradeable_track()
+
+
+func _resolve_upgrade_reward_skipped() -> void:
+	if _upgrade_taken:
+		return
+	_upgrade_taken = true
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.take_battle_reward_upgrade()
+	_rebuild_reward_ui()
+
+
+func _resolve_card_upgrade_reward(deck_index: int) -> void:
+	if _upgrade_taken:
+		return
+	_upgrade_taken = true
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		run.take_battle_reward_upgrade()
+		if (
+			character_stats != null
+			and character_stats.deck != null
+			and deck_index >= 0
+			and deck_index < character_stats.deck.cards.size()
+		):
+			await run.await_deck_gain_card_visual(
+				character_stats.deck.cards[deck_index], Vector2.ZERO
+			)
+	_rebuild_reward_ui()
 
 
 ## 公共方法：添加卡牌奖励

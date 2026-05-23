@@ -111,6 +111,10 @@ func _on_enemy_died(enemy: Enemy) -> void:
 
 
 func _on_enemy_action_completed(enemy: Enemy) -> void:
+	## 玩家回合内的插队行动（如影武士迅捷）也会 emit 此信号，但不在 acting_enemies 中；
+	## 若仍走 END_OF_TURN 推进，会误触发 enemy_turn_ended → 玩家抽牌/重置能量。
+	if not acting_enemies.has(enemy):
+		return
 	enemy.status_handler.apply_statuses_by_type(Status.Type.END_OF_TURN)
 
 

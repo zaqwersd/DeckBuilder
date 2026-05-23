@@ -124,6 +124,8 @@ signal card_drag_ended(card_ui: CardUI)
 signal card_aim_started(card_ui: CardUI)
 signal card_aim_ended(card_ui: CardUI)
 signal card_played(card: Card)
+## 单张牌 play() 内效果全部结算完毕（含选牌、延迟消耗/弃牌等）后发出。
+signal card_play_finished(card: Card)
 ## 牌进入消耗堆（打出消耗、虚无、被效果消耗等统一入口）。
 signal card_exhausted(card: Card)
 ## 玩家状态栏层数变化（如巨剑）：手牌需刷新攻击牌实际耗能显示。

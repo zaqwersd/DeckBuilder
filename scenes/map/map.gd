@@ -51,13 +51,14 @@ func generate_new_map(act: int = 1) -> void:
 func load_map(map: Array[Array], floors_completed: int, last_room_climbed: Room) -> void:
 	floors_climbed = floors_completed
 	map_data = map
-	last_room = last_room_climbed
+	last_room = SaveGame.resolve_room_in_map_data(map_data, last_room_climbed)
 	create_map()
 	
 	if floors_climbed > 0:
 		unlock_next_rooms()
 	else:
 		unlock_floor()
+	reconcile_visited_flags()
 
 
 func create_map() -> void:
@@ -118,11 +119,26 @@ func unlock_floor(which_floor: int = floors_climbed) -> void:
 
 
 func unlock_next_rooms() -> void:
+	last_room = SaveGame.resolve_room_in_map_data(map_data, last_room)
 	if last_room == null:
+		if floors_climbed <= 0:
+			unlock_floor(0)
+		return
+	if last_room.next_rooms.is_empty():
 		return
 	for map_room: MapRoom in rooms.get_children():
-		if last_room.next_rooms.has(map_room.room):
-			map_room.available = true
+		if map_room.room == null:
+			continue
+		for next_room: Room in last_room.next_rooms:
+			if map_room.room == next_room:
+				map_room.available = true
+				break
+			if (
+				map_room.room.row == next_room.row
+				and map_room.room.column == next_room.column
+			):
+				map_room.available = true
+				break
 
 
 func show_map() -> void:
@@ -143,8 +159,21 @@ func _spawn_room(room: Room) -> void:
 	new_map_room.selected.connect(_on_map_room_selected)
 	_connect_lines(room)
 	
-	if room.selected and room.row < floors_climbed:
+	if room.selected:
 		new_map_room.show_selected()
+
+
+func refresh_visited_markers() -> void:
+	for map_room: MapRoom in rooms.get_children():
+		if map_room.room != null and map_room.room.selected:
+			map_room.show_selected()
+		else:
+			map_room.hide_selected()
+
+
+func reconcile_visited_flags() -> void:
+	last_room = SaveGame.reconcile_map_visited_flags_on(map_data, last_room, floors_climbed)
+	refresh_visited_markers()
 
 
 func _connect_lines(room: Room) -> void:
@@ -165,6 +194,11 @@ func _on_map_room_clicked(room: Room) -> void:
 
 
 func _on_map_room_selected(room: Room) -> void:
+	room = SaveGame.resolve_room_in_map_data(map_data, room)
+	if room == null:
+		return
+	room.selected = true
 	last_room = room
 	floors_climbed += 1
+	refresh_visited_markers()
 	Events.map_exited.emit(room)

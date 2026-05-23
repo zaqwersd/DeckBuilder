@@ -6,10 +6,15 @@ const BATTLE_MODAL_CANVAS_LAYER := 6
 
 ## indices 为卡组真实下标，升序，元素为 int；取消时发空数组（用 Array 避免与 await 的 [] 类型冲突）
 signal pick_confirmed(indices: Array)
+## 战斗奖励式底栏：取消则回到奖励栏且保留本项奖励（与 CardPickOverlay 的「返回」一致）。
+signal pick_back
+signal pick_skipped
 
 @onready var grid: GridContainer = %Cards
 @onready var confirm: Button = %ConfirmPick
 @onready var cancel: Button = %CancelPick
+@onready var back: Button = %BackPick
+@onready var skip: Button = %SkipPick
 @onready var hint: Label = %HintLabel
 
 var _deck: CardPile
@@ -25,6 +30,8 @@ var _picker_card_ok: Callable = Callable()
 var _auto_confirm_single_pick := false
 ## 为 true：确认选牌后只发信号不 queue_free，由调用方在后续 UI（如升级流程）结束后再释放本层。
 var _defer_free_after_pick := false
+## 为 true：底栏为「返回」「跳过」（与 CardPickOverlay 一致），否则为单按钮「取消」。
+var _reward_back_skip_nav := false
 
 
 func get_card_listing_grid() -> GridContainer:
@@ -38,6 +45,10 @@ func _ready() -> void:
 	confirm.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	confirm.pressed.connect(_on_confirm)
 	cancel.pressed.connect(_on_cancel)
+	if back:
+		back.pressed.connect(_on_back_pressed)
+	if skip:
+		skip.pressed.connect(_on_skip_pressed)
 
 
 func _enter_tree() -> void:
@@ -59,7 +70,8 @@ func setup(
 	confirm_enabled: Callable = Callable(),
 	picker_card_ok: Callable = Callable(),
 	auto_confirm_single_pick: bool = false,
-	defer_free_after_pick: bool = false
+	defer_free_after_pick: bool = false,
+	reward_back_skip_nav: bool = false
 ) -> void:
 	_deck = deck
 	_picks_required = maxi(1, picks_required)
@@ -69,9 +81,27 @@ func setup(
 	_picker_card_ok = picker_card_ok
 	_auto_confirm_single_pick = auto_confirm_single_pick
 	_defer_free_after_pick = defer_free_after_pick
-	if hint and not hint_text.is_empty():
-		hint.text = hint_text
+	_reward_back_skip_nav = reward_back_skip_nav
+	_apply_bottom_bar_style()
+	if hint:
+		if not hint_text.is_empty():
+			hint.text = hint_text
+		elif _auto_confirm_single_pick and _reward_back_skip_nav:
+			hint.text = "点击卡牌进入升级。"
 	_populate()
+
+
+func _apply_bottom_bar_style() -> void:
+	if not is_node_ready():
+		await ready
+	if cancel:
+		cancel.visible = not _reward_back_skip_nav
+	if back:
+		back.visible = _reward_back_skip_nav
+		if _reward_back_skip_nav:
+			back.text = "取消"
+	if skip:
+		skip.visible = false
 
 
 func _id_is_allowed(card_id: String) -> bool:
@@ -195,6 +225,16 @@ func _on_confirm() -> void:
 
 func _on_cancel() -> void:
 	pick_confirmed.emit([])
+	queue_free()
+
+
+func _on_back_pressed() -> void:
+	pick_back.emit()
+	queue_free()
+
+
+func _on_skip_pressed() -> void:
+	pick_skipped.emit()
 	queue_free()
 
 

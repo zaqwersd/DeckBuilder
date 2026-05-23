@@ -73,8 +73,10 @@ func _save_run(was_on_map: bool) -> void:
 	save_data.rng_seed = RNG.instance.seed
 	save_data.rng_state = RNG.instance.state
 	save_data.run_stats = stats
-	save_data.last_room = map.last_room
-	save_data.map_data = map.map_data.duplicate()
+	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
+	save_data.last_room = SaveGame.resolve_room_in_map_data(save_data.map_data, map.last_room)
+	SaveGame.sync_saved_map_room_refs(save_data)
+	SaveGame.reconcile_map_visited_flags(save_data)
 	save_data.floors_climbed = map.floors_climbed
 	save_data.was_on_map = was_on_map
 	save_data.act_number = current_act
@@ -92,6 +94,7 @@ func _save_run(was_on_map: bool) -> void:
 	if save_data.combat_snapshot != null and not was_on_map:
 		# 战斗中：保留快照中的状态，但遗物仍然需要保存（战斗中遗物不会改变）
 		save_data.relics = current_relics
+		_sync_combat_snapshot_shadow_samurai_from_battle()
 	else:
 		# 正常保存：没有快照或在地图上
 		save_data.char_stats = character
@@ -307,6 +310,7 @@ func _show_map() -> void:
 		current_view.get_child(0).queue_free()
 
 	map.show_map()
+	map.reconcile_visited_flags()
 	map.unlock_next_rooms()
 	
 	if save_data:
@@ -521,9 +525,11 @@ func _persist_scene_room_quit_snapshot() -> void:
 	save_data.current_health = character.health
 	save_data.relics = relic_handler.get_all_relics()
 	save_data.run_stats = stats
-	save_data.map_data = map.map_data.duplicate()
+	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
 	save_data.floors_climbed = map.floors_climbed
-	save_data.last_room = map.last_room
+	save_data.last_room = SaveGame.resolve_room_in_map_data(save_data.map_data, map.last_room)
+	SaveGame.sync_saved_map_room_refs(save_data)
+	SaveGame.reconcile_map_visited_flags(save_data)
 	save_data.act_number = current_act
 	save_data.save_data()
 
@@ -548,6 +554,7 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	save_data.clear_battle_reward_pending_staging()
 	save_data.battle_reward_gold_taken = false
 	save_data.battle_reward_cards_taken = false
+	save_data.battle_reward_upgrade_taken = false
 	## 保留 card_offered / pending_card_template_ids，读档仍能看见选牌入口与同一批候选
 	for i: int in range(save_data.battle_reward_relics_taken.size()):
 		save_data.battle_reward_relics_taken[i] = 0
@@ -561,14 +568,21 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	save_data.current_health = character.health
 	save_data.relics = relic_handler.get_all_relics()
 	save_data.run_stats = stats
-	save_data.map_data = map.map_data.duplicate()
+	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
 	save_data.floors_climbed = map.floors_climbed
-	save_data.last_room = map.last_room
+	save_data.last_room = SaveGame.resolve_room_in_map_data(save_data.map_data, map.last_room)
+	SaveGame.sync_saved_map_room_refs(save_data)
+	SaveGame.reconcile_map_visited_flags(save_data)
 	save_data.act_number = current_act
 	save_data.save_data()
 
 
-func persist_battle_reward_full_state(gold: int, relics: Array[Relic], card_offered: bool = false) -> void:
+func persist_battle_reward_full_state(
+	gold: int,
+	relics: Array[Relic],
+	card_offered: bool = false,
+	upgrade_offered: bool = false
+) -> void:
 	if save_data == null:
 		return
 	save_data.run_stats = stats
@@ -580,6 +594,8 @@ func persist_battle_reward_full_state(gold: int, relics: Array[Relic], card_offe
 		RNG.instance.state
 	)
 	save_data.battle_reward_card_offered = card_offered
+	save_data.battle_reward_upgrade_offered = upgrade_offered
+	save_data.battle_reward_upgrade_taken = false
 	save_data.battle_reward_gold = gold
 	save_data.battle_reward_gold_taken = false
 	save_data.battle_reward_relic_ids = PackedStringArray()
@@ -615,6 +631,13 @@ func take_battle_reward_cards() -> void:
 	_save_run(false)
 
 
+func take_battle_reward_upgrade() -> void:
+	if save_data == null:
+		return
+	save_data.battle_reward_upgrade_taken = true
+	_save_run(false)
+
+
 ## 获取战斗奖励状态
 func get_battle_reward_state() -> Dictionary:
 	if save_data == null:
@@ -627,6 +650,8 @@ func get_battle_reward_state() -> Dictionary:
 		"card_ids": save_data.pending_card_template_ids,
 		"cards_taken": save_data.battle_reward_cards_taken,
 		"card_offered": save_data.battle_reward_card_offered,
+		"upgrade_offered": save_data.battle_reward_upgrade_offered,
+		"upgrade_taken": save_data.battle_reward_upgrade_taken,
 	}
 
 
@@ -694,6 +719,8 @@ func _show_elite_battle_rewards() -> void:
 	if relic:
 		reward_scene.add_relic_reward(relic)
 	
+	reward_scene.add_card_reward()
+	reward_scene.add_card_upgrade_reward()
 	reward_scene.save_initial_state()
 
 
@@ -789,7 +816,23 @@ func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
 	battle_scene.battle_stats = room.battle_stats
 	battle_scene.relics = relic_handler
 	battle_scene.start_battle()
+	_sync_combat_snapshot_shadow_samurai_from_battle()
 	print("[DEBUG] Battle started")
+
+
+func _sync_combat_snapshot_shadow_samurai_from_battle() -> void:
+	if save_data == null or save_data.combat_snapshot == null:
+		return
+	if current_view.get_child_count() == 0:
+		return
+	var battle := current_view.get_child(0) as Battle
+	if battle == null or not is_instance_valid(battle.enemy_handler):
+		return
+	for child in battle.enemy_handler.get_children():
+		if child is Enemy:
+			var picker := (child as Enemy).enemy_action_picker
+			if picker is ShadowSamuraiAI:
+				(picker as ShadowSamuraiAI).write_cycle_to_snapshot(save_data.combat_snapshot)
 
 
 func _save_combat_snapshot(room: Room) -> void:

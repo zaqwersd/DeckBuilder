@@ -5,9 +5,10 @@ const SAVE_PATH := "user://savegame.tres"
 
 ## 注意！！！需要保存的状态包括遗物，卡牌及其升级，金币，生命值，随机数等，切记！！！
 
-## Boss 战场景从 toxic_ghost 改名为 evil_spirit 后，旧存档里仍可能引用已删除的 .tscn。
-const _TIER2_MIMIC_BATTLE_SCENE := preload("res://battles/tier_2_mimic.tscn")
-const _TIER3_EVIL_BATTLE_SCENE := preload("res://battles/tier_3_evil_spirit.tscn")
+const _MIMIC_BATTLE_SCENE := preload("res://battles/mimic.tscn")
+const _SHADOW_SAMURAI_BATTLE_SCENE := preload("res://battles/shadow_samurai.tscn")
+const _EVIL_SPIRIT_BATTLE_SCENE := preload("res://battles/evil_spirit.tscn")
+const _HEAVEN_GUARDIAN_BATTLE_SCENE := preload("res://battles/heaven_guardian.tscn")
 
 @export var rng_seed: int
 @export var rng_state: int
@@ -67,6 +68,8 @@ const PENDING_BATTLE_REWARD := 4
 @export var battle_reward_relics_taken: PackedInt32Array = PackedInt32Array()  ## 0/1 表示每个遗物是否已领取
 @export var battle_reward_cards_taken: bool = false  ## 卡牌奖励是否已领取
 @export var battle_reward_card_offered: bool = false  ## 是否有「添加新卡牌」按钮（未必已 roll 出三张）
+@export var battle_reward_upgrade_offered: bool = false  ## 精英战等：是否有「升级一张牌」按钮
+@export var battle_reward_upgrade_taken: bool = false  ## 升级奖励是否已领取
 
 ## 战斗奖励：遗物领取暂存状态（类似营火的 pending 机制）
 const BATTLE_REWARD_PENDING_NONE := 0
@@ -107,6 +110,8 @@ func clear_room_pending() -> void:
 	battle_reward_relics_taken = PackedInt32Array()
 	battle_reward_cards_taken = false
 	battle_reward_card_offered = false
+	battle_reward_upgrade_offered = false
+	battle_reward_upgrade_taken = false
 	clear_battle_reward_entry_staging()
 	clear_battle_reward_pending_staging()
 
@@ -288,17 +293,159 @@ static func load_data() -> SaveGame:
 		if data:
 			_migrate_renamed_battle_scenes(data)
 			_migrate_relic_ids(data)
+			sync_saved_map_room_refs(data)
+			reconcile_map_visited_flags(data)
 		return data
 	
 	return null
 
 
+## 深拷贝地图网格，保留每个 Room 的 selected 与 next_rooms 引用关系（浅拷贝会共享实例导致存档丢失路径标记）。
+static func duplicate_map_data(source: Array[Array]) -> Array[Array]:
+	if source.is_empty():
+		return []
+	var unique: Array[Room] = []
+	for floor_arr: Array in source:
+		for room: Room in floor_arr:
+			if room != null and not unique.has(room):
+				unique.append(room)
+	var mapped: Dictionary = {}
+	for room: Room in unique:
+		var copy := room.duplicate(true) as Room
+		copy.next_rooms = []
+		mapped[room] = copy
+	for room: Room in unique:
+		var copy: Room = mapped[room]
+		for next_room: Room in room.next_rooms:
+			if next_room != null and mapped.has(next_room):
+				copy.next_rooms.append(mapped[next_room])
+	var result: Array[Array] = []
+	for floor_arr: Array in source:
+		var new_floor: Array[Room] = []
+		for room: Room in floor_arr:
+			new_floor.append(mapped[room] if room != null else null)
+		result.append(new_floor)
+	return result
+
+
+## 将可能来自旧 map_data 实例的 Room 对齐到当前 map_data 网格中的对应房间（按 row/column）。
+static func resolve_room_in_map_data(map_data: Array[Array], room: Room) -> Room:
+	if room == null or map_data.is_empty():
+		return null
+	if room.row < 0 or room.row >= map_data.size():
+		return null
+	var floor_arr: Array = map_data[room.row]
+	if room.column < 0 or room.column >= floor_arr.size():
+		return null
+	var on_map: Room = floor_arr[room.column] as Room
+	if on_map == null:
+		return null
+	if on_map == room:
+		return room
+	for floor: Array in map_data:
+		for r: Room in floor:
+			if r == room:
+				return r
+	return on_map
+
+
+## 存档 map_data 深拷贝后，last_room / combat_snapshot.room 等须指向新网格内的实例。
+static func sync_saved_map_room_refs(data: SaveGame) -> void:
+	if data == null or data.map_data.is_empty():
+		return
+	data.last_room = resolve_room_in_map_data(data.map_data, data.last_room)
+	if data.combat_snapshot != null and data.combat_snapshot.room != null:
+		data.combat_snapshot.room = resolve_room_in_map_data(
+			data.map_data, data.combat_snapshot.room
+		)
+
+
+## 根据 last_room 重建已走路径的 selected，清除岔路误标/漏标。返回对齐后的 last_room。
+static func reconcile_map_visited_flags_on(
+	map_data: Array[Array],
+	last_room: Room,
+	floors_climbed: int
+) -> Room:
+	if map_data.is_empty():
+		return last_room
+	var was_selected: Dictionary = {}
+	for floor_arr: Array in map_data:
+		for room: Room in floor_arr:
+			if room != null:
+				was_selected[room] = room.selected
+	for floor_arr: Array in map_data:
+		for room: Room in floor_arr:
+			if room != null:
+				room.selected = false
+	if floors_climbed <= 0 or last_room == null:
+		return last_room
+	var current := resolve_room_in_map_data(map_data, last_room)
+	if current == null:
+		return last_room
+	while current != null:
+		current.selected = true
+		if current.row <= 0:
+			break
+		var parent := _find_best_parent_on_path(map_data, current, was_selected)
+		if parent == null:
+			break
+		current = parent
+	return resolve_room_in_map_data(map_data, last_room)
+
+
+static func reconcile_map_visited_flags(data: SaveGame) -> void:
+	if data == null:
+		return
+	data.last_room = reconcile_map_visited_flags_on(
+		data.map_data, data.last_room, data.floors_climbed
+	)
+
+
+static func _collect_parents_on_map(map_data: Array[Array], room: Room) -> Array[Room]:
+	var target := resolve_room_in_map_data(map_data, room)
+	var parents: Array[Room] = []
+	if target == null or target.row <= 0:
+		return parents
+	for candidate: Room in map_data[target.row - 1]:
+		if candidate == null:
+			continue
+		for next_room: Room in candidate.next_rooms:
+			var resolved_next := resolve_room_in_map_data(map_data, next_room)
+			if resolved_next == target and not parents.has(candidate):
+				parents.append(candidate)
+				break
+	return parents
+
+
+static func _find_best_parent_on_path(
+	map_data: Array[Array],
+	room: Room,
+	was_selected: Dictionary
+) -> Room:
+	var parents := _collect_parents_on_map(map_data, room)
+	if parents.is_empty():
+		return null
+	for parent: Room in parents:
+		if was_selected.get(parent, false):
+			return parent
+	var target := resolve_room_in_map_data(map_data, room)
+	if target == null:
+		return parents[0]
+	parents.sort_custom(func(a: Room, b: Room) -> bool:
+		return absi(a.column - target.column) < absi(b.column - target.column)
+	)
+	return parents[0]
+
+
 static func _migrate_renamed_battle_scenes(data: SaveGame) -> void:
+	var act := maxi(1, data.act_number)
 	for floor_arr: Array in data.map_data:
 		for room: Room in floor_arr:
-			_fix_toxic_ghost_battle_scene(room)
+			_fix_toxic_ghost_battle_scene(room, act)
 	if data.last_room:
-		_fix_toxic_ghost_battle_scene(data.last_room)
+		_fix_toxic_ghost_battle_scene(data.last_room, act)
+	if data.combat_snapshot and data.combat_snapshot.room:
+		_fix_toxic_ghost_battle_scene(data.combat_snapshot.room, act)
 
 
 static func _migrate_relic_ids(data: SaveGame) -> void:
@@ -327,20 +474,76 @@ static func _replace_relic_id_in_array(arr: PackedStringArray, old_id: String, n
 			arr[i] = new_id
 
 
-static func _fix_toxic_ghost_battle_scene(room: Room) -> void:
+## battles/tier_0_bats2.tscn → battles/bats2.tscn 等（去掉 tier_N_ 前缀）
+static func _remap_legacy_battle_scene(enemies: PackedScene) -> PackedScene:
+	if enemies == null:
+		return null
+	var path := enemies.resource_path
+	if path.is_empty() or not path.contains("battles/tier_"):
+		return enemies
+	const PREFIX := "res://battles/tier_"
+	var idx := path.find(PREFIX)
+	if idx < 0:
+		return enemies
+	var tail := path.substr(idx + PREFIX.length())
+	var sep := tail.find("_")
+	if sep <= 0:
+		return enemies
+	var new_path := "res://battles/" + tail.substr(sep + 1)
+	if not ResourceLoader.exists(new_path):
+		return enemies
+	var scene := load(new_path) as PackedScene
+	return scene if scene else enemies
+
+
+static func _fix_toxic_ghost_battle_scene(room: Room, act_number: int) -> void:
 	if not room or not room.battle_stats:
 		return
 	var enemies := room.battle_stats.enemies
+	var remapped := _remap_legacy_battle_scene(enemies)
+	if remapped != enemies and remapped != null:
+		room.battle_stats.enemies = remapped
+		enemies = remapped
 	var path := enemies.resource_path if enemies else ""
 	var tier := room.battle_stats.battle_tier
-	var stale_elite := path.contains("elite/elite_mimic")
-	var stale_boss := path.contains("tier_2_toxic_ghost") or path.contains("/toxic_ghost/") or path.contains("tier_2_evil_spirit")
-	if stale_elite or (tier == 2 and enemies == null):
-		room.battle_stats.enemies = _TIER2_MIMIC_BATTLE_SCENE
+	var act := maxi(1, act_number)
+	var stale_elite := (
+		path.contains("elite/elite_mimic")
+		or path.contains("battles/tier_")
+		or path.contains("tier_2_mimic")
+		or path.contains("tier_2_shadow_samurai")
+		or path.contains("/shadow_samurai/elite/")
+		or path.contains("shadow_samurai_elite")
+		or path.contains("shadow_samurai/boss/")
+	)
+	var stale_boss := (
+		path.contains("battles/tier_")
+		or path.contains("tier_2_toxic_ghost")
+		or path.contains("/toxic_ghost/")
+		or path.contains("tier_2_evil_spirit")
+		or path.contains("tier_3_evil_spirit")
+		or path.contains("tier_3_heaven_guardian")
+		or path.contains("evil_spirit_boss")
+		or path.contains("heaven_guardian_boss")
+		or path.contains("/boss/")
+		or path.contains("/heaven_guardian/boss/")
+	)
+	if tier == 2 and (stale_elite or enemies == null):
+		if act == 3:
+			room.battle_stats.enemies = _SHADOW_SAMURAI_BATTLE_SCENE
+		else:
+			room.battle_stats.enemies = _MIMIC_BATTLE_SCENE
 		return
-	var broken_boss := tier == 3 and (enemies == null or stale_boss)
-	if broken_boss:
-		room.battle_stats.enemies = _TIER3_EVIL_BATTLE_SCENE
+	if tier != 3:
+		return
+	if act == 3:
+		var needs_heaven := enemies == null or stale_boss or path.contains("/evil_spirit/")
+		if needs_heaven:
+			room.battle_stats.enemies = _HEAVEN_GUARDIAN_BATTLE_SCENE
+	else:
+		var wrongly_heaven := path.contains("/heaven_guardian/")
+		if wrongly_heaven or enemies == null or stale_boss:
+			room.battle_stats.enemies = _EVIL_SPIRIT_BATTLE_SCENE
 
 
 static func delete_data() -> void:
