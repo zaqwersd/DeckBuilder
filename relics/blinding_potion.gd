@@ -10,6 +10,13 @@ func apply_persistent_pickup_on_acquire(_run: Node) -> void:
 	run.character.stats_changed.emit()
 
 
+func revert_persistent_pickup_on_rollback(ch: CharacterStats) -> void:
+	if ch == null:
+		return
+	ch.max_mana = maxi(1, ch.max_mana - 1)
+	ch.mana = mini(ch.mana, ch.max_mana)
+
+
 func initialize_relic(_owner: RelicUI) -> void:
 	pass
 

@@ -82,3 +82,54 @@ func pick_weighted_distinct_cards(
 		out.append(choice)
 		remaining.erase(choice)
 	return out
+
+
+## 不放回抽取多个遗物：按 COMMON / UNCOMMON / RARE 权重 roll，再于桶内均匀随机。
+## STARTER / SPECIAL 不参与权重桶；SHOP 仅当 shop_counts_as_uncommon 为 true 时归入 UNCOMMON 桶。
+func pick_weighted_distinct_relics(
+	pool: Array[Relic],
+	count: int,
+	weight_common: float,
+	weight_uncommon: float,
+	weight_rare: float,
+	shop_counts_as_uncommon: bool = false
+) -> Array[Relic]:
+	var remaining: Array[Relic] = pool.duplicate()
+	var out: Array[Relic] = []
+	for _i in range(count):
+		if remaining.is_empty():
+			break
+		var commons: Array[Relic] = []
+		var uncommons: Array[Relic] = []
+		var rares: Array[Relic] = []
+		for r: Relic in remaining:
+			match r.rarity:
+				Relic.Rarity.UNCOMMON:
+					uncommons.append(r)
+				Relic.Rarity.SHOP:
+					if shop_counts_as_uncommon:
+						uncommons.append(r)
+				Relic.Rarity.RARE:
+					rares.append(r)
+				Relic.Rarity.COMMON:
+					commons.append(r)
+				_:
+					pass
+		var wc := weight_common if not commons.is_empty() else 0.0
+		var wu := weight_uncommon if not uncommons.is_empty() else 0.0
+		var wr := weight_rare if not rares.is_empty() else 0.0
+		var tw := wc + wu + wr
+		var choice: Relic = null
+		if tw <= 0.0:
+			choice = array_pick_random(remaining) as Relic
+		else:
+			var roll := instance.randf() * tw
+			var bucket: Array[Relic] = rares
+			if roll < wc:
+				bucket = commons
+			elif roll < wc + wu:
+				bucket = uncommons
+			choice = array_pick_random(bucket) as Relic
+		out.append(choice)
+		remaining.erase(choice)
+	return out

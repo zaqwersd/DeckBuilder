@@ -235,6 +235,7 @@ func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_
 			_flush_drawn_cards_to_hand(to_hand)
 			_flush_drawn_cards_to_discard(to_discard)
 			return
+		## 仅在本次仍需抽牌且抽牌堆已空时，才将弃牌堆洗入抽牌堆
 		reshuffle_deck_from_discard()
 		if character.draw_pile.empty():
 			break
@@ -246,7 +247,6 @@ func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_
 		else:
 			to_hand.append(c)
 			pending_hand_count += 1
-		reshuffle_deck_from_discard()
 
 	if Events.is_combat_ended():
 		_flush_drawn_cards_to_hand(to_hand)
@@ -407,6 +407,7 @@ func _emit_player_hand_discarded_after_layout() -> void:
 	Events.player_hand_discarded.emit()
 
 
+## 抽牌堆已空且弃牌堆有牌时，将弃牌堆洗入抽牌堆。仅应在「即将抽牌」时调用。
 func reshuffle_deck_from_discard() -> void:
 	if not character.draw_pile.empty():
 		return
@@ -417,6 +418,7 @@ func reshuffle_deck_from_discard() -> void:
 
 	character.draw_pile.shuffle()
 	_intrinsic_draw_priority = false
+	Events.deck_shuffled.emit()
 
 
 func _on_card_played(card: Card) -> void:

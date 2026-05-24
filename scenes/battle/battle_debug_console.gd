@@ -9,7 +9,6 @@ const CHAR_ROOT := "res://characters"
 const COMMON_CARDS_DIR := "res://common_cards"
 const EVENT_ROOMS_DIR := "res://scenes/event_rooms"
 const RELICS_DIR := "res://relics"
-const POOL_TRES := "battle_stats_pool.tres"
 const SUGGEST_MAX := 40
 const SUGGEST_ROW_PX := 22.0
 ## 底边贴视口底，高度从此向上长；避免内容测量过小时整条面板只有几条像素高。
@@ -27,6 +26,8 @@ var _battle_ids: PackedStringArray = PackedStringArray()
 var _card_ids: PackedStringArray = PackedStringArray()
 var _event_ids: PackedStringArray = PackedStringArray()
 var _relic_ids: PackedStringArray = PackedStringArray()
+var _id_caches_built := false
+var _suggest_extra_height := 0.0
 
 
 func _ready() -> void:
@@ -36,7 +37,6 @@ func _ready() -> void:
 	z_index = 90
 	set_process_input(true)
 	_ensure_run()
-	_rebuild_id_caches()
 	_build_ui()
 	if not get_viewport().size_changed.is_connected(_on_viewport_size_changed):
 		get_viewport().size_changed.connect(_on_viewport_size_changed)
@@ -63,7 +63,8 @@ func _current_battle() -> Node:
 
 func _on_viewport_size_changed() -> void:
 	_ensure_overlay_rect()
-	_apply_panel_to_viewport()
+	if visible:
+		_apply_panel_to_viewport()
 
 
 func _input(event: InputEvent) -> void:
@@ -80,12 +81,17 @@ func _input(event: InputEvent) -> void:
 
 func _toggle_visible() -> void:
 	visible = not visible
-	if visible and _line:
-		_line.grab_focus()
+	mouse_filter = Control.MOUSE_FILTER_STOP if visible else Control.MOUSE_FILTER_IGNORE
+	if visible:
 		_ensure_overlay_rect()
-		call_deferred("_apply_panel_to_viewport")
-	elif _line:
-		_line.release_focus()
+		_apply_panel_to_viewport()
+		if _line:
+			_line.grab_focus()
+		if not _id_caches_built:
+			call_deferred("_build_id_caches_deferred")
+	else:
+		if _line:
+			_line.release_focus()
 		_hide_suggestions()
 
 
@@ -93,6 +99,7 @@ func _on_close_pressed() -> void:
 	if not visible:
 		return
 	visible = false
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _line:
 		_line.release_focus()
 	_hide_suggestions()
@@ -175,24 +182,19 @@ func _ensure_overlay_rect() -> void:
 
 
 func _apply_panel_to_viewport() -> void:
-	if _panel == null or _scroll == null or not is_inside_tree():
+	if _panel == null or _scroll == null or not is_inside_tree() or not visible:
 		return
 	_ensure_overlay_rect()
 	var r := get_viewport().get_visible_rect()
 	var margin_side := 10.0
 	var inner_pad := 8.0
-	var margin_top_reserve := 8.0
-	await get_tree().process_frame
-	_ensure_overlay_rect()
 	var w: float = maxf(32.0, r.size.x - 2.0 * margin_side)
 	var inner_w: float = maxf(1.0, w - 2.0 * inner_pad)
-	# 先给 Scroll 横向宽度，Hint 换行后纵向最小高度才可靠
-	_scroll.size = Vector2(inner_w, maxf(400.0, r.size.y * 0.5))
-	await get_tree().process_frame
-	var ch: float = _scroll.get_combined_minimum_size().y
-	var max_h: float = maxf(PANEL_MIN_HEIGHT + 1.0, r.size.y - margin_top_reserve)
-	var content_h: float = ch + PANEL_CONTENT_PAD
-	var h: float = clampf(content_h, PANEL_MIN_HEIGHT, max_h)
+	var h: float = clampf(
+		PANEL_MIN_HEIGHT + _suggest_extra_height,
+		PANEL_MIN_HEIGHT,
+		r.size.y - 8.0
+	)
 	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_panel.size = Vector2(w, h)
 	var bottom_y: float = r.position.y + r.size.y
@@ -200,6 +202,23 @@ func _apply_panel_to_viewport() -> void:
 	var inner_h: float = maxf(1.0, h - 2.0 * inner_pad)
 	_scroll.position = Vector2(inner_pad, inner_pad)
 	_scroll.size = Vector2(inner_w, inner_h)
+
+
+func _ensure_id_caches() -> void:
+	if _id_caches_built:
+		return
+	_rebuild_id_caches()
+	_id_caches_built = true
+
+
+func _build_id_caches_deferred() -> void:
+	if _id_caches_built:
+		return
+	await get_tree().process_frame
+	if not is_instance_valid(self) or _id_caches_built:
+		return
+	_rebuild_id_caches()
+	_id_caches_built = true
 
 
 func _rebuild_id_caches() -> void:
@@ -217,8 +236,9 @@ func _collect_battle_basenames() -> PackedStringArray:
 	dir.list_dir_begin()
 	var entry := dir.get_next()
 	while entry != "":
-		if not dir.current_is_dir() and entry.ends_with(".tres") and entry != POOL_TRES:
-			out.append(entry.get_basename())
+		if not dir.current_is_dir() and entry.ends_with(".tres"):
+			if not entry.begins_with("battle_stats_pool"):
+				out.append(entry.get_basename())
 		entry = dir.get_next()
 	dir.list_dir_end()
 	out.sort()
@@ -233,7 +253,7 @@ func _collect_event_room_basenames() -> PackedStringArray:
 	# 添加特殊快速选项
 	out.append("campfire")
 	out.append("shop")
-	
+
 	var dir := DirAccess.open(EVENT_ROOMS_DIR)
 	if dir == null:
 		return PackedStringArray()
@@ -241,7 +261,9 @@ func _collect_event_room_basenames() -> PackedStringArray:
 	var entry := dir.get_next()
 	while entry != "":
 		if not dir.current_is_dir() and entry.ends_with(".tscn"):
-			out.append(entry.get_basename())
+			var base := entry.get_basename()
+			if _is_valid_debug_event_id(base):
+				out.append(base)
 		entry = dir.get_next()
 	dir.list_dir_end()
 	out.sort()
@@ -251,21 +273,17 @@ func _collect_event_room_basenames() -> PackedStringArray:
 	return packed
 
 
+func _is_valid_debug_event_id(basename: String) -> bool:
+	if basename.is_empty() or basename == "event_room_button":
+		return false
+	return basename.ends_with("_event")
+
+
 func _collect_relic_ids() -> PackedStringArray:
 	var out: Array[String] = []
-	var dir := DirAccess.open(RELICS_DIR)
-	if dir == null:
-		return PackedStringArray()
-	dir.list_dir_begin()
-	var entry := dir.get_next()
-	while entry != "":
-		if not dir.current_is_dir() and entry.ends_with(".tres"):
-			var path := RELICS_DIR.path_join(entry)
-			var r := ResourceLoader.load(path)
-			if r is Relic and (r as Relic).id.strip_edges() != "":
-				out.append((r as Relic).id)
-		entry = dir.get_next()
-	dir.list_dir_end()
+	for relic: Relic in GameContent.load_all_relic_templates():
+		if relic != null and not relic.id.is_empty() and relic.id != "_deprecated":
+			out.append(relic.id)
 	out.sort()
 	var packed := PackedStringArray()
 	for s in out:
@@ -311,7 +329,7 @@ func _on_line_text_changed(_new_text: String) -> void:
 
 
 func _refresh_suggestions() -> void:
-	if _suggest == null or _line == null:
+	if _suggest == null or _line == null or not _id_caches_built:
 		return
 	_suggest.clear()
 	var ctx := _parse_autocomplete_context(_line.text)
@@ -342,9 +360,10 @@ func _refresh_suggestions() -> void:
 	for i in n:
 		_suggest.add_item(matches[i])
 	var rows := mini(n, 10)
-	_suggest.custom_minimum_size.y = rows * SUGGEST_ROW_PX + 8.0
+	_suggest_extra_height = rows * SUGGEST_ROW_PX + 8.0
+	_suggest.custom_minimum_size.y = _suggest_extra_height
 	_suggest.visible = true
-	call_deferred("_apply_panel_to_viewport")
+	_apply_panel_to_viewport()
 
 
 func _hide_suggestions() -> void:
@@ -352,7 +371,9 @@ func _hide_suggestions() -> void:
 		_suggest.clear()
 		_suggest.visible = false
 		_suggest.custom_minimum_size.y = 0.0
-	call_deferred("_apply_panel_to_viewport")
+	_suggest_extra_height = 0.0
+	if visible:
+		_apply_panel_to_viewport()
 
 
 func _parse_autocomplete_context(line: String) -> Dictionary:
@@ -489,9 +510,10 @@ func _fill_card_command_suggestions() -> void:
 	for i in n:
 		_suggest.add_item(matches[i])
 	var rows := mini(n, 10)
-	_suggest.custom_minimum_size.y = rows * SUGGEST_ROW_PX + 8.0
+	_suggest_extra_height = rows * SUGGEST_ROW_PX + 8.0
+	_suggest.custom_minimum_size.y = _suggest_extra_height
 	_suggest.visible = true
-	call_deferred("_apply_panel_to_viewport")
+	_apply_panel_to_viewport()
 
 
 func _on_suggest_item_selected(index: int) -> void:
@@ -748,7 +770,7 @@ func _cmd_card(arg: String) -> String:
 
 func _find_relic_tres_path(relic_id: String) -> String:
 	var rid := relic_id.strip_edges()
-	if rid.is_empty():
+	if rid.is_empty() or rid == "_deprecated":
 		return ""
 	var direct := RELICS_DIR.path_join("%s.tres" % rid)
 	if ResourceLoader.exists(direct):

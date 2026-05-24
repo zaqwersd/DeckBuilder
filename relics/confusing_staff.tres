@@ -8,5 +8,6 @@ script = ExtResource("2_pgwg4")
 relic_name = "混乱法杖"
 id = "confusing_staff"
 type = 4
+rarity = 4
 icon = ExtResource("1_kkvs0")
 tooltip = "随机将你所有牌的费用变为 0 到 3 之间。"

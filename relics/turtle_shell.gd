@@ -1,6 +1,6 @@
 extends Relic
 
-@export var block_bonus := 3
+@export var block_bonus := 4
 
 
 func activate_relic(owner: RelicUI) -> void:

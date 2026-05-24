@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://7vwghchanmp5"]
+
+[ext_resource type="Texture2D" uid="uid://cruutapj2ff8y" path="res://art/crossbody_bag.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://nwuj2r1s4bb" path="res://relics/crossbody_bag.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "斜挎包"
+id = "crossbody_bag"
+type = 1
+icon = ExtResource("1_icon")
+tooltip = "每场战斗开始时，额外抽 2 张牌。"

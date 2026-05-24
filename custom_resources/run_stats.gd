@@ -10,6 +10,11 @@ const BASE_COMMON_WEIGHT := 17.0
 const BASE_UNCOMMON_WEIGHT := 7.0
 const BASE_RARE_WEIGHT := 1.0
 
+## 遗物掉落权重：普通 / 罕见 / 稀有 = 3 : 2 : 1；第三幕为 1 : 1 : 1
+const RELIC_COMMON_WEIGHT := 3.0
+const RELIC_UNCOMMON_WEIGHT := 2.0
+const RELIC_RARE_WEIGHT := 1.0
+
 @export var gold := STARTING_GOLD : set = set_gold
 @export var card_rewards := BASE_CARD_REWARDS
 @export_range(0.0, 100.0) var common_weight := BASE_COMMON_WEIGHT
@@ -54,6 +59,21 @@ func get_dynamic_weights(floors_climbed: int) -> Dictionary:
 		"common": lerpf(BASE_COMMON_WEIGHT, 12.0, progress),      ## 从17降到12
 		"uncommon": lerpf(BASE_UNCOMMON_WEIGHT, 8.0, progress),   ## 从7升到8
 		"rare": lerpf(BASE_RARE_WEIGHT, 4.0, progress)           ## 从1升到4
+	}
+
+
+## 遗物稀有度静态权重：Act1–2 为 3:2:1，Act3 为 1:1:1
+func get_relic_rarity_weights(act_number: int) -> Dictionary:
+	if act_number >= 3:
+		return {
+			"common": 1.0,
+			"uncommon": 1.0,
+			"rare": 1.0,
+		}
+	return {
+		"common": RELIC_COMMON_WEIGHT,
+		"uncommon": RELIC_UNCOMMON_WEIGHT,
+		"rare": RELIC_RARE_WEIGHT,
 	}
 
 

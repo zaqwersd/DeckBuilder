@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://tevwfx8p7puj"]
+
+[ext_resource type="Texture2D" uid="uid://c114ggurpox8q" path="res://art/candle.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://di2x8iy5m3q5" path="res://relics/candle.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "蜡烛"
+id = "candle"
+type = 1
+icon = ExtResource("1_icon")
+tooltip = "每场战斗开始时，额外获得 1 点能量。"

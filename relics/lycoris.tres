@@ -9,6 +9,7 @@ relic_name = "彼岸花"
 id = "lycoris"
 type = 1
 character_type = 2
+rarity = 0
 starter_relic = true
 icon = ExtResource("1_u3wrq")
 tooltip = "每场战斗开始时，将一张[color=#5dff7a]气息[/color]加入你的手牌。"

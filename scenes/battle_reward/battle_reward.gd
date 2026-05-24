@@ -212,7 +212,7 @@ func _add_relic_reward_button(relic: Relic, index: int) -> void:
 	if not relic:
 		return
 	var relic_reward := REWARD_BUTTON.instantiate() as RewardButton
-	relic_reward.reward_icon = relic.icon
+	relic_reward.reward_icon = RelicIconUtil.get_colored_icon(relic.icon as Texture2D, relic.rarity)
 	relic_reward.reward_text = relic.relic_name
 	relic_reward.hover_relic = relic
 	relic_reward.pressed.connect(_on_relic_reward_taken.bind(relic, index))
@@ -653,6 +653,7 @@ func _on_relic_reward_taken(relic: Relic, index: int) -> void:
 		if index >= 0 and index < _relics_taken.size():
 			_relics_taken[index] = false
 		_rebuild_reward_ui()
+		run.save_data.apply_battle_reward_pending_rollback_to(character_stats, relic_handler)
 		run.save_data.clear_battle_reward_pending_staging()
 		run._save_run(false)
 		return
@@ -675,6 +676,9 @@ func _save_battle_reward_pending_snapshot(run: Run, relic_index: int) -> void:
 	## 保存当前状态
 	if character_stats != null:
 		sd.battle_reward_pending_pre_health = character_stats.health
+		sd.battle_reward_pending_pre_max_health = character_stats.max_health
+		sd.battle_reward_pending_pre_max_mana = character_stats.max_mana
+		sd.battle_reward_pending_pre_mana = character_stats.mana
 	if run_stats != null:
 		sd.battle_reward_pending_pre_gold = run_stats.gold
 	

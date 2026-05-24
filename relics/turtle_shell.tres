@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://bn5rwde1qkvaa"]
+
+[ext_resource type="Texture2D" uid="uid://qikgvt0huyn" path="res://art/turtle_shell.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://cgcuy52qrhbxg" path="res://relics/turtle_shell.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "龟甲"
+id = "turtle_shell"
+character_type = 2
+icon = ExtResource("1_icon")
+tooltip = "每回合开始时，获得 4 点格挡。"

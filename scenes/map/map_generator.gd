@@ -16,6 +16,8 @@ const CAMPFIRE_ROOM_WEIGHT := 4.0
 ## 精英房可出现的最小/最大地图行（含）；第 5–13 层
 const ELITE_ROW_MIN := 4
 const ELITE_ROW_MAX := 12
+const MAX_CONNECTION_ATTEMPTS := 512
+const MAX_ROOM_TYPE_ATTEMPTS := 256
 
 @export var battle_stats_pool: BattleStatsPool
 @export var event_room_pool: EventRoomPool
@@ -97,13 +99,15 @@ func _get_random_starting_points() -> Array[int]:
 func _setup_connection(i: int, j: int) -> int:
 	var next_room: Room = null
 	var current_room := map_data[i][j] as Room
-	
-	while not next_room or _would_cross_existing_path(i, j, next_room):
+	var attempts := 0
+	while attempts < MAX_CONNECTION_ATTEMPTS and (not next_room or _would_cross_existing_path(i, j, next_room)):
+		attempts += 1
 		var random_j := clampi(randi_range(j - 1, j + 1), 0, MAP_WIDTH - 1)
 		next_room = map_data[i + 1][random_j]
-		
+	if attempts >= MAX_CONNECTION_ATTEMPTS:
+		push_warning("MapGenerator: 连接 (%d,%d) 重试过多，使用直连接" % [i, j])
+		next_room = map_data[i + 1][clampi(j, 0, MAP_WIDTH - 1)]
 	current_room.next_rooms.append(next_room)
-	
 	return next_room.column
 
 
@@ -183,16 +187,11 @@ func _setup_room_types() -> void:
 
 
 func _set_room_randomly(room_to_set: Room) -> void:
-	var campfire_below_4 := true
-	var consecutive_campfire := true
-	var consecutive_shop := true
-	var campfire_on_13 := true
-	var elite_row_invalid := true
-	var consecutive_elite := true
-	
 	var type_candidate: Room.Type
+	var attempts := 0
 	
-	while campfire_below_4 or consecutive_campfire or consecutive_shop or campfire_on_13 or elite_row_invalid or consecutive_elite:
+	while attempts < MAX_ROOM_TYPE_ATTEMPTS:
+		attempts += 1
 		type_candidate = _get_random_room_type_by_weight()
 		
 		var is_campfire := type_candidate == Room.Type.CAMPFIRE
@@ -202,12 +201,25 @@ func _set_room_randomly(room_to_set: Room) -> void:
 		var is_elite := type_candidate == Room.Type.ELITE
 		var has_elite_parent := _room_has_parent_of_type(room_to_set, Room.Type.ELITE)
 		
-		campfire_below_4 = is_campfire and room_to_set.row < 3
-		consecutive_campfire = is_campfire and has_campfire_parent
-		consecutive_shop = is_shop and has_shop_parent
-		campfire_on_13 = is_campfire and room_to_set.row == FLOORS - 3
-		elite_row_invalid = is_elite and (room_to_set.row < ELITE_ROW_MIN or room_to_set.row > ELITE_ROW_MAX)
-		consecutive_elite = is_elite and has_elite_parent
+		var campfire_below_4 := is_campfire and room_to_set.row < 3
+		var consecutive_campfire := is_campfire and has_campfire_parent
+		var consecutive_shop := is_shop and has_shop_parent
+		var campfire_on_13 := is_campfire and room_to_set.row == FLOORS - 3
+		var elite_row_invalid := is_elite and (room_to_set.row < ELITE_ROW_MIN or room_to_set.row > ELITE_ROW_MAX)
+		var consecutive_elite := is_elite and has_elite_parent
+		
+		if not (
+			campfire_below_4
+			or consecutive_campfire
+			or consecutive_shop
+			or campfire_on_13
+			or elite_row_invalid
+			or consecutive_elite
+		):
+			break
+	if attempts >= MAX_ROOM_TYPE_ATTEMPTS:
+		push_warning("MapGenerator: 房间 (%d,%d) 类型重试过多，回退为普通战斗" % [room_to_set.row, room_to_set.column])
+		type_candidate = Room.Type.MONSTER
 		
 	room_to_set.type = type_candidate
 

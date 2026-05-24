@@ -8,5 +8,6 @@ script = ExtResource("2_scr")
 relic_name = "故障机器"
 id = "defect_machine"
 type = 1
+rarity = 2
 icon = ExtResource("1_kmaln")
 tooltip = "你每场战斗打出的第一张牌会打出两次。"

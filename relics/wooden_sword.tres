@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://cgsogoyh252sk"]
 
-[ext_resource type="Texture2D" uid="uid://dojlh80rte165" path="res://art/tile_0107.png" id="1_ub7wh"]
+[ext_resource type="Texture2D" uid="uid://bvw0tkrvon48i" path="res://art/wooden_sword.png" id="1_gsomu"]
 [ext_resource type="Script" uid="uid://b2a5uglbypgmw" path="res://relics/wooden_sword.gd" id="2_w5eni"]
 
 [resource]
@@ -8,5 +8,5 @@ script = ExtResource("2_w5eni")
 relic_name = "木剑"
 id = "wooden_sword"
 type = 4
-icon = ExtResource("1_ub7wh")
-tooltip = "每当你在一回合内打出 3 张技能牌，对所有敌人造成 5 点伤害。"
+icon = ExtResource("1_gsomu")
+tooltip = "每当你在一回合内打出 3 张技能牌，对所有敌人造成 7 点伤害。"

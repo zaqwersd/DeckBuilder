@@ -4,7 +4,12 @@ extends Resource
 @export var relics: Array[Relic] = []
 
 
-func roll_reward(char_stats: CharacterStats, relic_handler: RelicHandler) -> Relic:
+func roll_reward(
+	char_stats: CharacterStats,
+	relic_handler: RelicHandler,
+	act_number: int = 1,
+	run_stats: RunStats = null
+) -> Relic:
 	var available := relics.filter(
 		func(relic: Relic) -> bool:
 			if relic == null:
@@ -15,4 +20,16 @@ func roll_reward(char_stats: CharacterStats, relic_handler: RelicHandler) -> Rel
 	)
 	if available.is_empty():
 		return null
-	return RNG.array_pick_random(available) as Relic
+	var weights := run_stats.get_relic_rarity_weights(act_number) if run_stats else {
+		"common": RunStats.RELIC_COMMON_WEIGHT,
+		"uncommon": RunStats.RELIC_UNCOMMON_WEIGHT,
+		"rare": RunStats.RELIC_RARE_WEIGHT,
+	}
+	var picked := RNG.pick_weighted_distinct_relics(
+		available,
+		1,
+		weights.common,
+		weights.uncommon,
+		weights.rare
+	)
+	return picked[0] if not picked.is_empty() else null

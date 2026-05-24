@@ -51,8 +51,18 @@ func _setup_background() -> void:
 
 
 func generate_relic() -> void:
-	if relic_reward_pool:
-		found_relic = relic_reward_pool.roll_reward(char_stats, relic_handler)
+	if not relic_reward_pool:
+		return
+	var act_number := 1
+	var run_stats_ref: RunStats = null
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null:
+		if run.save_data != null:
+			act_number = run.save_data.act_number
+		run_stats_ref = run.stats
+	found_relic = relic_reward_pool.roll_reward(
+		char_stats, relic_handler, act_number, run_stats_ref
+	)
 
 
 # Called from the AnimationPlayer, at the

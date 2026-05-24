@@ -20,7 +20,7 @@ func set_relic(new_relic: Relic) -> void:
 		await ready
 
 	relic = new_relic
-	icon.texture = relic.icon
+	icon.texture = RelicIconUtil.get_colored_icon(relic.icon as Texture2D, relic.rarity)
 	set_counter_subscript(-1)
 
 

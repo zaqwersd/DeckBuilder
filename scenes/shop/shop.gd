@@ -142,6 +142,10 @@ func _build_shop_slots(
 			var new_shop_relic := SHOP_RELIC.instantiate() as ShopRelic
 			if i < relic_costs.size():
 				new_shop_relic.configure_cost(int(relic_costs[i]))
+			else:
+				new_shop_relic.configure_cost(
+					_get_relic_price_by_rarity(shop_relics_array[i].rarity)
+				)
 			col.add_child(new_shop_relic)
 			new_shop_relic.relic = shop_relics_array[i]
 			if apply_price_modifiers:
@@ -162,6 +166,21 @@ func _get_card_price_by_rarity(rarity: Card.Rarity) -> int:
 			return RNG.instance.randi_range(100, 250)
 		_:
 			return RNG.instance.randi_range(100, 300)  ## 默认
+
+
+## 根据遗物稀有度定价
+func _get_relic_price_by_rarity(rarity: Relic.Rarity) -> int:
+	match rarity:
+		Relic.Rarity.COMMON:
+			return RNG.instance.randi_range(100, 160)
+		Relic.Rarity.UNCOMMON:
+			return RNG.instance.randi_range(160, 230)
+		Relic.Rarity.RARE:
+			return RNG.instance.randi_range(230, 320)
+		Relic.Rarity.SHOP:
+			return RNG.instance.randi_range(180, 260)
+		_:
+			return RNG.instance.randi_range(100, 300)
 
 
 func _make_spacer(slot_size: Vector2) -> Control:
@@ -198,12 +217,42 @@ func _pick_shop_cards() -> Array[Card]:
 func _pick_shop_relics() -> Array[Relic]:
 	var available_relics := shop_relics.filter(
 		func(relic: Relic):
-			var can_appear := relic.can_appear_as_reward(char_stats)
+			var can_appear := relic.can_appear_in_shop(char_stats)
 			var already_had_it := relic_handler.has_relic(relic.id)
 			return can_appear and not already_had_it
 	)
-	RNG.array_shuffle(available_relics)
-	return available_relics.slice(0, 3)
+	if available_relics.is_empty():
+		return []
+
+	var weighted_pool: Array[Relic] = []
+	for relic: Relic in available_relics:
+		if (
+			relic.rarity == Relic.Rarity.COMMON
+			or relic.rarity == Relic.Rarity.UNCOMMON
+			or relic.rarity == Relic.Rarity.RARE
+			or relic.rarity == Relic.Rarity.SHOP
+		):
+			weighted_pool.append(relic)
+
+	var act_number := 1
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null and run.save_data != null:
+		act_number = run.save_data.act_number
+
+	var weights := run_stats.get_relic_rarity_weights(act_number) if run_stats else {
+		"common": RunStats.RELIC_COMMON_WEIGHT,
+		"uncommon": RunStats.RELIC_UNCOMMON_WEIGHT,
+		"rare": RunStats.RELIC_RARE_WEIGHT,
+	}
+
+	return RNG.pick_weighted_distinct_relics(
+		weighted_pool,
+		mini(3, weighted_pool.size()),
+		weights.common,
+		weights.uncommon,
+		weights.rare,
+		true
+	)
 
 
 func _card_ids_from(cards: Array[Card]) -> PackedStringArray:
@@ -328,9 +377,9 @@ func _on_shop_relic_bought(relic: Relic, gold_cost: int) -> void:
 	run_stats.gold -= gold_cost
 	_sync_shop_pending()
 
-	if relic is CouponsRelic:
-		var coupons_relic := relic as CouponsRelic
-		coupons_relic.add_shop_modifier(self)
+	if relic is VipCardRelic:
+		var vip_card_relic := relic as VipCardRelic
+		vip_card_relic.add_shop_modifier(self)
 		_update_item_costs()
 	else:
 		_update_items()

@@ -5,6 +5,8 @@ const CHAR_CARDS_ROOT := "res://characters"
 const COMMON_CARDS_DIR := "res://common_cards"
 const RELICS_DIR := "res://relics"
 
+static var _relic_template_cache: Dictionary = {}
+
 
 static func load_card_template(card_id: String) -> Card:
 	var path := find_card_resource_path(card_id)
@@ -26,18 +28,42 @@ static func load_cards_by_ids(ids: PackedStringArray) -> Array[Card]:
 
 
 static func load_relic_template(relic_id: String) -> Relic:
+	var id := String(relic_id)
+	if _relic_template_cache.has(id):
+		return (_relic_template_cache[id] as Relic).duplicate(true) as Relic
 	for path: String in _list_tres_files(RELICS_DIR):
 		var res := load(path) as Relic
-		if res != null and res.id == relic_id:
-			return res.duplicate(true) as Relic
+		if res == null or res.id.is_empty() or res.id == "_deprecated":
+			continue
+		if res.id == id:
+			_relic_template_cache[id] = res.duplicate(true) as Relic
+			return (_relic_template_cache[id] as Relic).duplicate(true) as Relic
 	return null
+
+
+## 读档/回滚：已知 id 加载模板，否则返回「已弃用」占位遗物
+static func load_relic_for_save(relic_id: String) -> Relic:
+	var resolved_id := SaveGameMigrations.resolve_relic_id(relic_id)
+	var relic := load_relic_template(resolved_id)
+	if relic != null:
+		return relic
+	return DeprecatedRelic.create_for_legacy_id(relic_id)
+
+
+static func load_relics_from_ids(ids: PackedStringArray) -> Array[Relic]:
+	var out: Array[Relic] = []
+	for relic_id in ids:
+		var relic := load_relic_for_save(String(relic_id))
+		if relic != null:
+			out.append(relic)
+	return out
 
 
 static func load_all_relic_templates() -> Array[Relic]:
 	var by_id: Dictionary = {}
 	for path: String in _list_tres_files(RELICS_DIR):
 		var res := load(path) as Relic
-		if res == null or res.id.is_empty():
+		if res == null or res.id.is_empty() or res.id == "_deprecated":
 			continue
 		if by_id.has(res.id):
 			continue

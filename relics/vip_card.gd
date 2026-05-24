@@ -1,4 +1,4 @@
-class_name CouponsRelic
+class_name VipCardRelic
 extends Relic
 
 @export_range(1, 100) var discount := 50
@@ -20,11 +20,11 @@ func add_shop_modifier(shop: Shop) -> void:
 	var shop_cost_modifier := shop.modifier_handler.get_modifier(Modifier.Type.SHOP_COST)
 	assert(shop_cost_modifier, "No shop cost modifier in shop!")
 
-	var coupons_modifier_value := shop_cost_modifier.get_value("coupons")
+	var vip_modifier_value := shop_cost_modifier.get_value("vip_card")
 
-	if not coupons_modifier_value:
-		coupons_modifier_value = ModifierValue.create_new_modifier("coupons", ModifierValue.Type.PERCENT_BASED)
-		coupons_modifier_value.percent_value = -1 * discount / 100.0
-		shop_cost_modifier.add_new_value(coupons_modifier_value)
+	if not vip_modifier_value:
+		vip_modifier_value = ModifierValue.create_new_modifier("vip_card", ModifierValue.Type.PERCENT_BASED)
+		vip_modifier_value.percent_value = -1 * discount / 100.0
+		shop_cost_modifier.add_new_value(vip_modifier_value)
 
 	relic_ui.flash()

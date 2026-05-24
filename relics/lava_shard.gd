@@ -1,6 +1,6 @@
 extends Relic
 
-@export var damage := 2
+@export var damage := 4
 
 
 func activate_relic(owner: RelicUI) -> void:
@@ -9,5 +9,4 @@ func activate_relic(owner: RelicUI) -> void:
 	damage_effect.amount = damage
 	damage_effect.receiver_modifier_type = Modifier.Type.NO_MODIFIER
 	damage_effect.execute(enemies)
-	
 	owner.flash()

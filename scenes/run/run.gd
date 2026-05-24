@@ -93,14 +93,15 @@ func _save_run(was_on_map: bool) -> void:
 	# 这样中途退出后重进时可以恢复到战斗开始时的状态
 	if save_data.combat_snapshot != null and not was_on_map:
 		# 战斗中：保留快照中的状态，但遗物仍然需要保存（战斗中遗物不会改变）
-		save_data.relics = current_relics
+		save_data.sync_relics_for_save(current_relics)
 		_sync_combat_snapshot_shadow_samurai_from_battle()
 	else:
 		# 正常保存：没有快照或在地图上
 		save_data.char_stats = character
 		save_data.current_deck = character.deck
 		save_data.current_health = character.health
-		save_data.relics = current_relics
+		save_data.current_max_health = character.max_health
+		save_data.sync_relics_for_save(current_relics)
 	
 	save_data.save_data()
 
@@ -112,6 +113,8 @@ func _load_run() -> void:
 	stats = save_data.run_stats
 	character = save_data.char_stats
 	character.deck = save_data.current_deck
+	if save_data.current_max_health >= 0:
+		character.max_health = save_data.current_max_health
 	character.health = save_data.current_health
 	
 	## 加载当前层数（默认为1，兼容旧存档）
@@ -175,11 +178,11 @@ func _load_run() -> void:
 			# 其他房间（战斗、商店、事件、宝藏等）
 			if save_data.combat_snapshot != null:
 				# 有战斗快照：先恢复快照，然后设置UI
-				save_data.combat_snapshot.apply_to(character, relic_handler, save_data.relics)
-				# 如果快照恢复后遗物仍为空，尝试从 save_data.relics 恢复
-				if relic_handler.get_all_relics().is_empty() and not save_data.relics.is_empty():
-					push_warning("战斗快照恢复后遗物仍为空，尝试从 save_data.relics 恢复...")
-					relic_handler.add_relics(save_data.relics, false)
+				var fallback_relics := GameContent.load_relics_from_ids(save_data.get_effective_relic_ids())
+				save_data.combat_snapshot.apply_to(character, relic_handler, fallback_relics)
+				if relic_handler.get_all_relics().is_empty() and not fallback_relics.is_empty():
+					push_warning("战斗快照恢复后遗物仍为空，尝试从 save_data 恢复...")
+					relic_handler.add_relics(fallback_relics, false)
 				_setup_top_bar()  # 快照恢复后才设置UI
 				_on_battle_room_entered(save_data.combat_snapshot.room, true)
 			else:
@@ -255,10 +258,10 @@ func _load_relics_from_save_data() -> void:
 	# 如果有战斗快照，遗物会在后续通过 apply_to 恢复
 	# 这里只处理没有快照的情况
 	if save_data.combat_snapshot == null:
-		# 没有战斗快照，直接从存档加载遗物
-		if not save_data.relics.is_empty():
-			print("从 save_data.relics 加载 %d 个遗物" % save_data.relics.size())
-			relic_handler.add_relics(save_data.relics, false)
+		var ids := save_data.get_effective_relic_ids()
+		if not ids.is_empty():
+			print("从 save_data.saved_relic_ids 加载 %d 个遗物" % ids.size())
+			relic_handler.restore_relics_from_ids(ids, false)
 			print("加载完成，当前遗物数量: %d" % relic_handler.get_all_relics().size())
 		else:
 			# 存档中没有遗物（新游戏或bug），添加初始遗物
@@ -323,20 +326,33 @@ func _show_map() -> void:
 
 
 func _setup_event_connections() -> void:
-	Events.battle_won.connect(_on_battle_won)
-	Events.battle_reward_exited.connect(_show_map)
-	Events.campfire_exited.connect(_show_map)
-	Events.map_exited.connect(_on_map_exited)
-	Events.shop_exited.connect(_show_map)
-	Events.treasure_room_exited.connect(_on_treasure_room_exited)
-	Events.event_room_exited.connect(_show_map)
+	if not Events.battle_won.is_connected(_on_battle_won):
+		Events.battle_won.connect(_on_battle_won)
+	if not Events.battle_reward_exited.is_connected(_show_map):
+		Events.battle_reward_exited.connect(_show_map)
+	if not Events.campfire_exited.is_connected(_show_map):
+		Events.campfire_exited.connect(_show_map)
+	if not Events.map_exited.is_connected(_on_map_exited):
+		Events.map_exited.connect(_on_map_exited)
+	if not Events.shop_exited.is_connected(_show_map):
+		Events.shop_exited.connect(_show_map)
+	if not Events.treasure_room_exited.is_connected(_on_treasure_room_exited):
+		Events.treasure_room_exited.connect(_on_treasure_room_exited)
+	if not Events.event_room_exited.is_connected(_show_map):
+		Events.event_room_exited.connect(_show_map)
 	
-	battle_button.pressed.connect(_change_view.bind(BATTLE_SCENE))
-	campfire_button.pressed.connect(_change_view.bind(CAMPFIRE_SCENE))
-	map_button.pressed.connect(_show_map)
-	rewards_button.pressed.connect(_change_view.bind(BATTLE_REWARD_SCENE))
-	shop_button.pressed.connect(_change_view.bind(SHOP_SCENE))
-	treasure_button.pressed.connect(_change_view.bind(TREASURE_SCENE))
+	if not battle_button.pressed.is_connected(_change_view.bind(BATTLE_SCENE)):
+		battle_button.pressed.connect(_change_view.bind(BATTLE_SCENE))
+	if not campfire_button.pressed.is_connected(_change_view.bind(CAMPFIRE_SCENE)):
+		campfire_button.pressed.connect(_change_view.bind(CAMPFIRE_SCENE))
+	if not map_button.pressed.is_connected(_show_map):
+		map_button.pressed.connect(_show_map)
+	if not rewards_button.pressed.is_connected(_change_view.bind(BATTLE_REWARD_SCENE)):
+		rewards_button.pressed.connect(_change_view.bind(BATTLE_REWARD_SCENE))
+	if not shop_button.pressed.is_connected(_change_view.bind(SHOP_SCENE)):
+		shop_button.pressed.connect(_change_view.bind(SHOP_SCENE))
+	if not treasure_button.pressed.is_connected(_change_view.bind(TREASURE_SCENE)):
+		treasure_button.pressed.connect(_change_view.bind(TREASURE_SCENE))
 
 
 func _setup_top_bar() -> void:
@@ -523,7 +539,8 @@ func _persist_scene_room_quit_snapshot() -> void:
 	save_data.char_stats = character
 	save_data.current_deck = character.deck
 	save_data.current_health = character.health
-	save_data.relics = relic_handler.get_all_relics()
+	save_data.current_max_health = character.max_health
+	save_data.sync_relics_for_save(relic_handler.get_all_relics())
 	save_data.run_stats = stats
 	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
 	save_data.floors_climbed = map.floors_climbed
@@ -548,7 +565,10 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	if save_data == null:
 		return
 	dismiss_reward_flow_overlays()
-	if save_data.battle_reward_entry_staged:
+	if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
+		save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+		stats = save_data.run_stats
+	elif save_data.battle_reward_entry_staged:
 		save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
 		stats = save_data.run_stats
 	save_data.clear_battle_reward_pending_staging()
@@ -566,7 +586,8 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	save_data.char_stats = character
 	save_data.current_deck = character.deck
 	save_data.current_health = character.health
-	save_data.relics = relic_handler.get_all_relics()
+	save_data.current_max_health = character.max_health
+	save_data.sync_relics_for_save(relic_handler.get_all_relics())
 	save_data.run_stats = stats
 	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
 	save_data.floors_climbed = map.floors_climbed
@@ -715,7 +736,12 @@ func _show_elite_battle_rewards() -> void:
 	else:
 		reward_scene.add_gold_reward(RNG.instance.randi_range(80, 105))
 	
-	var relic: Relic = RELIC_REWARD_POOL.roll_reward(character, relic_handler)
+	var relic: Relic = RELIC_REWARD_POOL.roll_reward(
+		character,
+		relic_handler,
+		save_data.act_number if save_data else 1,
+		stats
+	)
 	if relic:
 		reward_scene.add_relic_reward(relic)
 	
@@ -840,8 +866,8 @@ func _save_combat_snapshot(room: Room) -> void:
 		return
 	var current_relics := relic_handler.get_all_relics()
 	save_data.combat_snapshot = CombatSnapshot.create_from(character, current_relics, room)
-	# 确保遗物也被保存到 save_data.relics（作为后备）
-	save_data.relics = current_relics.duplicate()
+	# 确保遗物 id 也被写入存档（作为后备）
+	save_data.sync_relics_for_save(current_relics)
 	_save_run(false)
 
 

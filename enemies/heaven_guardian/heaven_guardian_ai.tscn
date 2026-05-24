@@ -1,16 +1,15 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://bvknvhhtcfg7o"]
 
-[ext_resource type="Script" path="res://enemies/heaven_guardian/heaven_guardian_ai.gd" id="1_ai"]
-[ext_resource type="Script" path="res://enemies/heaven_guardian/heaven_guardian_strike36_strength10_action.gd" id="2_strike"]
-[ext_resource type="Script" path="res://enemies/heaven_guardian/heaven_guardian_stunned_action.gd" id="3_stun"]
-[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_intent"]
-[ext_resource type="Texture2D" path="res://art/stunned.png" id="5_stunned_icon"]
-[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
-[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
+[ext_resource type="Script" uid="uid://7r2qw0wuvi85" path="res://enemies/heaven_guardian/heaven_guardian_ai.gd" id="1_ai"]
+[ext_resource type="Script" uid="uid://cib0nie5vfmwg" path="res://enemies/heaven_guardian/heaven_guardian_strike36_strength10_action.gd" id="2_strike"]
+[ext_resource type="Script" uid="uid://camnqcythan55" path="res://enemies/heaven_guardian/heaven_guardian_stunned_action.gd" id="3_stun"]
+[ext_resource type="Script" uid="uid://dxgwh7ui04omh" path="res://custom_resources/intent.gd" id="4_intent"]
+[ext_resource type="Texture2D" uid="uid://drowrrrvt2kko" path="res://art/stunned.png" id="5_stunned_icon"]
+[ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="6_atk"]
+[ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="7_blk"]
 
 [sub_resource type="Resource" id="Intent_attack36"]
 script = ExtResource("4_intent")
-kind = 0
 
 [sub_resource type="Resource" id="Intent_buff10"]
 script = ExtResource("4_intent")
@@ -21,16 +20,16 @@ script = ExtResource("4_intent")
 kind = 6
 icon = ExtResource("5_stunned_icon")
 
-[node name="HeavenGuardianAI" type="Node"]
+[node name="HeavenGuardianAI" type="Node" unique_id=59537731]
 script = ExtResource("1_ai")
 
-[node name="Strike36Strength10" type="Node" parent="."]
+[node name="Strike36Strength10" type="Node" parent="." unique_id=153926439]
 script = ExtResource("2_strike")
 strike_intent = SubResource("Intent_attack36")
 str_intent = SubResource("Intent_buff10")
 sound = ExtResource("6_atk")
 
-[node name="Stunned" type="Node" parent="."]
+[node name="Stunned" type="Node" parent="." unique_id=1660998683]
 script = ExtResource("3_stun")
 intent = SubResource("Intent_stunned")
 sound = ExtResource("7_blk")

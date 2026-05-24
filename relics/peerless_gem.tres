@@ -8,5 +8,6 @@ script = ExtResource("2_script")
 relic_name = "无上宝石"
 id = "peerless_gem"
 type = 4
+rarity = 3
 icon = ExtResource("1_c85e2")
 tooltip = "拾起时，选择一张卡牌，将其升至满级。"

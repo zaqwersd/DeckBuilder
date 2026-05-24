@@ -37,7 +37,7 @@ func _apply_starting_relic_display(relic: Relic) -> void:
 		starting_relic_name.text = ""
 		starting_relic_desc.text = ""
 		return
-	starting_relic_icon.texture = relic.icon
+	starting_relic_icon.texture = RelicIconUtil.get_colored_icon(relic.icon as Texture2D, relic.rarity)
 	starting_relic_name.text = relic.relic_name
 	starting_relic_desc.text = relic.get_tooltip()
 

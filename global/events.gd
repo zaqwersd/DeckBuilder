@@ -133,6 +133,7 @@ signal player_hand_cost_context_changed
 
 # Player-related events
 signal player_hand_drawn
+signal deck_shuffled
 signal player_hand_discarded
 signal player_turn_ended
 signal player_hit

@@ -139,6 +139,62 @@ func _on_relics_child_exiting_tree(relic_ui: RelicUI) -> void:
 		relic_ui.relic.deactivate_relic(relic_ui)
 
 
+func revert_persistent_pickups_not_in(
+	character: CharacterStats,
+	allowed_relic_ids: PackedStringArray
+) -> void:
+	if character == null:
+		return
+	var allowed: Dictionary = {}
+	for relic_id in allowed_relic_ids:
+		var id := String(relic_id)
+		if not id.is_empty():
+			allowed[id] = true
+	for relic: Relic in get_all_relics():
+		if relic == null or relic.id.is_empty():
+			continue
+		if not allowed.has(relic.id):
+			relic.revert_persistent_pickup_on_rollback(character)
+
+
+func revert_pending_relic_pickup_if_applied(
+	character: CharacterStats,
+	relic_id: String,
+	pre_max_health: int,
+	pre_max_mana: int
+) -> void:
+	if character == null or relic_id.is_empty():
+		return
+	var pickup_applied := (
+		pre_max_health >= 0
+		and character.max_health > pre_max_health
+	) or (
+		pre_max_mana >= 0
+		and character.max_mana > pre_max_mana
+	)
+	if not pickup_applied:
+		return
+	var relic := GameContent.load_relic_for_save(relic_id)
+	if relic != null:
+		relic.revert_persistent_pickup_on_rollback(character)
+
+
+func restore_relics_from_ids(
+	relic_ids: PackedStringArray,
+	apply_persistent_pickup: bool = false,
+	immediate_clear: bool = true
+) -> Array[Relic]:
+	if immediate_clear:
+		clear_relics_immediate()
+	else:
+		clear_relics()
+	for relic_id in relic_ids:
+		var relic := GameContent.load_relic_for_save(String(relic_id))
+		if relic != null:
+			add_relic(relic, apply_persistent_pickup)
+	return get_all_relics()
+
+
 func clear_relics() -> void:
 	for relic_ui: RelicUI in relics.get_children():
 		if is_instance_valid(relic_ui):
