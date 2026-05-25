@@ -3,4 +3,4 @@ extends Status
 
 
 func get_tooltip() -> String:
-	return tooltip % Status.format_tooltip_integer(stacks)
+	return tooltip % format_counter_for_tooltip(stacks)

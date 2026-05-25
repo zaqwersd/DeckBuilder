@@ -5,7 +5,7 @@ const MODIFIER := 0.5
 
 
 func get_tooltip() -> String:
-	return tooltip % Status.format_tooltip_integer(duration)
+	return tooltip % format_counter_for_tooltip(duration)
 
 
 func initialize_status(target: Node) -> void:

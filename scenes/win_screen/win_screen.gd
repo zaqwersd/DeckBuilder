@@ -15,4 +15,9 @@ func set_character(new_character: CharacterStats) -> void:
 
 
 func _on_main_menu_button_pressed() -> void:
-	get_tree().change_scene_to_file(MAIN_MENU_PATH)
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run:
+		run.abandon_finished_run_to_main_menu()
+	else:
+		SaveGame.delete_data()
+		get_tree().change_scene_to_file(MAIN_MENU_PATH)

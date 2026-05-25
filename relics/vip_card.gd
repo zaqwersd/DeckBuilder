@@ -27,4 +27,5 @@ func add_shop_modifier(shop: Shop) -> void:
 		vip_modifier_value.percent_value = -1 * discount / 100.0
 		shop_cost_modifier.add_new_value(vip_modifier_value)
 
-	relic_ui.flash()
+	if is_instance_valid(relic_ui):
+		relic_ui.flash()

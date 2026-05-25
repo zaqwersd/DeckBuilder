@@ -8,6 +8,7 @@ script = ExtResource("2_qbevf")
 id = "igneous_volatile"
 type = 2
 stack_type = 1
+polarity = 1
 stacks = 3
 icon = ExtResource("1_654nq")
 name = "不稳定"

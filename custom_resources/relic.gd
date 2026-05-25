@@ -23,6 +23,9 @@ const RARITY_DISPLAY_NAMES := {
 	Rarity.SHOP: "商店",
 }
 
+const SPENT_TOOLTIP := "这个遗物已失效。"
+const SPENT_ICON_MODULATE := Color(0.55, 0.55, 0.55, 1.0)
+
 @export var relic_name: String
 @export var id: String
 @export var type: Type
@@ -66,7 +69,36 @@ func deactivate_relic(_owner: RelicUI) -> void:
 	pass
 
 
+## 遗物栏右键；返回 true 表示已处理（如恶魔铃铛主动使用）。
+func try_handle_relic_ui_right_click(_ui: RelicUI) -> bool:
+	return false
+
+
+func is_relic_spent() -> bool:
+	return false
+
+
+func apply_spent_state_from_save(spent: bool) -> void:
+	pass
+
+
+## 从模板/存档加载实例时先清零，再由 apply_spent_relic_ids 按存档写入
+func reset_spent_state_for_load() -> void:
+	apply_spent_state_from_save(false)
+
+
+func sync_relic_ui_visual(ui: RelicUI) -> void:
+	if ui == null or not is_instance_valid(ui.icon):
+		return
+	if is_relic_spent():
+		ui.icon.modulate = SPENT_ICON_MODULATE
+	else:
+		ui.icon.modulate = Color.WHITE
+
+
 func get_tooltip() -> String:
+	if is_relic_spent():
+		return SPENT_TOOLTIP
 	return tooltip
 
 

@@ -30,13 +30,12 @@ var character: CharacterStats
 ## 本场战斗中，弃牌堆尚未洗回抽牌堆时：每次抽牌优先抽到「固有」牌；洗牌后与普通牌无异。
 var _intrinsic_draw_priority: bool = true
 
-## 回合末弃牌流程中：心流不立刻结算，在弃牌末尾统一抽牌；能量记到下一回合 `start_turn`。
-var _defer_flow_for_eot_discard: bool = false
-var _eot_flow_accum_draws: int = 0
-var _eot_flow_accum_mana: int = 0
-var _carry_mana_to_next_turn_start: int = 0
 ## 本场战斗是否已在首次 start_turn 抽牌前发放「战斗开始入手牌」类遗物牌。
 var _battle_start_hand_cards_granted: bool = false
+## 本场战斗的首个玩家回合：回合开始遗物无间隔触发，减轻进战卡顿感。
+var _first_turn_of_battle: bool = true
+## 本次 draw_cards 批次内洗牌触发的额外抽牌（如莫比乌斯环），须在 draw_cards 返回前全部结算。
+var _shuffle_bonus_draws_pending: int = 0
 
 
 func _ready() -> void:
@@ -48,19 +47,18 @@ func _ready() -> void:
 func start_battle_prep(char_stats: CharacterStats) -> void:
 	character = char_stats
 	_battle_start_hand_cards_granted = false
+	_first_turn_of_battle = true
+	_shuffle_bonus_draws_pending = 0
 	_intrinsic_draw_priority = true
 	var raw_pile := character.deck.custom_duplicate()
-	for c: Card in raw_pile.cards:
-		c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 	var intr: Array[Card] = []
 	var rest: Array[Card] = []
 	for c: Card in raw_pile.cards:
+		c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 		if c.intrinsic:
-			print("[PlayerHandler] 固有卡牌: %s (intrinsic=%s)" % [c.card_name, c.intrinsic])
 			intr.append(c)
 		else:
 			rest.append(c)
-	print("[PlayerHandler] 固有卡牌数量: %d, 普通卡牌: %d" % [intr.size(), rest.size()])
 	RNG.array_shuffle(intr)
 	RNG.array_shuffle(rest)
 	character.draw_pile = CardPile.new()
@@ -87,15 +85,13 @@ func start_turn() -> void:
 		return
 	character.block = 0
 	character.reset_mana()
-	if _carry_mana_to_next_turn_start != 0:
-		character.mana += _carry_mana_to_next_turn_start
-		_carry_mana_to_next_turn_start = 0
 	if is_instance_valid(player.status_handler):
 		player.status_handler.activate_awaiting_statuses()
 	if not _battle_start_hand_cards_granted:
 		_battle_start_hand_cards_granted = true
 		_grant_battle_start_hand_cards()
-	relics.activate_relics_by_type(Relic.Type.START_OF_TURN)
+	relics.activate_relics_by_type(Relic.Type.START_OF_TURN, _first_turn_of_battle)
+	_first_turn_of_battle = false
 
 
 func end_turn() -> void:
@@ -209,20 +205,28 @@ func _pop_draw_card() -> Card:
 	return character.draw_pile.draw_card()
 
 
-func is_deferring_flow_for_end_turn_discard() -> bool:
-	return _defer_flow_for_eot_discard
-
-
-func accumulate_end_turn_flow_from_exhaust(draws: int, mana: int) -> void:
-	_eot_flow_accum_draws += draws
-	_eot_flow_accum_mana += mana
-
-
-func _finish_discard_cards_defer() -> void:
-	_defer_flow_for_eot_discard = false
+## 洗牌遗物等：将额外抽牌记入当前 draw_cards，在整次抽牌（含动画）结束后再抽，避免打出牌已入弃牌堆才补抽。
+func request_shuffle_bonus_draw(amount: int = 1) -> void:
+	_shuffle_bonus_draws_pending += maxi(0, amount)
 
 
 func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_enable: bool = false) -> void:
+	if Events.is_combat_ended():
+		return
+	await _draw_cards_batch(amount, is_start_of_turn_draw, suppress_hand_enable)
+	await _flush_shuffle_bonus_draws(suppress_hand_enable)
+
+
+func _flush_shuffle_bonus_draws(suppress_hand_enable: bool) -> void:
+	while _shuffle_bonus_draws_pending > 0:
+		if Events.is_combat_ended():
+			_shuffle_bonus_draws_pending = 0
+			return
+		_shuffle_bonus_draws_pending -= 1
+		await _draw_cards_batch(1, false, suppress_hand_enable)
+
+
+func _draw_cards_batch(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_enable: bool = false) -> void:
 	if Events.is_combat_ended():
 		return
 	amount = maxi(0, amount)
@@ -292,11 +296,7 @@ func discard_cards() -> void:
 		_emit_player_hand_discarded_after_layout()
 		return
 
-	_defer_flow_for_eot_discard = true
-	_eot_flow_accum_draws = 0
-	_eot_flow_accum_mana = 0
-
-	# 阶段 A：先弃光非虚无（入弃牌堆），再阶段 B 处理虚无（入消耗，触发心流累计）
+	# 阶段 A：先弃光非虚无（入弃牌堆），再阶段 B 处理虚无（入消耗堆）
 	var pending_non: Array[Dictionary] = []
 	for slot in hand.get_children():
 		var card_ui_a := hand.get_card_ui_in_slot(slot)
@@ -323,9 +323,6 @@ func discard_cards() -> void:
 
 		if Events.is_combat_ended():
 			_sync_discard_entire_hand()
-			_eot_flow_accum_draws = 0
-			_eot_flow_accum_mana = 0
-			_finish_discard_cards_defer()
 			_emit_player_hand_discarded_after_layout()
 			return
 
@@ -340,9 +337,6 @@ func discard_cards() -> void:
 	while true:
 		if Events.is_combat_ended():
 			_sync_discard_entire_hand()
-			_eot_flow_accum_draws = 0
-			_eot_flow_accum_mana = 0
-			_finish_discard_cards_defer()
 			_emit_player_hand_discarded_after_layout()
 			return
 		var found_ethereal := false
@@ -357,9 +351,6 @@ func discard_cards() -> void:
 					hand.discard_card(card_ui)
 				if Events.is_combat_ended():
 					_sync_discard_entire_hand()
-					_eot_flow_accum_draws = 0
-					_eot_flow_accum_mana = 0
-					_finish_discard_cards_defer()
 					_emit_player_hand_discarded_after_layout()
 					return
 				await get_tree().create_timer(HAND_ETH_DISCARD_INTERVAL).timeout
@@ -376,16 +367,6 @@ func discard_cards() -> void:
 			if is_instance_valid(slot):
 				slot.queue_free()
 
-	var pull := _eot_flow_accum_draws
-	var mana_accum := _eot_flow_accum_mana
-	_eot_flow_accum_draws = 0
-	_eot_flow_accum_mana = 0
-	_carry_mana_to_next_turn_start += mana_accum
-	_finish_discard_cards_defer()
-
-	if pull > 0 and not Events.is_combat_ended():
-		await draw_cards(pull, false, true)
-
 	if not Events.is_combat_ended():
 		has_any_card = false
 		for slot in hand.get_children():
@@ -396,9 +377,7 @@ func discard_cards() -> void:
 				if is_instance_valid(slot):
 					slot.queue_free()
 
-	print("[DEBUG] About to emit player_hand_discarded (normal path)")
 	_emit_player_hand_discarded_after_layout()
-	print("[DEBUG] player_hand_discarded emitted (normal path)")
 
 
 func _emit_player_hand_discarded_after_layout() -> void:
@@ -434,24 +413,16 @@ func _on_card_played(card: Card) -> void:
 
 
 func _on_statuses_applied(type: Status.Type) -> void:
-	print("[DEBUG] _on_statuses_applied called, type: ", type)
 	match type:
 		Status.Type.START_OF_TURN:
-			print("[DEBUG] START_OF_TURN - calling draw_cards")
 			draw_cards(character.cards_per_turn, true)
 		Status.Type.END_OF_TURN:
-			print("[DEBUG] END_OF_TURN - calling discard_cards")
 			discard_cards()
 
 
 func _on_relics_activated(type: Relic.Type) -> void:
-	print("[DEBUG] _on_relics_activated called, type: ", type)
-	print("[DEBUG] player valid: ", is_instance_valid(player))
-	if is_instance_valid(player):
-		print("[DEBUG] status_handler valid: ", is_instance_valid(player.status_handler))
-	
 	if not is_instance_valid(player) or not is_instance_valid(player.status_handler):
-		push_error("[DEBUG] Early return - player or status_handler invalid")
+		push_error("PlayerHandler: player 或 status_handler 无效。")
 		return
 	match type:
 		Relic.Type.START_OF_TURN:

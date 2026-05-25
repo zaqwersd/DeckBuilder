@@ -378,11 +378,21 @@ func _on_shop_relic_bought(relic: Relic, gold_cost: int) -> void:
 	_sync_shop_pending()
 
 	if relic is VipCardRelic:
-		var vip_card_relic := relic as VipCardRelic
-		vip_card_relic.add_shop_modifier(self)
+		var vip_on_bar := _find_vip_card_on_handler()
+		if vip_on_bar != null:
+			vip_on_bar.add_shop_modifier(self)
 		_update_item_costs()
 	else:
 		_update_items()
+
+
+func _find_vip_card_on_handler() -> VipCardRelic:
+	if relic_handler == null:
+		return null
+	for r: Relic in relic_handler.get_all_relics():
+		if r is VipCardRelic:
+			return r as VipCardRelic
+	return null
 
 
 func _on_blink_timer_timeout() -> void:

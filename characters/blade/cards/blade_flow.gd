@@ -113,20 +113,17 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if hand == null:
 		return
 
-	## 1. 抽牌
+	## 1. 抽牌（含洗牌、莫比乌斯加抽与飞牌动画）全部结束后再继续
 	var draw_count := _get_draw_count()
-	ph.draw_cards(draw_count)
-
-	## 2. 等待抽牌动画完成
-	await tree.create_timer(0.4).timeout
+	await ph.draw_cards(draw_count)
 	await tree.process_frame
 
-	## 3. 重新获取手牌引用
+	## 2. 重新获取手牌引用
 	hand = ph.hand
 	if hand == null:
 		return
 
-	## 4. 检查是否有可选手牌
+	## 3. 检查是否有可选手牌
 	var has_any := false
 	for slot in hand.get_children():
 		var cui := hand.get_card_ui_in_slot(slot)
@@ -136,7 +133,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if not has_any:
 		return
 
-	## 5. 打开手牌选择界面（强制选择，不可ESC取消）
+	## 4. 打开手牌选择界面（强制选择，不可ESC取消）
 	var overlay := HandCardPickOverlay.open_on_tree(
 		tree, hand, 1, Callable(), "选择要消耗的卡牌", false
 	)
@@ -150,7 +147,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if selected_cards.is_empty():
 		return
 
-	## 6. 消耗选中的卡牌（参考超脱卡牌的方式）
+	## 5. 消耗选中的卡牌（参考超脱卡牌的方式）
 	var ch := ph.character
 	var bcf := ph.battle_card_fx
 
@@ -178,6 +175,6 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 				hand.resync_layout_after_draw()
 			break
 
-	## 7. 如果升级了mana_gain，获得能量
+	## 6. 如果升级了mana_gain，获得能量
 	if _can_gain_mana():
 		ph.character.mana += _MANA_GAIN_AMOUNT

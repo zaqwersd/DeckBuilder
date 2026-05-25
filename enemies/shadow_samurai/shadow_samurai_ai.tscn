@@ -19,6 +19,7 @@ script = ExtResource("4_intent")
 [sub_resource type="Resource" id="Intent_buff"]
 script = ExtResource("4_intent")
 kind = 2
+base_text = "+%d 力量"
 
 [node name="ShadowSamuraiAI" type="Node" unique_id=1268760649]
 script = ExtResource("1_ai")
@@ -46,5 +47,6 @@ sound = ExtResource("5_atk")
 
 [node name="StrengthBuff" type="Node" parent="." unique_id=1984557957]
 script = ExtResource("3_buff")
+strength_stacks = 2
 intent = SubResource("Intent_buff")
 sound = ExtResource("6_blk")

@@ -7,6 +7,7 @@
 script = ExtResource("2_d2jjc")
 id = "exposed"
 stack_type = 2
+polarity = 1
 can_expire = true
 duration = 1
 icon = ExtResource("1_242in")

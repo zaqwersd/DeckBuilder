@@ -33,6 +33,9 @@ const TOOLTIP_BODY_VULNERABLE_PLAIN := TOOLTIP_BODY_VULNERABLE_WITH_LINKS
 const TOOLTIP_BODY_STRENGTH_WITH_LINKS := "[color=#ffdd33][b]力量[/b][/color]\n增加造成的伤害。"
 const TOOLTIP_BODY_STRENGTH_PLAIN := TOOLTIP_BODY_STRENGTH_WITH_LINKS
 
+const TOOLTIP_BODY_DEXTERITY_WITH_LINKS := "[color=#ffdd33][b]敏捷[/b][/color]\n从卡牌中获得额外格挡。"
+const TOOLTIP_BODY_DEXTERITY_PLAIN := TOOLTIP_BODY_DEXTERITY_WITH_LINKS
+
 const TOOLTIP_BODY_INTRINSIC := (
 	"[color=#ffdd33][b]固有[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
 )
@@ -67,6 +70,7 @@ const _AUTO_WRAP: Array[Dictionary] = [
 	{"word": "消耗", "id": "exhaust"},
 	{"word": "易伤", "id": "vulnerable"},
 	{"word": "力量", "id": "strength"},
+	{"word": "敏捷", "id": "dexterity"},
 	{"word": "能量", "id": "mana"},
 ]
 
@@ -160,6 +164,8 @@ static func collect_tooltip_ids_from_raw_description(raw: String) -> PackedStrin
 		ids.append("vulnerable")
 	if raw.find("力量") != -1:
 		ids.append("strength")
+	if raw.find("敏捷") != -1:
+		ids.append("dexterity")
 	if raw.find("能量") != -1:
 		ids.append("mana")
 	return ids
@@ -179,21 +185,38 @@ static func without_color_tooltip_ids(ids: PackedStringArray) -> PackedStringArr
 	return out
 
 
+const SCRIPT_CARD_UI := "res://scenes/card_ui/card_ui.gd"
+const SCRIPT_MANA_UI := "res://scenes/ui/mana_ui.gd"
+const SCRIPT_CARD_MENU_UI := "res://scenes/ui/card_menu_ui.gd"
+const SCRIPT_COMBAT_CARD_VISUALS := "res://scenes/ui/combat_card_visuals.gd"
+
+
+static func _node_uses_script(n: Node, script_path: String) -> bool:
+	if n == null:
+		return false
+	var scr: Script = n.get_script() as Script
+	return scr != null and scr.resource_path == script_path
+
+
+static func _is_combat_card_visuals_node(n: Node) -> bool:
+	return _node_uses_script(n, SCRIPT_COMBAT_CARD_VISUALS)
+
+
 ## 手牌 CardUI、ManaUI、战斗牌堆 CombatCardVisuals 等战斗内锚点。
 static func is_combat_tooltip_anchor(near_to: Control) -> bool:
 	if not is_instance_valid(near_to):
 		return false
-	if near_to is CardUI or near_to is ManaUI:
+	if _node_uses_script(near_to, SCRIPT_CARD_UI) or _node_uses_script(near_to, SCRIPT_MANA_UI):
 		return true
-	if near_to is CombatCardVisuals:
+	if _is_combat_card_visuals_node(near_to):
 		return true
 	var n: Node = near_to
 	while n != null:
-		if n is CardUI or n is ManaUI:
+		if _node_uses_script(n, SCRIPT_CARD_UI) or _node_uses_script(n, SCRIPT_MANA_UI):
 			return true
-		if n is CardMenuUI:
-			var menu := n as CardMenuUI
-			return is_instance_valid(menu.visuals) and menu.visuals is CombatCardVisuals
+		if _node_uses_script(n, SCRIPT_CARD_MENU_UI):
+			var visuals: Node = n.get("visuals")
+			return is_instance_valid(visuals) and _is_combat_card_visuals_node(visuals)
 		n = n.get_parent()
 	return false
 
@@ -211,6 +234,8 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_VULNERABLE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_VULNERABLE_PLAIN
 		"strength":
 			return TOOLTIP_BODY_STRENGTH_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_STRENGTH_PLAIN
+		"dexterity":
+			return TOOLTIP_BODY_DEXTERITY_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_DEXTERITY_PLAIN
 		"intrinsic":
 			return TOOLTIP_BODY_INTRINSIC
 		"retain":

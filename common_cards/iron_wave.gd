@@ -50,7 +50,9 @@ func get_updated_tooltip(
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
 		modified_dmg, idmg, is_upgrade_track_maxed("damage")
 	)
-	var block_bb := bbcode_for_modified_number_with_upgrade_hint(ib, ib, is_upgrade_track_maxed("block"))
+	var block_bb := bbcode_for_modified_number_with_upgrade_hint(
+		effective_block_from_card_play(ib, combat_player), ib, is_upgrade_track_maxed("block")
+	)
 	return tooltip_text % [block_bb, dmg_bb]
 
 
@@ -65,6 +67,7 @@ func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 		player_nodes.append_array(tree.get_nodes_in_group("player"))
 	var block_effect := BlockEffect.new()
 	block_effect.amount = _intrinsic_block()
+	block_effect.from_card_play = true
 	block_effect.execute(player_nodes)
 	var damage_effect := DamageEffect.new()
 	damage_effect.amount = modifiers.get_modified_value(_intrinsic_damage(), Modifier.Type.DMG_DEALT)

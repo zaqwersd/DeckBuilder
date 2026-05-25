@@ -11,8 +11,8 @@ func get_tooltip() -> String:
 	var mult := damage_multiplier + s
 	## 正常显示数字，不在tooltip中使用上下标
 	return "攻击牌耗能+%s；攻击牌伤害%s倍。" % [
-		Status.format_tooltip_integer(add_cost),
-		Status.format_tooltip_integer(mult),
+		format_counter_for_tooltip(add_cost),
+		format_counter_for_tooltip(mult),
 	]
 
 

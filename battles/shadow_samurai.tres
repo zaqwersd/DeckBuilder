@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="BattleStats" format=3]
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://c3cqy78evu5jj"]
 
-[ext_resource type="Script" path="res://custom_resources/battle_stats.gd" id="1_bs"]
-[ext_resource type="PackedScene" path="res://battles/shadow_samurai.tscn" id="2_scene"]
+[ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_bs"]
+[ext_resource type="PackedScene" uid="uid://drkfb3p3ohvsv" path="res://battles/shadow_samurai.tscn" id="2_scene"]
 
 [resource]
 script = ExtResource("1_bs")

@@ -23,6 +23,7 @@ var _combat_keyword_tooltip: GameTooltip = null
 
 func _ready() -> void:
 	hand = _resolve_hand_node()
+	_reset_pile_counter_labels()
 	_setup_end_turn_button()
 	Events.player_hand_drawn.connect(_on_player_hand_drawn)
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
@@ -106,7 +107,17 @@ func _gray_button_style(lightness: float) -> StyleBoxFlat:
 	return s
 
 
+func _reset_pile_counter_labels() -> void:
+	for opener: CardPileOpener in [draw_pile_button, discard_pile_button, exhaust_pile_button]:
+		if opener == null or not is_instance_valid(opener.counter):
+			continue
+		opener.counter.text = "0"
+
+
 func initialize_card_pile_ui() -> void:
+	if char_stats == null:
+		_reset_pile_counter_labels()
+		return
 	draw_pile_button.card_pile = char_stats.draw_pile
 	draw_pile_view.card_pile = char_stats.draw_pile
 	discard_pile_button.card_pile = char_stats.discard

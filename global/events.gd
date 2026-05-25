@@ -143,6 +143,8 @@ signal player_died
 signal enemy_action_completed(enemy: Enemy)
 signal enemy_turn_ended
 signal enemy_died(enemy: Enemy)
+## 攻击牌结算期间，玩家对敌人造成实际生命伤害（格挡后仍扣血）
+signal player_dealt_attack_damage_to_enemy(enemy: Enemy, amount: int)
 
 # Battle-related events
 signal battle_over_screen_requested(text: String, type: BattleOverPanel.Type)

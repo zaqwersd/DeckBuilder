@@ -48,8 +48,11 @@ func get_updated_tooltip(
 	var hp_bb := bbcode_for_modified_number_with_upgrade_hint(
 		_hp_threshold(), _hp_threshold(), is_upgrade_track_maxed("hp_threshold")
 	)
+	var intrinsic_b := _block_amount()
 	var block_bb := bbcode_for_modified_number_with_upgrade_hint(
-		_block_amount(), _block_amount(), is_upgrade_track_maxed("block")
+		effective_block_from_card_play(intrinsic_b, _combat_player),
+		intrinsic_b,
+		is_upgrade_track_maxed("block")
 	)
 	return tooltip_text % [hp_bb, block_bb]
 
@@ -57,5 +60,6 @@ func get_updated_tooltip(
 func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var block_effect := BlockEffect.new()
 	block_effect.amount = _block_amount()
+	block_effect.from_card_play = true
 	block_effect.sound = sound
 	block_effect.execute(targets)

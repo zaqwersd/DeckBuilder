@@ -145,7 +145,7 @@ func defers_played_card_animation_to_effects() -> bool:
 	return false
 
 
-## 为 true 且 exhausts 时：不在 card_played 时入消耗堆，而在 play() 里 await apply_effects 全部结束后再入堆（先结算印牌等效果，再触发 card_exhausted / 心流抽牌）。
+## 为 true 且 exhausts 时：不在 card_played 时入消耗堆，而在 play() 里 await apply_effects 全部结束后再入堆（先结算印牌等效果，再触发 card_exhausted）。
 func defers_exhaust_to_end_of_play() -> bool:
 	return false
 
@@ -416,6 +416,11 @@ func _bbcode_visible_line_breaks(text: String) -> String:
 
 func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null) -> String:
 	return tooltip_text
+
+
+## 玩家打出格挡牌时的实际格挡（含敏捷等）；`combat_player` 为战斗中的 Player 节点。
+func effective_block_from_card_play(base: int, combat_player: Node = null) -> int:
+	return BlockEffect.compute_card_block_amount(base, combat_player)
 
 
 ## 卡面 RichTextLabel 用；默认与「更新后的提示文案」一致并居中（子类可覆盖以区分卡面/提示格式）。

@@ -27,16 +27,13 @@ func perform_action() -> void:
 	var player := target as Player
 	if not player:
 		return
-	var modified := player.modifier_handler.get_modified_value(damage, Modifier.Type.DMG_TAKEN)
-	var final_dmg := enemy.modifier_handler.get_modified_value(modified, Modifier.Type.DMG_DEALT)
+	var final_dmg := compute_damage_against_player(damage)
 	var tw1 := create_tween().set_trans(Tween.TRANS_QUINT)
 	var start := enemy.global_position
 	var end := EnemyAction.attack_lunge_position(start)
 	tw1.tween_property(enemy, "global_position", end, 0.4)
 	await tw1.finished
-	var dmg_eff := DamageEffect.new()
-	dmg_eff.amount = final_dmg
-	dmg_eff.sound = sound
+	var dmg_eff := make_final_player_damage_effect(final_dmg)
 	dmg_eff.execute([target])
 	var cards: Array[Card] = [GHOST.duplicate() as Card, GHOST.duplicate() as Card]
 	var fx: Node = player.get_tree().get_first_node_in_group("battle_card_fx")
@@ -55,9 +52,6 @@ func perform_action() -> void:
 
 
 func update_intent_text() -> void:
-	var player := target as Player
-	if not player or not enemy or not intent:
+	if not enemy or not target or not intent:
 		return
-	var modified := player.modifier_handler.get_modified_value(damage, Modifier.Type.DMG_TAKEN)
-	var final_dmg := enemy.modifier_handler.get_modified_value(modified, Modifier.Type.DMG_DEALT)
-	intent.set_attack_segments_display(final_dmg, 1)
+	intent.set_attack_segments_display(compute_damage_against_player(damage), 1)

@@ -78,13 +78,23 @@ func get_default_tooltip() -> String:
 func get_updated_tooltip(
 	_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null
 ) -> String:
-	return get_default_tooltip()
+	var intrinsic_b := get_upgrade_value_at("block")
+	var block_bb := bbcode_for_modified_number_with_upgrade_hint(
+		effective_block_from_card_play(intrinsic_b, _combat_player),
+		intrinsic_b,
+		is_upgrade_track_maxed("block")
+	)
+	if is_upgrade_track_maxed("discard_mode"):
+		return "[center]获得%s点格挡。[br]消耗1张手牌。[/center]" % block_bb
+	var rnd := "[color=%s]随机[/color]" % CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE
+	return "[center]获得%s点格挡。[br]%s消耗1张手牌。[/center]" % [block_bb, rnd]
 
 
 func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var block_value := get_upgrade_value_at("block")
 	var block_effect := BlockEffect.new()
 	block_effect.amount = block_value
+	block_effect.from_card_play = true
 	block_effect.sound = sound
 	block_effect.execute(targets)
 

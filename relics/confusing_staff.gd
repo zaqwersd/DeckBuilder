@@ -1,3 +1,4 @@
+## 混乱法杖 — 已从游戏中移除（见 `GameContent.DISABLED_RELIC_IDS`），本文件仅作备查。
 extends Relic
 
 var relic_ui: RelicUI

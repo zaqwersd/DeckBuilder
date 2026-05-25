@@ -44,3 +44,23 @@ func update_intent_text() -> void:
 		return
 	intent.current_text = intent.base_text
 	intent.display_number = Intent.NUMBER_HIDDEN
+
+
+## 与攻击意图一致：先玩家受伤修饰（易伤等），再敌人造成伤害修饰（力量等）。
+func compute_damage_against_player(base_damage: int) -> int:
+	var player := target as Player
+	if not player or not enemy:
+		return base_damage
+	var after_player := player.modifier_handler.get_modified_value(
+		base_damage, Modifier.Type.DMG_TAKEN
+	)
+	return enemy.modifier_handler.get_modified_value(after_player, Modifier.Type.DMG_DEALT)
+
+
+## 已含完整修饰链的最终伤害；避免 DamageEffect 再次套用 DMG_TAKEN。
+func make_final_player_damage_effect(final_damage: int) -> DamageEffect:
+	var effect := DamageEffect.new()
+	effect.amount = final_damage
+	effect.receiver_modifier_type = Modifier.Type.NO_MODIFIER
+	effect.sound = sound
+	return effect

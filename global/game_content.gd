@@ -5,7 +5,25 @@ const CHAR_CARDS_ROOT := "res://characters"
 const COMMON_CARDS_DIR := "res://common_cards"
 const RELICS_DIR := "res://relics"
 
+## 已从奖励/图鉴等玩法池移除，资源文件仍保留在 `res://relics/` 供读档与日后启用。
+const DISABLED_RELIC_IDS: Array[String] = ["confusing_staff", "blinding_potion"]
+
 static var _relic_template_cache: Dictionary = {}
+
+
+static func clear_relic_template_cache() -> void:
+	_relic_template_cache.clear()
+
+
+static func invalidate_relic_template(relic_id: String) -> void:
+	var resolved := SaveGameMigrations.resolve_relic_id(String(relic_id))
+	if resolved.is_empty():
+		return
+	_relic_template_cache.erase(resolved)
+
+
+static func is_relic_enabled_in_game(relic_id: String) -> bool:
+	return relic_id not in DISABLED_RELIC_IDS
 
 
 static func load_card_template(card_id: String) -> Card:
@@ -30,7 +48,9 @@ static func load_cards_by_ids(ids: PackedStringArray) -> Array[Card]:
 static func load_relic_template(relic_id: String) -> Relic:
 	var id := String(relic_id)
 	if _relic_template_cache.has(id):
-		return (_relic_template_cache[id] as Relic).duplicate(true) as Relic
+		var cached := _relic_template_cache[id] as Relic
+		cached.reset_spent_state_for_load()
+		return cached.duplicate(true) as Relic
 	for path: String in _list_tres_files(RELICS_DIR):
 		var res := load(path) as Relic
 		if res == null or res.id.is_empty() or res.id == "_deprecated":
@@ -46,6 +66,7 @@ static func load_relic_for_save(relic_id: String) -> Relic:
 	var resolved_id := SaveGameMigrations.resolve_relic_id(relic_id)
 	var relic := load_relic_template(resolved_id)
 	if relic != null:
+		relic.reset_spent_state_for_load()
 		return relic
 	return DeprecatedRelic.create_for_legacy_id(relic_id)
 
@@ -64,6 +85,8 @@ static func load_all_relic_templates() -> Array[Relic]:
 	for path: String in _list_tres_files(RELICS_DIR):
 		var res := load(path) as Relic
 		if res == null or res.id.is_empty() or res.id == "_deprecated":
+			continue
+		if not is_relic_enabled_in_game(res.id):
 			continue
 		if by_id.has(res.id):
 			continue

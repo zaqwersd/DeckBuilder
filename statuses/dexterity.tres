@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DexterityStatus" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://art/dexterity.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/dexterity.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "dexterity"
+stack_type = 1
+icon = ExtResource("1_icon")
+name = "敏捷"
+tooltip = "从卡牌中获得%s点额外格挡。"

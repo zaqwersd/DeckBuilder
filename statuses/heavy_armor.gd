@@ -14,8 +14,8 @@ func get_tooltip() -> String:
 	return (
 		"当前最多失去%s点生命值（已失去%s）。当达到阈值时，眩晕该敌人，对玩家造成%d点伤害并将阈值提升%d。"
 		% [
-			Status.format_tooltip_integer(threshold_n),
-			Status.format_tooltip_integer(accumulated_m),
+			format_counter_for_tooltip(threshold_n),
+			format_counter_for_tooltip(accumulated_m),
 			THRESHOLD_RETALIATION_DAMAGE,
 			THRESHOLD_STEP,
 		]

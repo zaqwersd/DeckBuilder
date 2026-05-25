@@ -13,6 +13,9 @@ const SAVE_PATH := "user://savegame.tres"
 @export var current_health: int
 @export var current_max_health: int = -1
 @export var saved_relic_ids: PackedStringArray = PackedStringArray()
+@export var saved_spent_relic_ids: PackedStringArray = PackedStringArray()
+## 与 saved_spent_relic_ids 同步的逗号分隔备份，避免部分环境下 PackedStringArray 未写入 .tres
+@export var saved_spent_relic_ids_csv: String = ""
 @export var relics: Array[Relic]
 @export var map_data: Array[Array]
 @export var last_room: Room
@@ -80,6 +83,7 @@ const BATTLE_REWARD_PENDING_RELIC := 1
 @export var battle_reward_pending_pre_gold: int = -1
 @export var battle_reward_pending_pre_deck_cards: Array[Card] = []
 @export var battle_reward_pending_pre_relic_ids: PackedStringArray = PackedStringArray()
+@export var battle_reward_pending_pre_spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var battle_reward_pending_pre_rng_seed: int = 0
 @export var battle_reward_pending_pre_rng_state: int = 0
 
@@ -92,6 +96,7 @@ const BATTLE_REWARD_PENDING_RELIC := 1
 @export var battle_reward_entry_pre_gold: int = -1
 @export var battle_reward_entry_pre_deck_cards: Array[Card] = []
 @export var battle_reward_entry_pre_relic_ids: PackedStringArray = PackedStringArray()
+@export var battle_reward_entry_pre_spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var battle_reward_entry_pre_rng_seed: int = 0
 @export var battle_reward_entry_pre_rng_state: int = 0
 
@@ -126,6 +131,7 @@ func clear_battle_reward_entry_staging() -> void:
 	battle_reward_entry_pre_gold = -1
 	battle_reward_entry_pre_deck_cards.clear()
 	battle_reward_entry_pre_relic_ids.clear()
+	battle_reward_entry_pre_spent_relic_ids.clear()
 	battle_reward_entry_pre_rng_seed = 0
 	battle_reward_entry_pre_rng_state = 0
 
@@ -156,12 +162,90 @@ static func _sync_character_stats_to_save(self_ref: SaveGame, ch: CharacterStats
 	self_ref.current_max_health = ch.max_health
 
 
-func sync_relics_for_save(from_relics: Array[Relic]) -> void:
+static func collect_spent_relic_ids(from_relics: Array[Relic]) -> PackedStringArray:
+	var out := PackedStringArray()
+	for relic: Relic in from_relics:
+		if relic != null and not relic.id.is_empty() and relic.is_relic_spent():
+			out.append(relic.id)
+	return out
+
+
+static func resolve_spent_relic_ids(ids: PackedStringArray) -> PackedStringArray:
+	var out := PackedStringArray()
+	var seen: Dictionary = {}
+	for raw_id in ids:
+		var id := SaveGameMigrations.resolve_relic_id(String(raw_id))
+		if id.is_empty() or seen.has(id):
+			continue
+		seen[id] = true
+		out.append(id)
+	return out
+
+
+static func spent_ids_to_csv(ids: PackedStringArray) -> String:
+	if ids.is_empty():
+		return ""
+	var parts: PackedStringArray = PackedStringArray()
+	for id in ids:
+		var s := String(id).strip_edges()
+		if not s.is_empty():
+			parts.append(s)
+	return ",".join(parts)
+
+
+static func spent_ids_from_csv(csv: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	if csv.is_empty():
+		return out
+	for part: String in csv.split(","):
+		var id := part.strip_edges()
+		if not id.is_empty():
+			out.append(id)
+	return out
+
+
+func get_resolved_spent_relic_ids() -> PackedStringArray:
+	return get_map_spent_relic_ids()
+
+
+func hydrate_spent_relic_ids_after_load() -> void:
+	if not saved_spent_relic_ids.is_empty():
+		return
+	var from_csv := spent_ids_from_csv(saved_spent_relic_ids_csv)
+	if not from_csv.is_empty():
+		saved_spent_relic_ids = resolve_spent_relic_ids(from_csv)
+
+
+## 地图/非战斗：整局持久化的失效遗物 id
+func get_map_spent_relic_ids() -> PackedStringArray:
+	hydrate_spent_relic_ids_after_load()
+	return resolve_spent_relic_ids(saved_spent_relic_ids)
+
+
+## 战斗中途读档：以 combat_snapshot.spent_relic_ids 为准（进战瞬间，不随本场使用而变）
+func get_combat_spent_relic_ids() -> PackedStringArray:
+	if combat_snapshot == null:
+		return PackedStringArray()
+	return resolve_spent_relic_ids(combat_snapshot.spent_relic_ids)
+
+
+func sync_relic_ids_for_save(from_relics: Array[Relic]) -> void:
 	saved_relic_ids = PackedStringArray()
 	for relic: Relic in from_relics:
 		if relic != null and not relic.id.is_empty():
 			saved_relic_ids.append(relic.id)
 	relics.clear()
+
+
+## 地图/战斗结束等：同步遗物 id 与整局失效状态
+func sync_relics_for_save(from_relics: Array[Relic]) -> void:
+	sync_relic_ids_for_save(from_relics)
+	saved_spent_relic_ids = PackedStringArray()
+	for relic: Relic in from_relics:
+		if relic != null and not relic.id.is_empty() and relic.is_relic_spent():
+			saved_spent_relic_ids.append(relic.id)
+	saved_spent_relic_ids = resolve_spent_relic_ids(saved_spent_relic_ids)
+	saved_spent_relic_ids_csv = spent_ids_to_csv(saved_spent_relic_ids)
 
 
 func get_effective_relic_ids() -> PackedStringArray:
@@ -194,6 +278,7 @@ func clear_battle_reward_pending_staging() -> void:
 	battle_reward_pending_pre_gold = -1
 	battle_reward_pending_pre_deck_cards.clear()
 	battle_reward_pending_pre_relic_ids.clear()
+	battle_reward_pending_pre_spent_relic_ids.clear()
 	battle_reward_pending_pre_rng_seed = 0
 	battle_reward_pending_pre_rng_state = 0
 
@@ -256,10 +341,14 @@ func stage_battle_reward_entry_snapshot(
 		for card in character.deck.cards:
 			battle_reward_entry_pre_deck_cards.append(card.duplicate(true) as Card)
 	battle_reward_entry_pre_relic_ids.clear()
+	battle_reward_entry_pre_spent_relic_ids.clear()
 	if relic_handler != null:
 		for r: Relic in relic_handler.get_all_relics():
 			if is_instance_valid(r) and r.id != "":
 				battle_reward_entry_pre_relic_ids.append(r.id)
+		battle_reward_entry_pre_spent_relic_ids = collect_spent_relic_ids(
+			relic_handler.get_all_relics()
+		)
 	battle_reward_entry_pre_rng_seed = rng_seed
 	battle_reward_entry_pre_rng_state = rng_state
 	battle_reward_entry_staged = true
@@ -288,7 +377,10 @@ func apply_battle_reward_entry_rollback_to(ch: CharacterStats, relic_handler: Re
 			ch.deck.cards.append(card.duplicate(true) as Card)
 	if relic_handler != null:
 		relics = relic_handler.restore_relics_from_ids(
-			battle_reward_entry_pre_relic_ids, false, true
+			battle_reward_entry_pre_relic_ids,
+			false,
+			true,
+			battle_reward_entry_pre_spent_relic_ids
 		)
 	ch.stats_changed.emit()
 	_sync_character_stats_to_save(self, ch)
@@ -339,7 +431,10 @@ func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: 
 	## 恢复遗物
 	if relic_handler != null:
 		relics = relic_handler.restore_relics_from_ids(
-			battle_reward_pending_pre_relic_ids, false, true
+			battle_reward_pending_pre_relic_ids,
+			false,
+			true,
+			battle_reward_pending_pre_spent_relic_ids
 		)
 	
 	ch.stats_changed.emit()
@@ -359,12 +454,17 @@ func save_data() -> void:
 	assert(err == OK, "无法保存游戏！")
 
 
+static func has_save_file() -> bool:
+	return FileAccess.file_exists(SAVE_PATH)
+
+
 static func load_data() -> SaveGame:
 	if FileAccess.file_exists(SAVE_PATH):
 		var data := SaveGameMigrations.load_save_game_resource(SAVE_PATH)
 		if data:
 			SaveGameMigrations.migrate(data)
 			SaveGameMigrations.sanitize_saved_relics(data)
+			data.hydrate_spent_relic_ids_after_load()
 			sync_saved_map_room_refs(data)
 			reconcile_map_visited_flags(data)
 		return data
@@ -526,6 +626,7 @@ static func delete_data() -> void:
 @export var scene_entry_gold: int = -1
 @export var scene_entry_deck_cards: Array[Card] = []
 @export var scene_entry_relic_ids: PackedStringArray = PackedStringArray()
+@export var scene_entry_spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var scene_entry_rng_seed: int = 0
 @export var scene_entry_rng_state: int = 0
 @export var scene_entry_room_type: int = -1
@@ -556,11 +657,13 @@ func save_scene_entry_snapshot(
 		for card in character.deck.cards:
 			scene_entry_deck_cards.append(card.duplicate(true) as Card)
 	
-	# 保存遗物ID
+	# 保存遗物 ID 与一次性遗物的失效状态
 	scene_entry_relic_ids.clear()
+	scene_entry_spent_relic_ids.clear()
 	for relic in relics:
 		if is_instance_valid(relic) and relic != null:
 			scene_entry_relic_ids.append(relic.id)
+	scene_entry_spent_relic_ids = collect_spent_relic_ids(relics)
 	
 	scene_entry_rng_seed = rng_seed
 	scene_entry_rng_state = rng_state
@@ -598,7 +701,9 @@ func apply_scene_entry_snapshot(character: CharacterStats, relic_handler: RelicH
 	
 	# 恢复遗物
 	if relic_handler != null:
-		relic_handler.restore_relics_from_ids(scene_entry_relic_ids, false, false)
+		relic_handler.restore_relics_from_ids(
+			scene_entry_relic_ids, false, false, scene_entry_spent_relic_ids
+		)
 	
 	# 恢复RNG状态
 	RNG.set_from_save_data(scene_entry_rng_seed, scene_entry_rng_state)
@@ -618,5 +723,6 @@ func clear_scene_entry_snapshot() -> void:
 	scene_entry_gold = -1
 	scene_entry_deck_cards.clear()
 	scene_entry_relic_ids.clear()
+	scene_entry_spent_relic_ids.clear()
 	scene_entry_rng_seed = 0
 	scene_entry_rng_state = 0

@@ -14,6 +14,8 @@ const RELIC_ID_RENAMES: Dictionary = {
 	"coupons": "VIP_card",
 	"mana_potion": "candle",
 	"explosive_barrel": "lava_shard",
+	"martial_manual": "martial_scroll",
+	"jade_axe": "emerald_axe",
 }
 
 const _DEPRECATED_RELIC_TRES := "res://relics/deprecated_relic.tres"
@@ -96,6 +98,8 @@ static func sanitize_saved_relics(data: SaveGame) -> void:
 		else:
 			resolved_ids.append(String(relic_id))
 	data.saved_relic_ids = resolved_ids
+	data.saved_spent_relic_ids = SaveGame.resolve_spent_relic_ids(data.saved_spent_relic_ids)
+	data.saved_spent_relic_ids_csv = SaveGame.spent_ids_to_csv(data.saved_spent_relic_ids)
 	var sanitized: Array[Relic] = []
 	for relic_id in resolved_ids:
 		var relic := GameContent.load_relic_for_save(String(relic_id))
@@ -120,8 +124,11 @@ static func _migrate_relic_ids(data: SaveGame) -> void:
 		_replace_relic_id_in_array(data.battle_reward_entry_pre_relic_ids, old_id, new_id)
 		_replace_relic_id_in_array(data.scene_entry_relic_ids, old_id, new_id)
 		_replace_relic_id_in_array(data.saved_relic_ids, old_id, new_id)
+		_replace_relic_id_in_array(data.saved_spent_relic_ids, old_id, new_id)
+		_replace_relic_id_in_array(data.scene_entry_spent_relic_ids, old_id, new_id)
 		if data.combat_snapshot:
 			_replace_relic_id_in_array(data.combat_snapshot.relic_ids, old_id, new_id)
+			_replace_relic_id_in_array(data.combat_snapshot.spent_relic_ids, old_id, new_id)
 	for i in range(data.relics.size()):
 		var relic: Relic = data.relics[i]
 		if relic == null or relic.id.is_empty():

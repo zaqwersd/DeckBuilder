@@ -35,6 +35,8 @@ var _intent_hover_tooltip_active: bool = false
 var _art_frame_index: int = 0
 var _art_anim_timer: Timer
 var _awaiting_interrupt_action: bool = false
+## take_damage 调用时若在攻击牌窗口内计数；实际扣血后发出 player_dealt_attack_damage_to_enemy（tween 晚于 end_attack_card_effects）
+var _pending_player_attack_card_hits: int = 0
 
 
 func _ready() -> void:
@@ -171,6 +173,10 @@ func _on_stats_unblocked_damage_taken(amount: int) -> void:
 	var heavy_armor := HeavyArmorStatus.get_on_enemy(self)
 	if heavy_armor != null and amount > 0:
 		heavy_armor.register_damage_taken(amount, self)
+	if _pending_player_attack_card_hits > 0:
+		_pending_player_attack_card_hits -= 1
+		if amount > 0 and not Events.is_combat_ended():
+			Events.player_dealt_attack_damage_to_enemy.emit(self, amount)
 
 
 func _on_stats_healing_applied(amount: int) -> void:
@@ -434,6 +440,12 @@ func _await_self_action_completed() -> void:
 			return
 
 
+func _apply_damage_tween(damage: int) -> void:
+	if _pending_player_attack_card_hits > 0 and damage <= 0:
+		_pending_player_attack_card_hits -= 1
+	_apply_damage_to_stats(damage)
+
+
 func _apply_damage_to_stats(damage: int) -> void:
 	if is_instance_valid(stats):
 		stats.take_damage(damage)
@@ -442,6 +454,12 @@ func _apply_damage_to_stats(damage: int) -> void:
 func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	if stats.health <= 0:
 		return
+	
+	if (
+		which_modifier == Modifier.Type.DMG_TAKEN
+		and Events.is_inside_attack_card_effects()
+	):
+		_pending_player_attack_card_hits += 1
 	
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
 	var modified_damage := modifier_handler.get_modified_value(damage, which_modifier)
@@ -460,7 +478,7 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 	
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
-	tween.tween_callback(_apply_damage_to_stats.bind(damage_to_apply))
+	tween.tween_callback(_apply_damage_tween.bind(damage_to_apply))
 	tween.tween_interval(0.17)
 
 	tween.finished.connect(

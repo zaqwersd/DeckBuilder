@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://505hqqgllel6"
-path="res://.godot/imported/flow_state.png-43c4c629393b7ef6e577f5ec0e0e9489.ctex"
+uid="uid://dvdijb368llb2"
+path="res://.godot/imported/cross.png-829a0caebb4985292e1594bdff1e95c5.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/flow_state.png"
-dest_files=["res://.godot/imported/flow_state.png-43c4c629393b7ef6e577f5ec0e0e9489.ctex"]
+source_file="res://art/cross.png"
+dest_files=["res://.godot/imported/cross.png-829a0caebb4985292e1594bdff1e95c5.ctex"]
 
 [params]
 

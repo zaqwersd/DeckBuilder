@@ -51,18 +51,6 @@ debug_color = Color(0, 0.6, 0.701961, 0.117647)
 position = Vector2(0, -40)
 script = ExtResource("4_41vpn")
 
-[node name="BatEnemy" parent="EnemyHandler" unique_id=469659438 instance=ExtResource("2_02s5s")]
-position = Vector2(783, 279)
-stats = ExtResource("8_d4c2d")
-
-[node name="CrabEnemy" parent="EnemyHandler" unique_id=1307363898 instance=ExtResource("2_02s5s")]
-position = Vector2(922.5, 360)
-stats = ExtResource("5_5flmk")
-
-[node name="BatEnemy2" parent="EnemyHandler" unique_id=739527217 instance=ExtResource("2_02s5s")]
-position = Vector2(1053, 279)
-stats = ExtResource("8_d4c2d")
-
 [node name="Player" parent="." unique_id=1017222038 groups=["battle_player"] instance=ExtResource("3_dpj45")]
 position = Vector2(202.5, 340)
 stats = ExtResource("4_fwb8a")

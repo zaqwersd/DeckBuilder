@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="FlowStateStatus" format=3 uid="uid://dv6ytdydvp7ea"]
+[gd_resource type="Resource" script_class="FlowStateStatus" format=3 uid="uid://b033lqlj8qi4o"]
 
-[ext_resource type="Texture2D" uid="uid://505hqqgllel6" path="res://art/flow_state.png" id="1_icon"]
-[ext_resource type="Script" uid="uid://bmj4m75k7k42y" path="res://statuses/flow_state.gd" id="2_script"]
+[ext_resource type="Texture2D" path="res://art/flow_state.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/flow_state.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")

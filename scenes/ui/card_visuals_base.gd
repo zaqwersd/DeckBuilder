@@ -15,6 +15,12 @@ const TYPE_DISPLAY := {
 	Card.Type.STATUS: "状态",
 }
 
+const _TOOLTIP_ANCHOR_SCRIPTS: Array[String] = [
+	"res://scenes/card_ui/card_ui.gd",
+	"res://scenes/ui/card_menu_ui.gd",
+	"res://scenes/ui/mana_ui.gd",
+]
+
 ## Blade 角色卡主底板填充色 #009688（RGB 0,150,136）
 const BLADE_MAIN_BG := Color(0.0 / 255.0, 150.0 / 255.0, 136.0 / 255.0, 1.0)
 
@@ -37,8 +43,8 @@ const COMMON_PUBLIC_CARD_IDS: Array[String] = ["ghost", "iron_wave", "scent"]
 ## 卡面整体被 scale 缩小时，保证屏幕上文字至少该像素
 const MIN_SCREEN_CARD_TEXT_PX := 16
 
-## 至少升级过一次的卡：名称与升级角标字色 #72d572
-const UPGRADED_CARD_ACCENT := Color(0x72 / 255.0, 0xd5 / 255.0, 0x72 / 255.0, 1.0)
+## 至少升级过一次的卡：名称与升级角标字色（与战斗增益绿 #5dff7a 一致）
+const UPGRADED_CARD_ACCENT := Color(0x5d / 255.0, 0xff / 255.0, 0x7a / 255.0, 1.0)
 const UPGRADED_FONT_OUTLINE := Color(0x05 / 255.0, 0x6f / 255.0, 0.0 / 255.0, 1.0)
 
 ## 卡面描述 RichTextLabel 字号
@@ -102,10 +108,19 @@ func _ensure_description_meta_signals() -> void:
 	_desc_meta_signals_wired = true
 
 
+func _node_is_tooltip_anchor(n: Node) -> bool:
+	if not (n is Control):
+		return false
+	var scr: Script = n.get_script() as Script
+	if scr == null:
+		return false
+	return scr.resource_path in _TOOLTIP_ANCHOR_SCRIPTS
+
+
 func _tooltip_anchor_control() -> Control:
 	var n: Node = self
 	while n != null:
-		if n is CardUI or n is CardMenuUI or n is ManaUI:
+		if _node_is_tooltip_anchor(n):
 			return n as Control
 		n = n.get_parent()
 	return self
@@ -438,11 +453,13 @@ func set_combat_effective_mana_affordable(affordable: bool) -> void:
 
 
 func apply_modifier_context(
-	player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler, combat_player: Node = null
+	player_modifiers: ModifierHandler = null,
+	enemy_modifiers: ModifierHandler = null,
+	combat_player: Node = null,
 ) -> void:
-	_player_modifiers = player_modifiers
-	_enemy_modifiers = enemy_modifiers
-	_combat_player_for_desc = combat_player
+	_player_modifiers = player_modifiers if is_instance_valid(player_modifiers) else null
+	_enemy_modifiers = enemy_modifiers if is_instance_valid(enemy_modifiers) else null
+	_combat_player_for_desc = combat_player if is_instance_valid(combat_player) else null
 	_refresh_description_text()
 	_sync_cost_label_style()
 

@@ -3,7 +3,7 @@ extends Status
 
 
 func get_tooltip() -> String:
-	return tooltip % Status.format_tooltip_integer(stacks)
+	return tooltip % format_counter_for_tooltip(stacks)
 
 
 ## 「幽灵」被消耗时调用：虚无消散、打出并消耗（exhaust）等；伤害 = 当前恶灵缠身层数。

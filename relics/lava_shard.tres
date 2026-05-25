@@ -1,13 +1,12 @@
-[gd_resource type="Resource" format=3]
+[gd_resource type="Resource" format=3 uid="uid://cgdh8eiirsp18"]
 
-[ext_resource type="Texture2D" path="res://art/lava_shard.png" id="1_icon"]
-[ext_resource type="Script" path="res://relics/lava_shard.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://c1417rupy2gso" path="res://art/lava_shard.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://8ce1nbbbmiff" path="res://relics/lava_shard.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")
 relic_name = "熔岩碎片"
 id = "lava_shard"
 type = 2
-rarity = 1
 icon = ExtResource("1_icon")
-tooltip = "回合结束时，对所有敌人造成 4 点伤害。"
+tooltip = "回合结束时，对所有敌人造成 3 点伤害。"

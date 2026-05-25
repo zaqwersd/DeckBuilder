@@ -23,4 +23,4 @@ func _on_deck_shuffled() -> void:
 	if player_handler == null:
 		return
 	relic_ui.flash()
-	player_handler.call_deferred("draw_cards", 1)
+	player_handler.request_shuffle_bonus_draw(1)

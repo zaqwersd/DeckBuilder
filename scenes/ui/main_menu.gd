@@ -20,7 +20,7 @@ var _relic_compendium: RelicCompendiumView
 func _ready() -> void:
 	add_to_group("main_menu")
 	get_tree().paused = false
-	continue_button.disabled = SaveGame.load_data() == null
+	continue_button.disabled = not SaveGame.has_save_file()
 	if not Events.card_keyword_tooltip_show.is_connected(game_tooltip.show_keyword_blocks):
 		Events.card_keyword_tooltip_show.connect(game_tooltip.show_keyword_blocks)
 	if not Events.card_keyword_tooltip_hide.is_connected(game_tooltip.hide_tooltip):

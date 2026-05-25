@@ -7,6 +7,8 @@ extends Resource
 @export var deck_cards: Array[Card]
 ## 保存遗物ID而不是Resource引用，避免Resource失效问题
 @export var relic_ids: PackedStringArray
+## 进战瞬间的失效状态（仅 create_from 写入；战斗中途保存不修改，读档回退到此）
+@export var spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var room: Room
 @export var timestamp: int
 ## 进入战斗时的RNG状态，确保重进后抽牌结果相同
@@ -19,10 +21,6 @@ extends Resource
 func has_shadow_samurai_cycle() -> bool:
 	return shadow_samurai_cycle_slots.size() == 4
 
-## 遗物资源缓存（静态，用于在创建和恢复之间传递）
-static var _relics_cache: Array[Relic] = []
-
-
 static func create_from(character: CharacterStats, current_relics: Array[Relic], current_room: Room) -> CombatSnapshot:
 	var snapshot := CombatSnapshot.new()
 	snapshot.health = character.health
@@ -30,13 +28,12 @@ static func create_from(character: CharacterStats, current_relics: Array[Relic],
 	for card in character.deck.cards:
 		snapshot.deck_cards.append(card.duplicate(true) as Card)
 	
-	# 保存遗物ID列表，并将遗物存入静态缓存
+	# 仅保存遗物 ID 与进入战斗时的失效状态（实例由读档时按 ID 重建）
 	snapshot.relic_ids = PackedStringArray()
-	_relics_cache.clear()
+	snapshot.spent_relic_ids = SaveGame.collect_spent_relic_ids(current_relics)
 	for relic in current_relics:
-		if is_instance_valid(relic) and relic != null:
+		if is_instance_valid(relic) and relic != null and not relic.id.is_empty():
 			snapshot.relic_ids.append(relic.id)
-			_relics_cache.append(relic)
 	
 	snapshot.room = current_room
 	snapshot.timestamp = Time.get_unix_time_from_system() as int
@@ -46,7 +43,7 @@ static func create_from(character: CharacterStats, current_relics: Array[Relic],
 	return snapshot
 
 
-func apply_to(character: CharacterStats, relic_handler: RelicHandler, fallback_relics: Array[Relic] = []) -> void:
+func apply_to(character: CharacterStats, relic_handler: RelicHandler) -> void:
 	if character == null:
 		return
 	character.health = health
@@ -57,24 +54,11 @@ func apply_to(character: CharacterStats, relic_handler: RelicHandler, fallback_r
 		for c: Card in character.deck.cards:
 			c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
 	if relic_handler != null:
-		relic_handler.clear_relics()
-		var relics_to_use: Array[Relic] = []
-		
-		print("CombatSnapshot.apply_to: 缓存=%d个, 后备=%d个" % [_relics_cache.size(), fallback_relics.size()])
-		
-		if not _relics_cache.is_empty():
-			# 使用内存中的缓存（适用于退出到主菜单后继续游戏）
-			print("使用内存缓存恢复遗物")
-			relics_to_use = _relics_cache.duplicate()
-		elif not fallback_relics.is_empty():
-			# 使用后备遗物（适用于完全重启游戏后）
-			print("使用后备数据恢复遗物")
-			relics_to_use = fallback_relics.duplicate()
-		
-		if not relics_to_use.is_empty():
-			relic_handler.add_relics(relics_to_use, false)
-			print("apply_to 完成，当前遗物数量: %d" % relic_handler.get_all_relics().size())
+		var ids_to_restore := relic_ids
+		if ids_to_restore.is_empty():
+			push_warning("CombatSnapshot.apply_to: 快照中无 relic_ids，将跳过遗物恢复")
 		else:
-			push_warning("CombatSnapshot.apply_to: 没有遗物可以恢复！")
+			var spent_apply := SaveGame.resolve_spent_relic_ids(spent_relic_ids)
+			relic_handler.restore_relics_from_ids(ids_to_restore, false, true, spent_apply)
 	# 恢复RNG状态，确保抽牌结果与第一次进入时相同
 	RNG.set_from_save_data(rng_seed, rng_state)

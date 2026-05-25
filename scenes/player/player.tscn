@@ -25,3 +25,6 @@ type = 1
 
 [node name="CardCostModifier" parent="ModifierHandler" instance=ExtResource("6_jup6q")]
 type = 2
+
+[node name="PowerCardCostModifier" parent="ModifierHandler" instance=ExtResource("6_jup6q")]
+type = 5

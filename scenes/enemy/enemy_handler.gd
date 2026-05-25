@@ -15,7 +15,7 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 		return
 	
 	for enemy: Enemy in get_children():
-		enemy.queue_free()
+		enemy.free()
 	
 	var all_new_enemies := battle_stats.enemies.instantiate()
 	
@@ -30,7 +30,7 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 		if is_instance_valid(template.stats):
 			new_enemy_child.stats = template.stats
 		
-	all_new_enemies.queue_free()
+	all_new_enemies.free()
 
 
 func reset_enemy_actions() -> void:
@@ -40,56 +40,34 @@ func reset_enemy_actions() -> void:
 
 
 func start_turn() -> void:
-	print("[DEBUG] ==========================================")
-	print("[DEBUG] enemy_handler start_turn called")
-	print("[DEBUG] self: ", self)
-	print("[DEBUG] is_instance_valid: ", is_instance_valid(self))
-	print("[DEBUG] is_inside_tree: ", is_inside_tree())
-	print("[DEBUG] child count: ", get_child_count())
 	if get_child_count() == 0:
-		push_error("[DEBUG] No enemies found!")
+		push_error("EnemyHandler.start_turn: 场上没有敌人。")
 		return
 	
-	print("[DEBUG] Clearing acting_enemies...")
 	acting_enemies.clear()
-	print("[DEBUG] Populating acting_enemies from children...")
 	for child in get_children():
-		print("[DEBUG] Checking child: ", child.name, " type: ", child.get_class())
-		if child is Enemy:
-			var enemy := child as Enemy
-			print("[DEBUG] Found enemy: ", enemy.name, " valid: ", is_instance_valid(enemy))
-			if is_instance_valid(enemy):
-				acting_enemies.append(enemy)
-		else:
-			print("[DEBUG] Child is not Enemy, skipping: ", child.name)
+		if child is Enemy and is_instance_valid(child):
+			acting_enemies.append(child as Enemy)
 	
-	print("[DEBUG] acting_enemies count after population: ", acting_enemies.size())
-	print("[DEBUG] About to call _start_next_enemy_turn...")
 	_start_next_enemy_turn()
-	print("[DEBUG] _start_next_enemy_turn returned")
 
 
 func _start_next_enemy_turn() -> void:
-	print("[DEBUG] _start_next_enemy_turn called, acting_enemies count: ", acting_enemies.size())
 	if acting_enemies.is_empty():
-		print("[DEBUG] acting_enemies is empty, emitting enemy_turn_ended")
 		Events.enemy_turn_ended.emit()
 		return
 	
 	var current_enemy := acting_enemies[0]
-	print("[DEBUG] Current enemy: ", current_enemy.name if current_enemy else "null", " valid: ", is_instance_valid(current_enemy))
 	
 	if not is_instance_valid(current_enemy):
-		push_error("[DEBUG] Current enemy is invalid!")
 		acting_enemies.erase(current_enemy)
 		_start_next_enemy_turn()
 		return
 	
 	if not is_instance_valid(current_enemy.status_handler):
-		push_error("[DEBUG] Enemy status_handler is invalid!")
+		push_error("EnemyHandler: 敌人 status_handler 无效。")
 		return
 	
-	print("[DEBUG] Applying START_OF_TURN to enemy: ", current_enemy.name)
 	current_enemy.status_handler.apply_statuses_by_type(Status.Type.START_OF_TURN)
 
 

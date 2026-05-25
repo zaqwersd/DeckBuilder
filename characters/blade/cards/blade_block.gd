@@ -27,13 +27,14 @@ func get_default_tooltip() -> String:
 func get_updated_tooltip(
 	_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null
 ) -> String:
-	var b := _intrinsic_block()
+	var b := effective_block_from_card_play(_intrinsic_block(), _combat_player)
 	var mx := is_upgrade_track_maxed("block")
-	return tooltip_text % bbcode_for_modified_number_with_upgrade_hint(b, b, mx)
+	return tooltip_text % bbcode_for_modified_number_with_upgrade_hint(b, _intrinsic_block(), mx)
 
 
 func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var block_effect := BlockEffect.new()
 	block_effect.amount = _intrinsic_block()
+	block_effect.from_card_play = true
 	block_effect.sound = sound
 	block_effect.execute(targets)

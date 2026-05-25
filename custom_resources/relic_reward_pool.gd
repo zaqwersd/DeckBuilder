@@ -14,6 +14,8 @@ func roll_reward(
 		func(relic: Relic) -> bool:
 			if relic == null:
 				return false
+			if not GameContent.is_relic_enabled_in_game(relic.id):
+				return false
 			var can_appear := relic.can_appear_as_reward(char_stats)
 			var already_had := relic_handler != null and relic_handler.has_relic(relic.id)
 			return can_appear and not already_had

@@ -2,7 +2,7 @@ extends EnemyAction
 
 const STRENGTH := preload("res://statuses/strength.tres")
 
-@export var strength_stacks := 1
+@export var strength_stacks := 2
 
 
 func get_planned_intents() -> Array[Intent]:

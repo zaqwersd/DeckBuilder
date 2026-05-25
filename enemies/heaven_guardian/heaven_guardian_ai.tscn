@@ -25,6 +25,7 @@ script = ExtResource("1_ai")
 
 [node name="Strike36Strength10" type="Node" parent="." unique_id=153926439]
 script = ExtResource("2_strike")
+damage = 36
 strike_intent = SubResource("Intent_attack36")
 str_intent = SubResource("Intent_buff10")
 sound = ExtResource("6_atk")

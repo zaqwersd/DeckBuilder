@@ -1,7 +1,7 @@
 extends Relic
 
 @export var skills_required := 3
-@export var damage := 7
+@export var damage := 5
 
 var relic_ui: RelicUI
 var skills_this_turn: int

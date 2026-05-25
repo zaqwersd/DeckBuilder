@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="NextTurnManaStatus" format=3 uid="uid://b2pbejc4jyhi"]
+
+[ext_resource type="Texture2D" uid="uid://bn5t3ty8ylqnn" path="res://art/next_turn_mana.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://c7ybg4a433smt" path="res://statuses/next_turn_mana.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "next_turn_mana"
+can_expire = true
+duration = 1
+icon = ExtResource("1_icon")
+name = "下回合能量"
+tooltip = "下回合开始时，获得%s点能量。"

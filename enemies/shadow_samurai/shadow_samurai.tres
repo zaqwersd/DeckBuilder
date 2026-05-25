@@ -11,5 +11,5 @@ art_scale = Vector2(4, 4)
 health_bar_width = 210
 status_bar_offset = Vector2(0, 80)
 intent_ui_offset = Vector2(0, 40)
-max_health = 297
+max_health = 320
 art = ExtResource("2_art")

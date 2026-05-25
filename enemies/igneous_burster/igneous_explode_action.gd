@@ -40,8 +40,11 @@ func perform_action() -> void:
 	
 	# 如果玩家死亡，发送死亡事件并直接返回（不自爆，战斗已结束）
 	if is_instance_valid(player) and player.stats.health <= 0:
-		Events.player_died.emit()
-		return
+		if player.handle_lethal_if_needed():
+			pass
+		else:
+			Events.player_died.emit()
+			return
 	
 	# 玩家没死，继续自爆流程
 	Events.enemy_action_completed.emit(enemy)

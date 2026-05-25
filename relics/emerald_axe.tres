@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://art/jade_axe.png" id="1_icon"]
+[ext_resource type="Script" path="res://relics/emerald_axe.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "翡翠斧头"
+id = "emerald_axe"
+type = 1
+rarity = 1
+icon = ExtResource("1_icon")
+tooltip = "每场战斗开始时，获得 1 点力量。"

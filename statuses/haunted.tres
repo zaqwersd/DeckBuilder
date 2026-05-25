@@ -8,6 +8,7 @@ script = ExtResource("2_haunt")
 id = "haunted"
 type = 2
 stack_type = 1
+polarity = 1
 icon = ExtResource("1_d6sdf")
 name = "恶灵缠身"
 tooltip = "每当一张「恶灵」被消耗，受到%s点伤害。"

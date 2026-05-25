@@ -20,7 +20,9 @@ static func compute_mana_to_spend(
 	if player_modifiers:
 		base = player_modifiers.get_modified_value(base, Modifier.Type.CARD_COST)
 	base += _status_mana_cost_add(card, combat_player)
-	return base
+	if card.type == Card.Type.POWER and player_modifiers:
+		base = player_modifiers.get_modified_value(base, Modifier.Type.POWER_CARD_COST)
+	return maxi(0, base)
 
 
 static func can_play(

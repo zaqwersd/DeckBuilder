@@ -688,12 +688,16 @@ func _save_battle_reward_pending_snapshot(run: Run, relic_index: int) -> void:
 		for card in character_stats.deck.cards:
 			sd.battle_reward_pending_pre_deck_cards.append(card.duplicate(true) as Card)
 	
-	## 保存遗物ID列表
+	## 保存遗物 ID 与失效状态
 	sd.battle_reward_pending_pre_relic_ids.clear()
+	sd.battle_reward_pending_pre_spent_relic_ids.clear()
 	var current_relics := relic_handler.get_all_relics()
 	for r: Relic in current_relics:
 		if is_instance_valid(r) and r.id != "":
 			sd.battle_reward_pending_pre_relic_ids.append(r.id)
+	sd.battle_reward_pending_pre_spent_relic_ids = SaveGame.collect_spent_relic_ids(
+		current_relics
+	)
 	
 	## 保存RNG状态
 	sd.battle_reward_pending_pre_rng_seed = RNG.instance.seed

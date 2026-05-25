@@ -40,6 +40,15 @@ const SAMSARA_ANCHOR_HOLD := 0.02
 ## 单条 lane 预估时长（飞到屏心+变化+飞抽牌堆），用于并行等待兜底
 const SAMSARA_LANE_PIPELINE_ESTIMATE := 0.82
 const SAMSARA_PIPELINE_TIMEOUT_PAD := 1.2
+const DEMONS_BELL_SWEEP_DURATION := 0.1
+const DEMON_SWEEP_TEX := preload("res://art/demon.png")
+const DEMON_SWEEP_SFX := preload("res://art/demon_sweep.ogg")
+const DEMON_SWEEP_ALPHA := 0.55
+const DEMON_SWEEP_HEIGHT_RATIO := 0.55
+const DEMON_SWEEP_Y_OFFSET := 140.0
+const DEMON_TRAIL_PROGRESS_STEP := 0.12
+const DEMON_TRAIL_ALPHA := 0.32
+const DEMON_TRAIL_FADE_DURATION := 0.14
 var draw_pile_button: Control
 var discard_pile_button: Control
 var exhaust_pile_button: Control
@@ -1166,3 +1175,75 @@ func _tween_ghost_curve_scale(
 	# 勿用 .bind(data)：Tween 的 MethodTweener 会把插值 float 当作第 1 个实参直接调方法，导致「float 无法转成 Dictionary」
 	tw.tween_method(func(te: float) -> void: _bezier_ghost_step(data, te), 0.0, 1.0, duration)
 	await _await_ghost_tween_finished(ghost, tw, duration + 0.12)
+
+
+## 恶魔铃铛：半透明 demon 自左向右扫屏（与 demon_sweep.ogg 同步）。
+func play_demons_bell_sweep() -> void:
+	if not is_inside_tree():
+		return
+	_fit_to_viewport()
+	var viewport := get_viewport()
+	if viewport == null:
+		return
+	SFXPlayer.play(DEMON_SWEEP_SFX)
+	var vp_rect := viewport.get_visible_rect()
+	var spr := _make_demon_sweep_sprite(DEMON_SWEEP_ALPHA, 500)
+	add_child(spr)
+	_fit_demon_sweep_sprite_scale(spr, vp_rect.size.y)
+	var tex_w := 0.0
+	var tex_h := 0.0
+	if spr.texture:
+		tex_w = spr.texture.get_width() * absf(spr.scale.x)
+		tex_h = spr.texture.get_height() * absf(spr.scale.y)
+	var y := vp_rect.position.y + vp_rect.size.y * 0.42 - tex_h * 0.5 + DEMON_SWEEP_Y_OFFSET
+	var start_x := vp_rect.position.x - tex_w
+	var end_x := vp_rect.position.x + vp_rect.size.x + tex_w
+	var demon_scale := spr.scale
+	spr.global_position = Vector2(start_x, y)
+	var next_trail_at := 0.0
+	var tween := spr.create_tween()
+	tween.set_trans(Tween.TRANS_LINEAR)
+	tween.tween_method(
+		func(t: float) -> void:
+			var pos := Vector2(lerpf(start_x, end_x, t), y)
+			spr.global_position = pos
+			if t + 0.001 < next_trail_at:
+				return
+			next_trail_at += DEMON_TRAIL_PROGRESS_STEP
+			_spawn_demon_sweep_trail(demon_scale, pos),
+		0.0,
+		1.0,
+		DEMONS_BELL_SWEEP_DURATION
+	)
+	tween.finished.connect(spr.queue_free)
+
+
+func _make_demon_sweep_sprite(alpha: float, z: int) -> Sprite2D:
+	var spr := Sprite2D.new()
+	spr.texture = DEMON_SWEEP_TEX
+	spr.modulate = Color(1.0, 1.0, 1.0, alpha)
+	spr.top_level = true
+	spr.z_index = z
+	return spr
+
+
+func _spawn_demon_sweep_trail(scale: Vector2, global_pos: Vector2) -> void:
+	var trail := _make_demon_sweep_sprite(DEMON_TRAIL_ALPHA, 499)
+	trail.scale = scale
+	trail.global_position = global_pos
+	add_child(trail)
+	var fade := trail.create_tween()
+	fade.set_parallel(true)
+	fade.tween_property(trail, "modulate:a", 0.0, DEMON_TRAIL_FADE_DURATION)
+	fade.tween_property(trail, "scale", scale * Vector2(1.06, 1.02), DEMON_TRAIL_FADE_DURATION)
+	fade.finished.connect(trail.queue_free)
+
+
+func _fit_demon_sweep_sprite_scale(spr: Sprite2D, viewport_height: float) -> void:
+	if spr.texture == null:
+		return
+	var tex_h := spr.texture.get_height()
+	if tex_h <= 0.0:
+		return
+	var target_h := viewport_height * DEMON_SWEEP_HEIGHT_RATIO
+	spr.scale = Vector2.ONE * (target_h / tex_h)

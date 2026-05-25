@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3 uid="uid://df00on56uhtqj"]
+
+[ext_resource type="Texture2D" uid="uid://fg0sln3ghauu" path="res://art/martial_scroll.png" id="1_icon"]
+[ext_resource type="Script" path="res://relics/martial_scroll.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "武功秘籍"
+id = "martial_scroll"
+type = 4
+rarity = 3
+icon = ExtResource("1_icon")
+tooltip = "能力牌耗能减少1。"

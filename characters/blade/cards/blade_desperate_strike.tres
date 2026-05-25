@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://art/desperate_strike.png" id="1_icon"]
+[ext_resource type="Script" path="res://characters/blade/cards/blade_desperate_strike.gd" id="2_script"]
+[ext_resource type="AudioStream" path="res://art/axe.ogg" id="3_snd"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_desperate_strike"
+rarity = 1
+target = 1
+cost = 1
+card_name = "舍身技"
+icon = ExtResource("1_icon")
+tooltip_text = "[center]受到6点伤害。[br]造成%s点伤害。[/center]"
+sound = ExtResource("3_snd")

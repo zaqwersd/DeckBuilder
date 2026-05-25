@@ -36,6 +36,8 @@ var stats: RunStats
 var character: CharacterStats
 var save_data: SaveGame
 var current_act: int = 1  ## 当前层数（1-3），用于三层游戏结构
+## 失败/通关界面出现后：禁止再写入存档，退出主菜单时删除存档。
+var run_finished: bool = false
 
 
 func _ready() -> void:
@@ -54,6 +56,7 @@ func _ready() -> void:
 		RunStartup.Type.CONTINUED_RUN:
 			_load_run()
 	
+	call_deferred("_warmup_battle_assets")
 	_ensure_debug_console()
 func _start_run() -> void:
 	stats = RunStats.new()
@@ -66,10 +69,31 @@ func _start_run() -> void:
 	map.unlock_floor(0)
 	
 	save_data = SaveGame.new()
-	_save_run(true)
+	call_deferred("_save_run", true)
+	call_deferred("_warmup_battle_assets")
+
+
+func mark_run_finished() -> void:
+	run_finished = true
+
+
+## 从失败/通关界面返回主菜单：删除存档并结束本局。
+func abandon_finished_run_to_main_menu() -> void:
+	mark_run_finished()
+	SaveGame.delete_data()
+	get_tree().paused = false
+	get_tree().change_scene_to_file(MAIN_MENU_PATH)
+
+
+func _write_save_file() -> void:
+	if run_finished or save_data == null:
+		return
+	save_data.save_data()
 
 
 func _save_run(was_on_map: bool) -> void:
+	if run_finished or save_data == null:
+		return
 	save_data.rng_seed = RNG.instance.seed
 	save_data.rng_state = RNG.instance.state
 	save_data.run_stats = stats
@@ -92,8 +116,8 @@ func _save_run(was_on_map: bool) -> void:
 	# 如果有战斗快照（战斗进行中），不覆盖角色状态
 	# 这样中途退出后重进时可以恢复到战斗开始时的状态
 	if save_data.combat_snapshot != null and not was_on_map:
-		# 战斗中：保留快照中的状态，但遗物仍然需要保存（战斗中遗物不会改变）
-		save_data.sync_relics_for_save(current_relics)
+		# 战斗中：只同步遗物 id；失效状态保持「进战瞬间」快照，便于未失效时退出可回退
+		save_data.sync_relic_ids_for_save(current_relics)
 		_sync_combat_snapshot_shadow_samurai_from_battle()
 	else:
 		# 正常保存：没有快照或在地图上
@@ -103,10 +127,11 @@ func _save_run(was_on_map: bool) -> void:
 		save_data.current_max_health = character.max_health
 		save_data.sync_relics_for_save(current_relics)
 	
-	save_data.save_data()
+	_write_save_file()
 
 
 func _load_run() -> void:
+	GameContent.clear_relic_template_cache()
 	save_data = SaveGame.load_data()
 	assert(save_data, "无法加载上次的存档")
 	
@@ -178,11 +203,25 @@ func _load_run() -> void:
 			# 其他房间（战斗、商店、事件、宝藏等）
 			if save_data.combat_snapshot != null:
 				# 有战斗快照：先恢复快照，然后设置UI
-				var fallback_relics := GameContent.load_relics_from_ids(save_data.get_effective_relic_ids())
-				save_data.combat_snapshot.apply_to(character, relic_handler, fallback_relics)
-				if relic_handler.get_all_relics().is_empty() and not fallback_relics.is_empty():
+				var snap := save_data.combat_snapshot
+				var relic_ids := snap.relic_ids
+				if relic_ids.is_empty():
+					relic_ids = save_data.get_effective_relic_ids()
+				if relic_ids.is_empty():
+					push_warning("战斗读档：快照与存档均无 relic_ids")
+				else:
+					snap.relic_ids = relic_ids
+				var combat_spent_ids := save_data.get_combat_spent_relic_ids()
+				snap.apply_to(character, relic_handler)
+				if relic_handler.get_all_relics().is_empty() and not relic_ids.is_empty():
 					push_warning("战斗快照恢复后遗物仍为空，尝试从 save_data 恢复...")
-					relic_handler.add_relics(fallback_relics, false)
+					relic_handler.restore_relics_from_ids(
+						relic_ids,
+						false,
+						true,
+						combat_spent_ids
+					)
+				call_deferred("_apply_spent_relic_state_from_save")
 				_setup_top_bar()  # 快照恢复后才设置UI
 				_on_battle_room_entered(save_data.combat_snapshot.room, true)
 			else:
@@ -217,6 +256,7 @@ func _load_run() -> void:
 		# 在地图上
 		_load_relics_from_save_data()
 		_setup_top_bar()
+		call_deferred("_apply_spent_relic_state_from_save")
 		RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 
 
@@ -245,6 +285,15 @@ func _reset_scene_room_reload_state() -> void:
 		save_data.clear_room_pending()
 
 
+func _apply_spent_relic_state_from_save() -> void:
+	if save_data == null or relic_handler == null:
+		return
+	if save_data.combat_snapshot != null:
+		relic_handler.apply_spent_relic_ids(save_data.get_combat_spent_relic_ids())
+	else:
+		relic_handler.apply_spent_relic_ids(save_data.get_map_spent_relic_ids())
+
+
 func _load_relics_from_save_data() -> void:
 	"""从存档加载遗物，优先使用战斗快照中的遗物"""
 	if save_data == null:
@@ -261,13 +310,23 @@ func _load_relics_from_save_data() -> void:
 		var ids := save_data.get_effective_relic_ids()
 		if not ids.is_empty():
 			print("从 save_data.saved_relic_ids 加载 %d 个遗物" % ids.size())
-			relic_handler.restore_relics_from_ids(ids, false)
+			relic_handler.restore_relics_from_ids(
+				ids, false, true, save_data.get_map_spent_relic_ids()
+			)
 			print("加载完成，当前遗物数量: %d" % relic_handler.get_all_relics().size())
 		else:
 			# 存档中没有遗物（新游戏或bug），添加初始遗物
 			print("存档中没有遗物，由 _setup_top_bar 添加初始遗物")
 	else:
 		print("有战斗快照，遗物将由 apply_to 恢复")
+
+
+## 预加载战斗场景脚本与资源，减轻首次进战卡顿。
+func _warmup_battle_assets() -> void:
+	if not is_inside_tree():
+		return
+	var battle := BATTLE_SCENE.instantiate()
+	battle.free()
 
 
 func _change_view(scene: PackedScene, configure_before_add: Callable = Callable()) -> Node:
@@ -285,13 +344,12 @@ func _change_view(scene: PackedScene, configure_before_add: Callable = Callable(
 			if is_instance_valid(old_battle.enemy_handler):
 				if Events.player_hand_discarded.is_connected(old_battle.enemy_handler.start_turn):
 					Events.player_hand_discarded.disconnect(old_battle.enemy_handler.start_turn)
-					print("[DEBUG] _change_view: disconnected old battle enemy_handler start_turn")
 			
 			if is_instance_valid(old_battle.player_handler):
 				if Events.player_turn_ended.is_connected(old_battle.player_handler.end_turn):
 					Events.player_turn_ended.disconnect(old_battle.player_handler.end_turn)
-					print("[DEBUG] _change_view: disconnected old battle player_handler end_turn")
 		
+		## 须在信号/动画回调返回后再释放，不能用 free()（会触发 locked object）
 		old_view.queue_free()
 	
 	get_tree().paused = false
@@ -548,7 +606,7 @@ func _persist_scene_room_quit_snapshot() -> void:
 	SaveGame.sync_saved_map_room_refs(save_data)
 	SaveGame.reconcile_map_visited_flags(save_data)
 	save_data.act_number = current_act
-	save_data.save_data()
+	_write_save_file()
 
 
 func _reset_shop_pending_sold_flags() -> void:
@@ -595,7 +653,7 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	SaveGame.sync_saved_map_room_refs(save_data)
 	SaveGame.reconcile_map_visited_flags(save_data)
 	save_data.act_number = current_act
-	save_data.save_data()
+	_write_save_file()
 
 
 func persist_battle_reward_full_state(
@@ -817,8 +875,6 @@ func _on_act_reward_finished() -> void:
 
 
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
-	print("[DEBUG] _on_battle_room_entered called, room type: ", room.type, " is_reload: ", is_reload)
-	# 如果不是重新加载（即新进入战斗），创建战斗快照
 	if not is_reload:
 		_save_combat_snapshot(room)
 	
@@ -827,23 +883,11 @@ func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
 		push_error("无法实例化战斗场景")
 		return
 	
-	print("[DEBUG] Battle scene instantiated, checking player_handler...")
-	if is_instance_valid(battle_scene.player_handler):
-		print("[DEBUG] player_handler valid: ", is_instance_valid(battle_scene.player_handler))
-		print("[DEBUG] player valid: ", is_instance_valid(battle_scene.player_handler.player))
-		if is_instance_valid(battle_scene.player_handler.player):
-			print("[DEBUG] status_handler valid: ", is_instance_valid(battle_scene.player_handler.player.status_handler))
-	else:
-		push_error("[DEBUG] player_handler is invalid!")
-	
-	print("[DEBUG] enemy_handler child count: ", battle_scene.enemy_handler.get_child_count())
-	
 	battle_scene.char_stats = character
 	battle_scene.battle_stats = room.battle_stats
 	battle_scene.relics = relic_handler
 	battle_scene.start_battle()
 	_sync_combat_snapshot_shadow_samurai_from_battle()
-	print("[DEBUG] Battle started")
 
 
 func _sync_combat_snapshot_shadow_samurai_from_battle() -> void:
@@ -875,8 +919,6 @@ func _clear_combat_snapshot() -> void:
 	if save_data == null:
 		return
 	save_data.combat_snapshot = null
-	# 清除遗物缓存
-	CombatSnapshot._relics_cache.clear()
 	_save_run(false)
 
 
@@ -1000,9 +1042,9 @@ func _on_battle_won() -> void:
 			_show_act_boss_rewards()
 		else:
 			## 第3层（最终）BOSS，通关
+			mark_run_finished()
 			var win_screen := _change_view(WIN_SCREEN_SCENE) as WinScreen
 			win_screen.character = character
-			SaveGame.delete_data()
 	elif map.last_room != null and map.last_room.type == Room.Type.ELITE:
 		_show_elite_battle_rewards()
 	else:
@@ -1021,6 +1063,9 @@ func _should_persist_scene_room_quit() -> bool:
 
 
 func _on_pause_save_and_quit() -> void:
+	if run_finished:
+		abandon_finished_run_to_main_menu()
+		return
 	if save_data:
 		if _is_pending_battle_reward():
 			_persist_battle_reward_quit_snapshot()
@@ -1033,6 +1078,9 @@ func _on_pause_save_and_quit() -> void:
 
 
 func _on_window_close_requested() -> void:
+	if run_finished:
+		SaveGame.delete_data()
+		return
 	if save_data:
 		if _is_pending_battle_reward():
 			_persist_battle_reward_quit_snapshot()

@@ -3,7 +3,7 @@ extends HBoxContainer
 
 signal relics_activated(type: Relic.Type)
 
-const RELIC_APPLY_INTERVAL := 0.5
+const RELIC_APPLY_INTERVAL := 0.2
 const RELIC_UI = preload("res://scenes/relic_handler/relic_ui.tscn")
 
 @onready var relics_control: RelicsControl = $RelicsControl
@@ -14,7 +14,7 @@ func _ready() -> void:
 	relics.child_exiting_tree.connect(_on_relics_child_exiting_tree)
 
 
-func activate_relics_by_type(type: Relic.Type) -> void:
+func activate_relics_by_type(type: Relic.Type, instant: bool = false) -> void:
 	if type == Relic.Type.EVENT_BASED:
 		return
 		
@@ -26,7 +26,7 @@ func activate_relics_by_type(type: Relic.Type) -> void:
 		relics_activated.emit(type)
 		return
 	
-	if Events.is_combat_ended():
+	if Events.is_combat_ended() or instant:
 		for relic_ui: RelicUI in relic_queue:
 			relic_ui.relic.activate_relic(relic_ui)
 		relics_activated.emit(type)
@@ -58,17 +58,32 @@ func add_relics(relics_array: Array[Relic], apply_persistent_pickup: bool = true
 	print("add_relics: 成功添加 %d 个遗物" % added)
 
 
+func try_prevent_player_lethal(player: Player) -> bool:
+	for relic_ui: RelicUI in _get_all_relic_ui_nodes():
+		if not is_instance_valid(relic_ui) or relic_ui.relic == null:
+			continue
+		var cross := relic_ui.relic as CrossRelic
+		if cross != null and cross.try_trigger(player):
+			return true
+	return false
+
+
 func add_relic(relic: Relic, apply_persistent_pickup: bool = true) -> void:
 	if has_relic(relic.id):
 		return
 	
+	var instance := relic.duplicate(true) as Relic
+	if instance == null:
+		push_warning("add_relic: 无法 duplicate 遗物 %s" % relic.id)
+		return
+	
 	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
 	relics.add_child(new_relic_ui)
-	new_relic_ui.relic = relic
+	new_relic_ui.relic = instance
 	if apply_persistent_pickup:
 		var run := get_tree().get_first_node_in_group("run") as Run
 		if run:
-			relic.apply_persistent_pickup_on_acquire(run)
+			instance.apply_persistent_pickup_on_acquire(run)
 	new_relic_ui.relic.initialize_relic(new_relic_ui)
 
 
@@ -85,9 +100,14 @@ func add_relic_async(relic: Relic) -> void:
 	if has_relic(relic.id):
 		return
 	
+	var instance := relic.duplicate(true) as Relic
+	if instance == null:
+		push_warning("add_relic_async: 无法 duplicate 遗物 %s" % relic.id)
+		return
+	
 	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
 	relics.add_child(new_relic_ui)
-	new_relic_ui.relic = relic
+	new_relic_ui.relic = instance
 	new_relic_ui.relic.initialize_relic(new_relic_ui)
 
 
@@ -182,7 +202,8 @@ func revert_pending_relic_pickup_if_applied(
 func restore_relics_from_ids(
 	relic_ids: PackedStringArray,
 	apply_persistent_pickup: bool = false,
-	immediate_clear: bool = true
+	immediate_clear: bool = true,
+	spent_relic_ids: PackedStringArray = PackedStringArray()
 ) -> Array[Relic]:
 	if immediate_clear:
 		clear_relics_immediate()
@@ -192,7 +213,22 @@ func restore_relics_from_ids(
 		var relic := GameContent.load_relic_for_save(String(relic_id))
 		if relic != null:
 			add_relic(relic, apply_persistent_pickup)
+	apply_spent_relic_ids(spent_relic_ids)
 	return get_all_relics()
+
+
+func apply_spent_relic_ids(spent_relic_ids: PackedStringArray) -> void:
+	var resolved_spent := SaveGame.resolve_spent_relic_ids(spent_relic_ids)
+	var spent_set: Dictionary = {}
+	for rid: String in resolved_spent:
+		spent_set[rid] = true
+	for relic_ui: RelicUI in _get_all_relic_ui_nodes():
+		if not is_instance_valid(relic_ui) or relic_ui.relic == null:
+			continue
+		var relic_id := SaveGameMigrations.resolve_relic_id(relic_ui.relic.id)
+		var is_spent := spent_set.has(relic_id)
+		relic_ui.relic.apply_spent_state_from_save(is_spent)
+		relic_ui.relic.sync_relic_ui_visual(relic_ui)
 
 
 func clear_relics() -> void:

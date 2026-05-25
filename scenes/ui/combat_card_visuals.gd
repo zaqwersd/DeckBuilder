@@ -1,5 +1,5 @@
 class_name CombatCardVisuals
-extends CardVisualsBase
+extends "res://scenes/ui/card_visuals_base.gd"
 
 ## 战斗中卡牌的视觉显示规则：
 ## - 固有关键词：只有 intrinsic == true 且 should_show_intrinsic_keyword_in_combat_description() 才显示
@@ -28,6 +28,8 @@ func _sync_cost_label_style() -> void:
 			)
 		elif display_cost > card.cost:
 			cost.add_theme_color_override("font_color", CardUpgradeUiColors.color_bb_value())
+		elif display_cost < card.cost:
+			cost.add_theme_color_override("font_color", UPGRADED_CARD_ACCENT)
 		else:
 			cost.add_theme_color_override("font_color", Color.WHITE)
 
@@ -114,11 +116,12 @@ func _refresh_description_text() -> void:
 		return
 	
 	Card.push_visual_number_bbcode_style(Card.NumberBbcodeStyle.COMBAT_PILES_AND_HAND)
-	# 检查敌人修饰器是否仍然有效
+	var valid_player_modifiers := _player_modifiers if is_instance_valid(_player_modifiers) else null
 	var valid_enemy_modifiers := _enemy_modifiers if is_instance_valid(_enemy_modifiers) else null
+	var valid_combat_player := _combat_player_for_desc if is_instance_valid(_combat_player_for_desc) else null
 	var raw := _prepend_intrinsic_line_bbcode(
 		card.get_updated_visual_description_bbcode(
-			_player_modifiers, valid_enemy_modifiers, _combat_player_for_desc
+			valid_player_modifiers, valid_enemy_modifiers, valid_combat_player
 		)
 	)
 	Card.pop_visual_number_bbcode_style()
@@ -133,10 +136,12 @@ func get_keyword_tooltip_ids() -> PackedStringArray:
 		return PackedStringArray()
 	
 	Card.push_visual_number_bbcode_style(Card.NumberBbcodeStyle.COMBAT_PILES_AND_HAND)
+	var valid_player_modifiers := _player_modifiers if is_instance_valid(_player_modifiers) else null
 	var valid_enemy_modifiers := _enemy_modifiers if is_instance_valid(_enemy_modifiers) else null
+	var valid_combat_player := _combat_player_for_desc if is_instance_valid(_combat_player_for_desc) else null
 	var raw := _prepend_intrinsic_line_bbcode(
 		card.get_updated_visual_description_bbcode(
-			_player_modifiers, valid_enemy_modifiers, _combat_player_for_desc
+			valid_player_modifiers, valid_enemy_modifiers, valid_combat_player
 		)
 	)
 	Card.pop_visual_number_bbcode_style()

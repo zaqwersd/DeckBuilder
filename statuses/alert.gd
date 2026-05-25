@@ -8,7 +8,7 @@ var _owner: Node
 
 
 func get_tooltip() -> String:
-	return tooltip % Status.format_tooltip_integer(turns_until_wake)
+	return tooltip % format_counter_for_tooltip(turns_until_wake)
 
 
 func initialize_status(target: Node) -> void:

@@ -117,9 +117,6 @@ func _apply_swift_status() -> void:
 func _on_card_play_finished(_card: Card) -> void:
 	if Events.is_combat_ended() or not is_instance_valid(enemy):
 		return
-	var ph := get_tree().get_first_node_in_group("player_handler") as PlayerHandler
-	if ph and ph.is_deferring_flow_for_end_turn_discard():
-		return
 	var enemy_handler := get_tree().get_first_node_in_group("enemy_handler") as EnemyHandler
 	if enemy_handler and not enemy_handler.acting_enemies.is_empty():
 		return

@@ -18,6 +18,7 @@ var _combat_started: bool = false
 func _ready() -> void:
 	Events.reset_combat_flow()
 	_combat_started = false
+	visible = false
 	
 	if is_instance_valid(enemy_handler):
 		enemy_handler.child_order_changed.connect(_on_enemies_child_order_changed)
@@ -63,9 +64,13 @@ func start_battle() -> void:
 	## 设置战斗背景图（优先使用配置的，其次使用层默认）
 	_setup_background()
 	
-	battle_ui.char_stats = char_stats
-	player.stats = char_stats
+	if char_stats == null:
+		push_error("Battle.start_battle: char_stats 未设置。")
+		return
+	
 	player_handler.relics = relics
+	_prepare_combat_data()
+	
 	_combat_started = false
 	enemy_handler.setup_enemies(battle_stats)
 	enemy_handler.reset_enemy_actions()
@@ -73,8 +78,26 @@ func start_battle() -> void:
 	
 	_connect_enemy_turn_after_discard()
 	
-	relics.relics_activated.connect(_on_relics_activated)
-	relics.activate_relics_by_type(Relic.Type.START_OF_COMBAT)
+	if is_instance_valid(relics) and not relics.relics_activated.is_connected(_on_relics_activated):
+		relics.relics_activated.connect(_on_relics_activated)
+	
+	visible = true
+	relics.activate_relics_by_type(Relic.Type.START_OF_COMBAT, true)
+
+
+## 在显示战斗 UI 前：洗牌堆、绑定牌堆计数、清零格挡并刷新玩家状态栏。
+func _prepare_combat_data() -> void:
+	if not is_instance_valid(player_handler) or not is_instance_valid(battle_ui) or not is_instance_valid(player):
+		return
+	
+	player_handler.start_battle_prep(char_stats)
+	char_stats.block = 0
+	char_stats.reset_mana()
+	
+	battle_ui.char_stats = char_stats
+	player.stats = char_stats
+	battle_ui.initialize_card_pile_ui()
+	player.update_stats()
 
 
 ## 设置战斗背景图
@@ -206,14 +229,11 @@ func _on_enemy_turn_ended() -> void:
 func _on_player_died() -> void:
 	Events.mark_combat_ended()
 	Events.battle_over_screen_requested.emit("游戏结束！", BattleOverPanel.Type.LOSE)
-	SaveGame.delete_data()
 
 
 func _on_relics_activated(type: Relic.Type) -> void:
 	match type:
 		Relic.Type.START_OF_COMBAT:
-			player_handler.start_battle_prep(char_stats)
-			battle_ui.initialize_card_pile_ui()
 			player_handler.start_turn()
 		Relic.Type.END_OF_COMBAT:
 			Events.battle_over_screen_requested.emit("胜利！", BattleOverPanel.Type.WIN)

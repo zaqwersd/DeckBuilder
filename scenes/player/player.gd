@@ -102,6 +102,23 @@ func update_stats() -> void:
 	_layout_status_bar()
 
 
+func handle_lethal_if_needed() -> bool:
+	if stats == null or stats.health > 0:
+		return false
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var run := tree.get_first_node_in_group("run") as Run
+	if run == null or not is_instance_valid(run.relic_handler):
+		return false
+	return run.relic_handler.try_prevent_player_lethal(self)
+
+
+func _die_from_lethal() -> void:
+	Events.player_died.emit()
+	queue_free()
+
+
 func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bool = true) -> void:
 	if stats.health <= 0:
 		return
@@ -114,8 +131,9 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 		stats.take_damage(modified_damage)
 		sprite_2d.material = null
 		if stats.health <= 0:
-			Events.player_died.emit()
-			queue_free()
+			if handle_lethal_if_needed():
+				return
+			_die_from_lethal()
 		return
 	
 	var tween := create_tween()
@@ -130,8 +148,9 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 			sprite_2d.material = null
 			
 			if stats.health <= 0:
-				Events.player_died.emit()
-				queue_free()
+				if handle_lethal_if_needed():
+					return
+				_die_from_lethal()
 	)
 
 
@@ -145,8 +164,9 @@ func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
 		stats.take_damage(final_damage)
 		sprite_2d.material = null
 		if stats.health <= 0:
-			Events.player_died.emit()
-			queue_free()
+			if handle_lethal_if_needed():
+				return
+			_die_from_lethal()
 		return
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
@@ -158,6 +178,7 @@ func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
 				return
 			sprite_2d.material = null
 			if stats.health <= 0:
-				Events.player_died.emit()
-				queue_free()
+				if handle_lethal_if_needed():
+					return
+				_die_from_lethal()
 	)

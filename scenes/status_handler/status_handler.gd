@@ -12,7 +12,6 @@ var tooltips_open_to_right: bool = true
 
 
 func apply_statuses_by_type(type: Status.Type) -> void:
-	print("[DEBUG] StatusHandler.apply_statuses_by_type called, type: ", type, " owner: ", status_owner.name if status_owner else "null")
 	if type == Status.Type.EVENT_BASED:
 		return
 		
@@ -20,13 +19,11 @@ func apply_statuses_by_type(type: Status.Type) -> void:
 		func(status: Status):
 			return status.type == type and not status.awaits_turn_start
 	)
-	print("[DEBUG] Status queue size: ", status_queue.size())
 	if status_queue.is_empty():
-		print("[DEBUG] No statuses to apply, emitting statuses_applied immediately")
 		statuses_applied.emit(type)
 		return
 	
-	if Events.is_combat_ended():
+	if Events.is_combat_ended() or status_queue.size() == 1:
 		for status: Status in status_queue:
 			status.apply_status(status_owner)
 		statuses_applied.emit(type)
@@ -64,14 +61,12 @@ func add_status(status: Status) -> void:
 		_emit_player_hand_cost_context_if_needed()
 		return
 
-	if status.id == "flow_state" and _has_status("flow_state"):
-		var existing := _get_status("flow_state") as FlowStateStatus
-		var incoming := status as FlowStateStatus
-		if existing and incoming:
-			## 多张心流牌：抽牌/能量轨叠加，而非用后一张覆盖前一张。
-			existing.draw_on_exhaust += incoming.draw_on_exhaust
-			existing.mana_on_exhaust += incoming.mana_on_exhaust
-			existing.status_changed.emit()
+	if status.id == "next_turn_mana" and _has_status("next_turn_mana"):
+		var existing_mana := _get_status("next_turn_mana") as NextTurnManaStatus
+		var incoming_mana := status as NextTurnManaStatus
+		if existing_mana and incoming_mana:
+			existing_mana.mana_to_grant += incoming_mana.mana_to_grant
+			existing_mana.status_changed.emit()
 		_emit_player_hand_cost_context_if_needed()
 		return
 

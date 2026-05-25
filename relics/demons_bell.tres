@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://art/demons_bell.png" id="1_icon"]
+[ext_resource type="Script" path="res://relics/demons_bell.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "恶魔铃铛"
+id = "demons_bell"
+type = 4
+rarity = 3
+icon = ExtResource("1_icon")
+tooltip = "只可使用一次。右键该遗物，对所有敌人造成 67 点伤害。"

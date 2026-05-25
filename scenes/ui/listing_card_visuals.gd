@@ -1,5 +1,5 @@
 class_name ListingCardVisuals
-extends CardVisualsBase
+extends "res://scenes/ui/card_visuals_base.gd"
 
 ## 战斗外卡牌的视觉显示规则（图鉴、牌库、商店、奖励等）：
 ## - 固有关键词：只要卡牌有 intrinsic 属性或可升级为固有，就显示（灰色表示未激活）

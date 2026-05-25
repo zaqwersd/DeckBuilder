@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3 uid="uid://xauh3bj7ne61"]
+
+[ext_resource type="Texture2D" uid="uid://d0kavo6p0856n" path="res://art/fishbone.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://cw3hyprf1sy83" path="res://relics/fishbone.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "鱼骨"
+id = "fishbone"
+type = 4
+rarity = 2
+icon = ExtResource("1_icon")
+tooltip = "每当你对一名敌人造成未被格挡的攻击伤害，对随机一名敌人造成 1 点伤害。"

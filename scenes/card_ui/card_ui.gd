@@ -583,16 +583,30 @@ func _play_resolved() -> void:
 	queue_free()
 
 
+func _resolve_enemy_from_target_node(node: Node) -> Enemy:
+	if not is_instance_valid(node):
+		return null
+	if node is Enemy:
+		return node as Enemy
+	var current: Node = node.get_parent()
+	while current != null:
+		if current is Enemy and is_instance_valid(current):
+			return current as Enemy
+		current = current.get_parent()
+	return null
+
+
 func get_active_enemy_modifiers() -> ModifierHandler:
 	_prune_invalid_targets()
 	if targets.is_empty() or targets.size() > 1:
 		return null
-	var t: Node = targets[0]
-	if not is_instance_valid(t):
+	var enemy := _resolve_enemy_from_target_node(targets[0])
+	if enemy == null:
 		return null
-	if not (t is Enemy):
+	var handler: ModifierHandler = enemy.modifier_handler
+	if not is_instance_valid(handler):
 		return null
-	return (t as Enemy).modifier_handler
+	return handler
 
 
 func _prune_invalid_targets() -> void:
@@ -632,7 +646,10 @@ func refresh_combat_description() -> void:
 	if not card or not is_instance_valid(card_visuals):
 		return
 	_prune_invalid_targets()
-	card_visuals.apply_modifier_context(player_modifiers, get_active_enemy_modifiers(), combat_player)
+	var pm: ModifierHandler = player_modifiers if is_instance_valid(player_modifiers) else null
+	var em: ModifierHandler = get_active_enemy_modifiers()
+	var cp: Player = combat_player if is_instance_valid(combat_player) else null
+	card_visuals.apply_modifier_context(pm, em, cp)
 	refresh_mana_cost_display()
 
 
@@ -754,13 +771,20 @@ func _set_char_stats(value: CharacterStats) -> void:
 
 
 func _on_drop_point_detector_area_entered(area: Area2D) -> void:
+	if not is_instance_valid(area):
+		return
+	# DropPointDetector 的 mask 对准 card_drop_area（如战斗 CardDropArea），不是敌人层。
 	if not targets.has(area):
 		targets.append(area)
-		refresh_combat_description()
+	refresh_combat_description()
 
 
 func _on_drop_point_detector_area_exited(area: Area2D) -> void:
-	targets.erase(area)
+	_prune_invalid_targets()
+	if is_instance_valid(area):
+		targets.erase(area)
+	else:
+		_prune_invalid_targets()
 	refresh_combat_description()
 
 

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+
+[ext_resource type="Texture2D" path="res://art/cross.png" id="1_icon"]
+[ext_resource type="Script" path="res://relics/cross.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "十字架"
+id = "cross"
+type = 4
+rarity = 3
+icon = ExtResource("1_icon")
+tooltip = "当你要死亡时，免死并回复最大生命值的 50%，然后此遗物失效。"

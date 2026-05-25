@@ -5,7 +5,7 @@ extends Status
 ## 临时力量状态：回合开始时失去等量力量
 
 func get_tooltip() -> String:
-	return tooltip % Status.format_tooltip_integer(stacks)
+	return tooltip % format_counter_for_tooltip(stacks)
 
 
 func initialize_status(target: Node) -> void:

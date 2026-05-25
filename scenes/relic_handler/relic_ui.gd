@@ -21,6 +21,7 @@ func set_relic(new_relic: Relic) -> void:
 
 	relic = new_relic
 	icon.texture = RelicIconUtil.get_colored_icon(relic.icon as Texture2D, relic.rarity)
+	relic.sync_relic_ui_visual(self)
 	set_counter_subscript(-1)
 
 
@@ -49,6 +50,10 @@ func _on_mouse_exited_relic() -> void:
 
 
 func _on_gui_input(event: InputEvent) -> void:
+	if event.is_action_pressed("right_mouse"):
+		if relic != null and relic.try_handle_relic_ui_right_click(self):
+			accept_event()
+		return
 	if not event.is_action_pressed("left_mouse"):
 		return
 	relic_pressed.emit(relic)
