@@ -47,14 +47,10 @@ func get_updated_tooltip(
 	player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler, combat_player: Node = null
 ) -> String:
 	var intrinsic := _intrinsic_damage()
-	var modified_dmg := intrinsic
-	if player_modifiers:
-		modified_dmg = player_modifiers.get_modified_value(intrinsic, Modifier.Type.DMG_DEALT)
-	if enemy_modifiers:
-		modified_dmg = enemy_modifiers.get_modified_value(modified_dmg, Modifier.Type.DMG_TAKEN)
-	modified_dmg = OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, modified_dmg, type)
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
-		modified_dmg, intrinsic, is_upgrade_track_maxed("damage")
+		compute_attack_damage_dealt(intrinsic, player_modifiers, enemy_modifiers, combat_player),
+		intrinsic,
+		is_upgrade_track_maxed("damage")
 	)
 	var sl := _intrinsic_strength_loss()
 	var sl_bb := _bbcode_strength_loss(sl)
@@ -71,7 +67,9 @@ func _bbcode_strength_loss(amount: int) -> String:
 
 func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	var damage_effect := DamageEffect.new()
-	damage_effect.amount = modifiers.get_modified_value(_intrinsic_damage(), Modifier.Type.DMG_DEALT)
+	damage_effect.amount = resolve_attack_damage_dealt(
+		_intrinsic_damage(), modifiers, _get_combat_player_for_effects(targets)
+	)
 	damage_effect.sound = sound
 	damage_effect.execute(targets)
 

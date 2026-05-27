@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://prn32xgwr15x"]
+
+[ext_resource type="Texture2D" uid="uid://dip3m5x7e68as" path="res://art/milk.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://0omu8270i53j" path="res://potions/milk_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "牛奶"
+id = "milk_potion"
+rarity = 2
+icon = ExtResource("1_icon")
+tooltip = "移除你身上的所有负面效果。"

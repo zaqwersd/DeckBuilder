@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3 uid="uid://bgkbbpa61e6ix"]
+
+[ext_resource type="Texture2D" uid="uid://ipdsfqeb343c" path="res://art/flame_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://c5u7k0s1h4uyk" path="res://potions/flame_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "火焰药水"
+id = "flame_potion"
+rarity = 1
+icon = ExtResource("1_icon")
+tooltip = "对一名敌人造成20点伤害。"
+target_kind = 1

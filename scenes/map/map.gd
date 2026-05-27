@@ -45,12 +45,18 @@ func _unhandled_input(event: InputEvent) -> void:
 func generate_new_map(act: int = 1) -> void:
 	floors_climbed = 0
 	map_data = map_generator.generate_map(act)
+	if _map_data_needs_regeneration(map_data):
+		push_warning("Map: 房间类型未分配，重新生成地图")
+		map_data = map_generator.generate_map(act)
 	create_map()
 
 
-func load_map(map: Array[Array], floors_completed: int, last_room_climbed: Room) -> void:
+func load_map(map: Array[Array], floors_completed: int, last_room_climbed: Room, act: int = 1) -> void:
 	floors_climbed = floors_completed
 	map_data = map
+	if _map_data_needs_regeneration(map_data):
+		push_warning("Map: 存档地图无效，重新生成")
+		map_data = map_generator.generate_map(act)
 	last_room = SaveGame.resolve_room_in_map_data(map_data, last_room_climbed)
 	create_map()
 	
@@ -59,6 +65,19 @@ func load_map(map: Array[Array], floors_completed: int, last_room_climbed: Room)
 	else:
 		unlock_floor()
 	reconcile_visited_flags()
+
+
+func _map_data_needs_regeneration(data: Array[Array]) -> bool:
+	var connected := 0
+	var typed := 0
+	for floor: Array in data:
+		for room: Room in floor:
+			if room.next_rooms.is_empty():
+				continue
+			connected += 1
+			if room.type != Room.Type.NOT_ASSIGNED:
+				typed += 1
+	return connected > 0 and typed == 0
 
 
 func create_map() -> void:

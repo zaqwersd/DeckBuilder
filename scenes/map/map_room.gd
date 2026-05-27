@@ -28,19 +28,36 @@ var room: Room : set = set_room
 
 func set_available(new_value: bool) -> void:
 	available = new_value
+	if not is_node_ready():
+		return
 	
 	if available:
 		animation_player.play("highlight")
-	elif not room.selected:
+	elif room == null or not room.selected:
 		animation_player.play("RESET")
 
 
 func set_room(new_data: Room) -> void:
 	room = new_data
 	position = room.position
+	if is_node_ready():
+		_apply_room_visuals()
+	else:
+		call_deferred("_apply_room_visuals")
+
+
+func _ready() -> void:
+	if room != null:
+		_apply_room_visuals()
+
+
+func _apply_room_visuals() -> void:
+	if room == null:
+		return
+	var icon: Array = ICONS.get(room.type, ICONS[Room.Type.NOT_ASSIGNED])
 	line_2d.rotation_degrees = randi_range(0, 360)
-	sprite_2d.texture = ICONS[room.type][0]
-	sprite_2d.scale = ICONS[room.type][1] * MAP_ICON_SCALE
+	sprite_2d.texture = icon[0]
+	sprite_2d.scale = icon[1] * MAP_ICON_SCALE
 
 
 func show_selected() -> void:

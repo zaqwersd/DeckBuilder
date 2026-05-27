@@ -10,6 +10,66 @@ const STATUS_UI = preload("res://scenes/status_handler/status_ui.tscn")
 ## 由 StatusBar 设置：玩家 true（说明在右），敌人 false（说明在左）
 var tooltips_open_to_right: bool = true
 
+var _active_status_hover_ui: StatusUI = null
+
+
+func _ready() -> void:
+	set_process(true)
+
+
+func _process(_delta: float) -> void:
+	if Events.is_combat_ended():
+		_clear_status_hover_if_active()
+		return
+	var viewport := get_viewport()
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	var hovered: StatusUI = null
+	for c in get_children():
+		if not c is StatusUI:
+			continue
+		var ui := c as StatusUI
+		var hit_ctl := _status_ui_hit_control(ui)
+		if not CombatPointer.control_has_screen_point(hit_ctl, screen_pos, 4.0):
+			continue
+		# 仅在有模态独占层时跳过；勿把同层 BattleUI 当成遮挡（否则战斗状态栏永远无 tooltip）
+		if Events.get_pointer_exclusive_leaf() != null and Events.is_pointer_ui_obscured_for(ui):
+			continue
+		hovered = ui
+		break
+	if hovered != null and hovered.status != null:
+		if _active_status_hover_ui != hovered:
+			# 勿 emit card_keyword_tooltip_hide：会取消 Run 上 game_tooltip 的 show 协程（_layout_generation++）
+			Events.status_tooltip_hover_show.emit(hovered.status, hovered, tooltips_open_to_right)
+			_active_status_hover_ui = hovered
+	elif _active_status_hover_ui != null:
+		_clear_status_hover_if_active()
+
+
+func _clear_status_hover_if_active() -> void:
+	if _active_status_hover_ui == null:
+		return
+	_active_status_hover_ui = null
+	Events.status_tooltip_hover_hide.emit()
+
+
+func is_pointer_over_status_ui(ui: StatusUI) -> bool:
+	if ui == null or not is_instance_valid(ui):
+		return false
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	return CombatPointer.control_has_screen_point(_status_ui_hit_control(ui), screen_pos, 4.0)
+
+
+static func _status_ui_hit_control(ui: StatusUI) -> Control:
+	if ui == null:
+		return ui
+	var icon := ui.get_node_or_null("Icon") as Control
+	if is_instance_valid(icon):
+		return icon
+	return ui
+
 
 func apply_statuses_by_type(type: Status.Type) -> void:
 	if type == Status.Type.EVENT_BASED:
@@ -52,8 +112,6 @@ func add_status(status: Status) -> void:
 		new_status_ui.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		new_status_ui.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		add_child(new_status_ui)
-		new_status_ui.mouse_entered.connect(_on_status_ui_mouse_entered.bind(new_status_ui))
-		new_status_ui.mouse_exited.connect(_on_status_ui_mouse_exited)
 		new_status_ui.status = status
 		new_status_ui.status.status_applied.connect(_on_status_applied)
 		if not new_status_ui.status.awaits_turn_start:
@@ -89,6 +147,7 @@ func add_status(status: Status) -> void:
 func _emit_player_hand_cost_context_if_needed() -> void:
 	if status_owner is Player:
 		Events.player_hand_cost_context_changed.emit()
+		_emit_player_combat_stat_context_if_needed()
 
 func _has_status(id: String) -> bool:
 	for status_ui: StatusUI in get_children():
@@ -110,15 +169,41 @@ func get_status_by_id(status_id: String) -> Status:
 	return _get_status(status_id)
 
 
+## 牛奶等：移除负面极性状态、临时力量，以及层数为负的力量/敏捷等。
+func is_harmful_status_for_purge(status: Status) -> bool:
+	if status == null:
+		return false
+	if status.polarity == Status.Polarity.NEGATIVE:
+		return true
+	if status.id == "temp_strength":
+		return true
+	if status.stack_type == Status.StackType.INTENSITY:
+		return status.counter_shows_as_harmful(status.stacks)
+	return false
+
+
+func remove_harmful_statuses() -> void:
+	var ids: Array[String] = []
+	for status_ui: StatusUI in get_children():
+		if status_ui.status != null and is_harmful_status_for_purge(status_ui.status):
+			ids.append(status_ui.status.id)
+	for status_id: String in ids:
+		remove_status_by_id(status_id)
+
+
 func remove_status_by_id(status_id: String) -> void:
 	for status_ui: StatusUI in get_children():
 		if status_ui.status == null or status_ui.status.id != status_id:
 			continue
-		if status_ui.status.has_method("deactivate_status"):
-			status_ui.status.deactivate_status(status_owner)
+		status_ui.status.deactivate_status(status_owner)
 		status_ui.queue_free()
 		_emit_player_hand_cost_context_if_needed()
 		return
+
+
+func _emit_player_combat_stat_context_if_needed() -> void:
+	if status_owner is Player:
+		Events.player_combat_stat_context_changed.emit()
 
 
 func _get_all_statuses() -> Array[Status]:
@@ -149,24 +234,3 @@ func _on_status_applied(status: Status) -> void:
 	if status.can_expire:
 		status.duration -= 1
 
-
-func _on_status_ui_mouse_entered(ui: StatusUI) -> void:
-	if ui.status:
-		# 显示状态 tooltip 前，先关闭卡牌关键词 tooltip
-		Events.card_keyword_tooltip_hide.emit()
-		Events.status_tooltip_hover_show.emit(ui.status, ui, tooltips_open_to_right)
-
-
-func _on_status_ui_mouse_exited() -> void:
-	# 延迟一帧再判：相邻图标间移动时 exit 可能早于 enter
-	call_deferred("_deferred_status_ui_mouse_hide_check")
-
-
-func _deferred_status_ui_mouse_hide_check() -> void:
-	if not is_inside_tree():
-		return
-	var mp := get_global_mouse_position()
-	for c in get_children():
-		if c is StatusUI and (c as StatusUI).get_global_rect().has_point(mp):
-			return
-	Events.status_tooltip_hover_hide.emit()

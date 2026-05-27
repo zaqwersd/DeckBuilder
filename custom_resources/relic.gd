@@ -51,6 +51,11 @@ func revert_persistent_pickup_on_rollback(ch: CharacterStats) -> void:
 	pass
 
 
+## 为 true 时：先挂到遗物栏再执行拾起效果（如大礼包，购买后立即可见）
+func add_to_bar_before_persistent_pickup() -> bool:
+	return false
+
+
 ## 异步版本的 apply_persistent_pickup_on_acquire
 ## 对于有UI交互的遗物（如无上宝石），此方法会被异步等待直到效果完成
 func apply_persistent_pickup_on_acquire_async(_run: Node) -> void:

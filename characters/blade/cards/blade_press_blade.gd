@@ -61,11 +61,9 @@ func _body_bbcode(
 	var intrinsic := _intrinsic_damage()
 	var modified := intrinsic
 	if use_modifiers:
-		if player_modifiers:
-			modified = player_modifiers.get_modified_value(intrinsic, Modifier.Type.DMG_DEALT)
-		if enemy_modifiers:
-			modified = enemy_modifiers.get_modified_value(modified, Modifier.Type.DMG_TAKEN)
-		modified = OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, modified, type)
+		modified = compute_attack_damage_dealt(
+			intrinsic, player_modifiers, enemy_modifiers, combat_player
+		)
 	var dbb := bbcode_for_modified_number_with_upgrade_hint(
 		modified, intrinsic, is_upgrade_track_maxed("damage")
 	)
@@ -90,7 +88,9 @@ func get_updated_tooltip(
 
 func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	var damage_effect := DamageEffect.new()
-	damage_effect.amount = modifiers.get_modified_value(_intrinsic_damage(), Modifier.Type.DMG_DEALT)
+	damage_effect.amount = resolve_attack_damage_dealt(
+		_intrinsic_damage(), modifiers, _get_combat_player_for_effects(targets)
+	)
 	damage_effect.sound = sound
 	damage_effect.execute(targets)
 

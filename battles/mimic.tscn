@@ -1,10 +1,10 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://djjkug35g3a0n"]
 
 [ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
-[ext_resource type="Resource" path="res://enemies/mimic/mimic_enemy.tres" id="2_mimic"]
+[ext_resource type="Resource" uid="uid://b48dh3mgkvpqf" path="res://enemies/mimic/mimic_enemy.tres" id="2_mimic"]
 
-[node name="Mimic" type="Node2D"]
+[node name="Mimic" type="Node2D" unique_id=1838915590]
 
-[node name="Enemy" parent="." instance=ExtResource("1_enemy")]
-position = Vector2(895, 387.5)
+[node name="Enemy" parent="." unique_id=1309579772 instance=ExtResource("1_enemy")]
+position = Vector2(922, 355)
 stats = ExtResource("2_mimic")

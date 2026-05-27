@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="OsteogenesisStatus" format=3 uid="uid://cv0dkxvmqrqv3"]
+
+[ext_resource type="Texture2D" uid="uid://cyvdfx152l274" path="res://art/osteogenesis.png" id="1_hudyd"]
+[ext_resource type="Script" uid="uid://r05qn2wh583c" path="res://statuses/osteogenesis.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "osteogenesis"
+type = 2
+icon = ExtResource("1_hudyd")
+name = "增生"
+tooltip = "每当造成未被格挡的伤害，召唤一只小骷髅（场上至多5只）。"

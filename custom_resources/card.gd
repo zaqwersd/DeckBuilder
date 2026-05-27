@@ -418,9 +418,60 @@ func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: M
 	return tooltip_text
 
 
-## 玩家打出格挡牌时的实际格挡（含敏捷等）；`combat_player` 为战斗中的 Player 节点。
+## 玩家打出格挡牌时的实际格挡（含敏捷、脆弱等）；`combat_player` 为战斗中的 Player 节点。
 func effective_block_from_card_play(base: int, combat_player: Node = null) -> int:
 	return BlockEffect.compute_card_block_amount(base, combat_player)
+
+
+## 攻击牌：玩家侧伤害（力量、虚弱等），不含敌人易伤（由 take_damage 结算）。
+func resolve_attack_damage_dealt(
+	intrinsic: int,
+	player_modifiers: ModifierHandler,
+	combat_player: Node = null
+) -> int:
+	if type != Type.ATTACK:
+		return intrinsic
+	var v := intrinsic
+	if player_modifiers:
+		v = player_modifiers.get_modified_value(v, Modifier.Type.DMG_DEALT)
+	return WeakStatus.apply_to_attack_damage(v, combat_player)
+
+
+## 攻击牌：卡面/提示完整预览（含敌人易伤、巨剑等）。
+func compute_attack_damage_dealt(
+	intrinsic: int,
+	player_modifiers: ModifierHandler,
+	enemy_modifiers: ModifierHandler,
+	combat_player: Node = null
+) -> int:
+	var v := resolve_attack_damage_dealt(intrinsic, player_modifiers, combat_player)
+	if enemy_modifiers:
+		v = enemy_modifiers.get_modified_value(v, Modifier.Type.DMG_TAKEN)
+	return OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, v, type)
+
+
+func _get_combat_player_for_effects(targets: Array[Node]) -> Node:
+	for t: Node in targets:
+		if t is Player:
+			return t
+	if targets.is_empty() or not is_instance_valid(targets[0]) or not targets[0].is_inside_tree():
+		return null
+	var tree := targets[0].get_tree()
+	if tree == null:
+		return null
+	var players := tree.get_nodes_in_group("player")
+	if players.is_empty():
+		return null
+	return players[0]
+
+
+## 战斗中描述正文下方追加的实际结算预览（如「造成 m 点伤害 n 次」）；默认无。
+func get_combat_effect_summary_bbcode(
+	_player_modifiers: ModifierHandler,
+	_enemy_modifiers: ModifierHandler,
+	_combat_player: Node = null
+) -> String:
+	return ""
 
 
 ## 卡面 RichTextLabel 用；默认与「更新后的提示文案」一致并居中（子类可覆盖以区分卡面/提示格式）。

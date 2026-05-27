@@ -1,7 +1,7 @@
-[gd_resource type="Resource" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="CrossRelic" format=3 uid="uid://bnbguff04tkfj"]
 
-[ext_resource type="Texture2D" path="res://art/cross.png" id="1_icon"]
-[ext_resource type="Script" path="res://relics/cross.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://dvdijb368llb2" path="res://art/cross.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://di7p1sh8txh7a" path="res://relics/cross.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")

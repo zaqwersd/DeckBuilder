@@ -7,6 +7,7 @@ const CAMPFIRE_SCENE := preload("res://scenes/campfire/campfire.tscn")
 const SHOP_SCENE := preload("res://scenes/shop/shop.tscn")
 const TREASURE_SCENE = preload("res://scenes/treasure/treasure.tscn")
 const RELIC_REWARD_POOL := preload("res://relics/relic_reward_pool.tres")
+const POTION_REWARD_POOL := preload("res://potions/potion_reward_pool.tres")
 const WIN_SCREEN_SCENE := preload("res://scenes/win_screen/win_screen.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
@@ -18,6 +19,8 @@ const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
 @onready var health_ui: HealthUI = %HealthUI
 @onready var gold_ui: GoldUI = %GoldUI
 @onready var relic_handler: RelicHandler = %RelicHandler
+@onready var potion_handler: PotionHandler = %PotionHandler
+@onready var potion_bar_ui: PotionBarUI = %PotionBarUI
 @onready var game_tooltip: GameTooltip = %GameTooltip
 @onready var deck_button: CardPileOpener = %DeckButton
 @onready var pause_button: TextureButton = %PauseButton
@@ -67,8 +70,10 @@ func _start_run() -> void:
 	
 	map.generate_new_map(current_act)
 	map.unlock_floor(0)
+	map.show_map()
 	
 	save_data = SaveGame.new()
+	save_data.sync_potion_ids_for_save(potion_handler.get_ids_for_save())
 	call_deferred("_save_run", true)
 	call_deferred("_warmup_battle_assets")
 
@@ -116,7 +121,7 @@ func _save_run(was_on_map: bool) -> void:
 	# 如果有战斗快照（战斗进行中），不覆盖角色状态
 	# 这样中途退出后重进时可以恢复到战斗开始时的状态
 	if save_data.combat_snapshot != null and not was_on_map:
-		# 战斗中：只同步遗物 id；失效状态保持「进战瞬间」快照，便于未失效时退出可回退
+		# 战斗中：只同步遗物 id；药水/快照内遗物均保持「进战瞬间」，读档由 combat_snapshot 回退
 		save_data.sync_relic_ids_for_save(current_relics)
 		_sync_combat_snapshot_shadow_samurai_from_battle()
 	else:
@@ -126,6 +131,7 @@ func _save_run(was_on_map: bool) -> void:
 		save_data.current_health = character.health
 		save_data.current_max_health = character.max_health
 		save_data.sync_relics_for_save(current_relics)
+		save_data.sync_potion_ids_for_save(potion_handler.get_ids_for_save())
 	
 	_write_save_file()
 
@@ -150,13 +156,14 @@ func _load_run() -> void:
 	
 	_setup_event_connections()
 	
-	map.load_map(save_data.map_data, save_data.floors_climbed, save_data.last_room)
+	map.load_map(save_data.map_data, save_data.floors_climbed, save_data.last_room, current_act)
 	
 	if save_data.last_room and not save_data.was_on_map:
 		# 不在地图上（战斗、商店、事件等房间）
 		if save_data.campfire_leave_pending and save_data.last_room.type == Room.Type.CAMPFIRE:
 			# 营火房间的特殊处理
 			_load_relics_from_save_data()  # 加载遗物
+			_load_potions_from_save_data()
 			_setup_top_bar()
 			_change_view(
 				CAMPFIRE_SCENE,
@@ -166,8 +173,7 @@ func _load_run() -> void:
 					cf.restore_leave_pending_campfire_ui()
 			)
 		elif save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:
-			_setup_top_bar()
-			dismiss_reward_flow_overlays()
+			dismiss_modal_sub_overlays()
 			
 			## 回到「战斗刚结束、尚未领取任何奖励」的状态（精英/普通战/宝箱后续奖励栏均适用）
 			if save_data.battle_reward_entry_staged:
@@ -175,14 +181,22 @@ func _load_run() -> void:
 					## 点了遗物但拾取效果未完成：回滚到点击前（含牌组/遗物栏），而非整屏奖励重置
 					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
 				else:
-					save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
+					save_data.apply_battle_reward_entry_rollback_to(
+						character, relic_handler, potion_handler
+					)
 				save_data.clear_battle_reward_pending_staging()
 				stats = save_data.run_stats
 				RNG.set_from_save_data(
 					save_data.battle_reward_entry_pre_rng_seed,
 					save_data.battle_reward_entry_pre_rng_state
 				)
-				_setup_top_bar()
+			elif (
+				save_data.battle_reward_gold_taken
+				and save_data.battle_reward_gold > 0
+				and stats != null
+			):
+				stats.set_gold(maxi(0, stats.gold - save_data.battle_reward_gold))
+				save_data.run_stats = stats
 			else:
 				## 旧存档：遗物领取异步中途退出
 				if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
@@ -190,12 +204,12 @@ func _load_run() -> void:
 					save_data.clear_battle_reward_pending_staging()
 				else:
 					_load_relics_from_save_data()
+				_load_potions_from_save_data()
 				RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 			
-			var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
-			reward_scene.run_stats = stats
-			reward_scene.character_stats = character
-			reward_scene.relic_handler = relic_handler
+			_setup_top_bar()
+			_restore_battle_victory_backdrop_for_reward()
+			var reward_scene := _open_battle_reward_overlay()
 			reward_scene.setup_from_run(true)
 			## 关闭任何子界面，确保回到奖励栏主界面
 			reward_scene.restore_card_picker_if_pending()
@@ -212,7 +226,7 @@ func _load_run() -> void:
 				else:
 					snap.relic_ids = relic_ids
 				var combat_spent_ids := save_data.get_combat_spent_relic_ids()
-				snap.apply_to(character, relic_handler)
+				snap.apply_to(character, relic_handler, potion_handler)
 				if relic_handler.get_all_relics().is_empty() and not relic_ids.is_empty():
 					push_warning("战斗快照恢复后遗物仍为空，尝试从 save_data 恢复...")
 					relic_handler.restore_relics_from_ids(
@@ -240,13 +254,16 @@ func _load_run() -> void:
 				if should_apply_snapshot:
 					# 应用场景进入快照，恢复到刚进入场景时的状态
 					# 注意：apply_scene_entry_snapshot 已经恢复了遗物和RNG状态
-					save_data.apply_scene_entry_snapshot(character, relic_handler)
+					save_data.apply_scene_entry_snapshot(
+						character, relic_handler, potion_handler
+					)
 					_reset_scene_room_reload_state()
 					_setup_top_bar()
 					_on_map_exited(save_data.last_room, true)
 				else:
 					# 没有场景快照：正常加载遗物和RNG
 					_load_relics_from_save_data()
+					_load_potions_from_save_data()
 					_setup_top_bar()
 					RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 					## 旧存档可能无 scene_entry_snapshot，仍须清掉事件/商店内未完成的选牌 pending
@@ -255,19 +272,31 @@ func _load_run() -> void:
 	else:
 		# 在地图上
 		_load_relics_from_save_data()
+		_load_potions_from_save_data()
 		_setup_top_bar()
 		call_deferred("_apply_spent_relic_state_from_save")
 		RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+		map.show_map()
 
 
-## 关闭遗物拾取效果可能打开的模态层（无上宝石选牌/升级、三选一等）
-func dismiss_reward_flow_overlays() -> void:
+## 仅关闭叠在战斗奖励之上的子模态（选牌/升级/三选一），保留 BattleReward。
+func dismiss_modal_sub_overlays() -> void:
 	var tree := get_tree()
 	if tree == null:
 		return
 	var to_close: Array[Node] = []
 	for node: Node in tree.root.get_children():
-		if (
+		if node is CanvasLayer:
+			for child: Node in node.get_children():
+				if (
+					child is DeckPickerOverlay
+					or child is HandCardPickOverlay
+					or child is CardPickOverlay
+					or child is CardUpgradeFlow
+				):
+					to_close.append(node)
+					break
+		elif (
 			node is DeckPickerOverlay
 			or node is HandCardPickOverlay
 			or node is CardPickOverlay
@@ -276,6 +305,15 @@ func dismiss_reward_flow_overlays() -> void:
 			to_close.append(node)
 	for node: Node in to_close:
 		node.queue_free()
+
+
+## 关闭遗物拾取效果可能打开的模态层（无上宝石选牌/升级、三选一等），含战斗奖励栏
+func dismiss_reward_flow_overlays() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	dismiss_modal_sub_overlays()
+	BattleReward.dismiss_all_on_tree(tree)
 
 
 ## 读档/保存退出回到事件、商店、宝藏「刚进房间」：关掉选牌层并丢弃未完成 pending。
@@ -331,6 +369,7 @@ func _warmup_battle_assets() -> void:
 
 func _change_view(scene: PackedScene, configure_before_add: Callable = Callable()) -> Node:
 	Events.relic_tooltip_hover_hide.emit()
+	Events.potion_tooltip_hover_hide.emit()
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
 	Events.card_keyword_tooltip_hide.emit()
@@ -364,9 +403,11 @@ func _change_view(scene: PackedScene, configure_before_add: Callable = Callable(
 
 func _show_map() -> void:
 	Events.relic_tooltip_hover_hide.emit()
+	Events.potion_tooltip_hover_hide.emit()
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
 	Events.card_keyword_tooltip_hide.emit()
+	BattleReward.dismiss_all_on_tree(get_tree())
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
 
@@ -405,12 +446,49 @@ func _setup_event_connections() -> void:
 		campfire_button.pressed.connect(_change_view.bind(CAMPFIRE_SCENE))
 	if not map_button.pressed.is_connected(_show_map):
 		map_button.pressed.connect(_show_map)
-	if not rewards_button.pressed.is_connected(_change_view.bind(BATTLE_REWARD_SCENE)):
-		rewards_button.pressed.connect(_change_view.bind(BATTLE_REWARD_SCENE))
+	if not rewards_button.pressed.is_connected(_debug_open_battle_reward):
+		rewards_button.pressed.connect(_debug_open_battle_reward)
 	if not shop_button.pressed.is_connected(_change_view.bind(SHOP_SCENE)):
 		shop_button.pressed.connect(_change_view.bind(SHOP_SCENE))
 	if not treasure_button.pressed.is_connected(_change_view.bind(TREASURE_SCENE)):
 		treasure_button.pressed.connect(_change_view.bind(TREASURE_SCENE))
+
+
+func is_in_active_battle() -> bool:
+	return current_view.get_child_count() > 0 and current_view.get_child(0) is Battle
+
+
+func _load_potions_from_save_data() -> void:
+	if save_data == null:
+		return
+	if save_data.combat_snapshot != null:
+		return
+	potion_handler.restore_from_ids(save_data.get_effective_potion_ids())
+
+
+func _should_persist_potion_slots_to_save() -> bool:
+	if save_data == null:
+		return false
+	if save_data.combat_snapshot != null and not save_data.was_on_map:
+		return false
+	if save_data.has_scene_entry_snapshot and not save_data.was_on_map:
+		return false
+	if save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:
+		return false
+	return true
+
+
+func _on_potion_slots_changed() -> void:
+	if run_finished or save_data == null:
+		return
+	if _should_persist_potion_slots_to_save():
+		var on_map := map != null and map.visible
+		_save_run(on_map)
+
+
+func _refresh_top_bar_gold() -> void:
+	if gold_ui != null and stats != null:
+		gold_ui.set_run_stats(stats)
 
 
 func _setup_top_bar() -> void:
@@ -422,7 +500,16 @@ func _setup_top_bar() -> void:
 	if not character.stats_changed.is_connected(health_ui.update_stats.bind(character)):
 		character.stats_changed.connect(health_ui.update_stats.bind(character))
 	health_ui.update_stats(character)
-	gold_ui.run_stats = stats
+	_refresh_top_bar_gold()
+	if potion_bar_ui:
+		potion_bar_ui.bind_handler(potion_handler)
+		potion_bar_ui.refresh_from_handler()
+	if not potion_handler.slots_changed.is_connected(_on_potion_slots_changed):
+		potion_handler.slots_changed.connect(_on_potion_slots_changed)
+	if not Events.potion_tooltip_hover_show.is_connected(game_tooltip.show_potion_tooltip):
+		Events.potion_tooltip_hover_show.connect(game_tooltip.show_potion_tooltip)
+	if not Events.potion_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
+		Events.potion_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
 	
 	# 只有在没有遗物时才添加初始遗物（避免加载存档时重复添加）
 	var current_relics := relic_handler.get_all_relics()
@@ -435,10 +522,10 @@ func _setup_top_bar() -> void:
 		Events.relic_tooltip_hover_show.connect(game_tooltip.show_tooltip)
 	if not Events.relic_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
 		Events.relic_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
-	if not Events.status_tooltip_hover_show.is_connected(game_tooltip.show_status_tooltip):
-		Events.status_tooltip_hover_show.connect(game_tooltip.show_status_tooltip)
-	if not Events.status_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
-		Events.status_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
+	if not Events.status_tooltip_hover_show.is_connected(_on_run_status_tooltip_hover_show):
+		Events.status_tooltip_hover_show.connect(_on_run_status_tooltip_hover_show)
+	if not Events.status_tooltip_hover_hide.is_connected(_on_run_status_tooltip_hover_hide):
+		Events.status_tooltip_hover_hide.connect(_on_run_status_tooltip_hover_hide)
 	if not Events.intent_tooltip_hover_show.is_connected(game_tooltip.show_custom_bbcode):
 		Events.intent_tooltip_hover_show.connect(game_tooltip.show_custom_bbcode)
 	if not Events.intent_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
@@ -524,28 +611,41 @@ func can_restore_shop_pending() -> bool:
 	return save_data != null and save_data.pending_room_kind == SaveGame.PENDING_SHOP
 
 
+const SHOP_PENDING_INT_COUNT := 23
+
+
 func persist_shop_pending(
 	card_ids: PackedStringArray,
 	relic_ids: PackedStringArray,
+	potion_ids: PackedStringArray,
 	card_costs: PackedInt32Array,
 	relic_costs: PackedInt32Array,
+	potion_costs: PackedInt32Array,
 	card_sold: PackedInt32Array,
-	relic_sold: PackedInt32Array
+	relic_sold: PackedInt32Array,
+	potion_sold: PackedInt32Array,
+	remove_count: int = 0
 ) -> void:
 	if save_data == null:
 		return
 	save_data.pending_room_kind = SaveGame.PENDING_SHOP
 	save_data.pending_card_template_ids = card_ids
 	save_data.pending_relic_ids = relic_ids
+	save_data.pending_potion_ids = potion_ids
 	var packed := PackedInt32Array()
 	for v: int in card_costs:
 		packed.append(v)
 	for v: int in relic_costs:
 		packed.append(v)
+	for v: int in potion_costs:
+		packed.append(v)
 	for v: int in card_sold:
 		packed.append(v)
 	for v: int in relic_sold:
 		packed.append(v)
+	for v: int in potion_sold:
+		packed.append(v)
+	packed.append(remove_count)
 	save_data.pending_shop_ints = packed
 	_save_run(false)
 
@@ -554,13 +654,20 @@ func get_shop_pending_data() -> Dictionary:
 	if not can_restore_shop_pending():
 		return {}
 	var ints := save_data.pending_shop_ints
+	if ints.size() < SHOP_PENDING_INT_COUNT:
+		return {"format_version": 0}
 	return {
+		"format_version": 2,
 		"card_ids": save_data.pending_card_template_ids,
 		"relic_ids": save_data.pending_relic_ids,
-		"card_costs": ints.slice(0, 3),
-		"relic_costs": ints.slice(3, 6),
-		"card_sold": ints.slice(6, 9),
-		"relic_sold": ints.slice(9, 12),
+		"potion_ids": save_data.pending_potion_ids,
+		"card_costs": ints.slice(0, 5),
+		"relic_costs": ints.slice(5, 8),
+		"potion_costs": ints.slice(8, 11),
+		"card_sold": ints.slice(11, 16),
+		"relic_sold": ints.slice(16, 19),
+		"potion_sold": ints.slice(19, 22),
+		"remove_count": ints[22],
 	}
 
 
@@ -589,9 +696,10 @@ func _persist_scene_room_quit_snapshot() -> void:
 		_reset_scene_room_reload_state()
 		_save_run(map.visible if map != null else false)
 		return
-	save_data.apply_scene_entry_snapshot(character, relic_handler)
+	save_data.apply_scene_entry_snapshot(character, relic_handler, potion_handler)
 	stats = save_data.run_stats
 	RNG.set_from_save_data(save_data.scene_entry_rng_seed, save_data.scene_entry_rng_state)
+	_refresh_top_bar_gold()
 	_reset_scene_room_reload_state()
 	save_data.was_on_map = false
 	save_data.char_stats = character
@@ -599,6 +707,9 @@ func _persist_scene_room_quit_snapshot() -> void:
 	save_data.current_health = character.health
 	save_data.current_max_health = character.max_health
 	save_data.sync_relics_for_save(relic_handler.get_all_relics())
+	save_data.sync_potion_ids_for_save(potion_handler.get_ids_for_save())
+	if potion_bar_ui:
+		potion_bar_ui.refresh_from_handler()
 	save_data.run_stats = stats
 	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
 	save_data.floors_climbed = map.floors_climbed
@@ -610,10 +721,10 @@ func _persist_scene_room_quit_snapshot() -> void:
 
 
 func _reset_shop_pending_sold_flags() -> void:
-	if save_data == null or save_data.pending_shop_ints.size() < 12:
+	if save_data == null or save_data.pending_shop_ints.size() < SHOP_PENDING_INT_COUNT:
 		return
 	var ints := save_data.pending_shop_ints.duplicate()
-	for i: int in range(6, 12):
+	for i: int in range(11, 22):
 		ints[i] = 0
 	save_data.pending_shop_ints = ints
 
@@ -627,12 +738,24 @@ func _persist_battle_reward_quit_snapshot() -> void:
 		save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
 		stats = save_data.run_stats
 	elif save_data.battle_reward_entry_staged:
-		save_data.apply_battle_reward_entry_rollback_to(character, relic_handler)
+		save_data.apply_battle_reward_entry_rollback_to(
+			character, relic_handler, potion_handler
+		)
 		stats = save_data.run_stats
+	elif (
+		save_data.battle_reward_gold_taken
+		and save_data.battle_reward_gold > 0
+		and stats != null
+	):
+		## 旧档/未 stage：至少回退已领取的金币奖励
+		stats.set_gold(maxi(0, stats.gold - save_data.battle_reward_gold))
+		save_data.run_stats = stats
+	_refresh_top_bar_gold()
 	save_data.clear_battle_reward_pending_staging()
 	save_data.battle_reward_gold_taken = false
 	save_data.battle_reward_cards_taken = false
 	save_data.battle_reward_upgrade_taken = false
+	save_data.battle_reward_potion_taken = false
 	## 保留 card_offered / pending_card_template_ids，读档仍能看见选牌入口与同一批候选
 	for i: int in range(save_data.battle_reward_relics_taken.size()):
 		save_data.battle_reward_relics_taken[i] = 0
@@ -646,6 +769,7 @@ func _persist_battle_reward_quit_snapshot() -> void:
 	save_data.current_health = character.health
 	save_data.current_max_health = character.max_health
 	save_data.sync_relics_for_save(relic_handler.get_all_relics())
+	save_data.sync_potion_ids_for_save(potion_handler.get_ids_for_save())
 	save_data.run_stats = stats
 	save_data.map_data = SaveGame.duplicate_map_data(map.map_data)
 	save_data.floors_climbed = map.floors_climbed
@@ -660,7 +784,8 @@ func persist_battle_reward_full_state(
 	gold: int,
 	relics: Array[Relic],
 	card_offered: bool = false,
-	upgrade_offered: bool = false
+	upgrade_offered: bool = false,
+	potion_id: String = ""
 ) -> void:
 	if save_data == null:
 		return
@@ -670,7 +795,8 @@ func persist_battle_reward_full_state(
 		character,
 		relic_handler,
 		RNG.instance.seed,
-		RNG.instance.state
+		RNG.instance.state,
+		potion_handler
 	)
 	save_data.battle_reward_card_offered = card_offered
 	save_data.battle_reward_upgrade_offered = upgrade_offered
@@ -685,6 +811,10 @@ func persist_battle_reward_full_state(
 	for i: int in range(relics.size()):
 		save_data.battle_reward_relics_taken.append(0)
 	save_data.battle_reward_cards_taken = false
+	save_data.battle_reward_potion_id = potion_id
+	save_data.battle_reward_potion_taken = false
+	save_data.rng_seed = RNG.instance.seed
+	save_data.rng_state = RNG.instance.state
 	_save_run(false)
 
 
@@ -717,6 +847,13 @@ func take_battle_reward_upgrade() -> void:
 	_save_run(false)
 
 
+func take_battle_reward_potion() -> void:
+	if save_data == null:
+		return
+	save_data.battle_reward_potion_taken = true
+	_save_run(false)
+
+
 ## 获取战斗奖励状态
 func get_battle_reward_state() -> Dictionary:
 	if save_data == null:
@@ -731,6 +868,8 @@ func get_battle_reward_state() -> Dictionary:
 		"card_offered": save_data.battle_reward_card_offered,
 		"upgrade_offered": save_data.battle_reward_upgrade_offered,
 		"upgrade_taken": save_data.battle_reward_upgrade_taken,
+		"potion_id": save_data.battle_reward_potion_id,
+		"potion_taken": save_data.battle_reward_potion_taken,
 	}
 
 
@@ -739,6 +878,31 @@ func clear_room_pending_and_save() -> void:
 		return
 	save_data.clear_room_pending()
 	_save_run(false)
+
+
+func _current_view_is_battle() -> bool:
+	if current_view == null:
+		return false
+	for child in current_view.get_children():
+		if child is Battle:
+			return true
+	return false
+
+
+func _on_run_status_tooltip_hover_show(
+	status: Status,
+	near_to: Control,
+	open_to_right: bool
+) -> void:
+	if _current_view_is_battle():
+		return
+	game_tooltip.show_status_tooltip(status, near_to, open_to_right)
+
+
+func _on_run_status_tooltip_hover_hide() -> void:
+	if _current_view_is_battle():
+		return
+	game_tooltip.hide_tooltip()
 
 
 func _on_card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
@@ -752,6 +916,8 @@ func _on_card_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> 
 
 
 func _on_card_keyword_tooltip_hide() -> void:
+	if _current_view_is_battle():
+		return
 	if Events.is_pointer_ui_obscured_for(game_tooltip):
 		return
 	game_tooltip.hide_tooltip()
@@ -782,11 +948,86 @@ func play_deck_remove_two_cards_fade_and_wait(card1: Card, card2: Card) -> void:
 		await run_card_fx.animate_two_cards_center_fade_remove(card1, card2)
 
 
-func _show_elite_battle_rewards() -> void:
-	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
+func _get_current_battle_view() -> Battle:
+	if current_view == null or current_view.get_child_count() == 0:
+		return null
+	return current_view.get_child(0) as Battle
+
+
+## 读档战斗奖励：恢复「刚打完、背景与玩家仍在」的定格画面（宝箱奖励仍保持宝藏房视图）。
+func _restore_battle_victory_backdrop_for_reward() -> void:
+	if save_data == null or save_data.last_room == null:
+		return
+	var room_type: Room.Type = save_data.last_room.type
+	if room_type not in [Room.Type.MONSTER, Room.Type.ELITE, Room.Type.BOSS]:
+		return
+	var battle := _get_current_battle_view()
+	if battle == null:
+		battle = _change_view(
+			BATTLE_SCENE,
+			func(n: Node) -> void:
+				var b := n as Battle
+				b.char_stats = character
+				b.battle_stats = save_data.last_room.battle_stats
+				b.relics = relic_handler
+		) as Battle
+	else:
+		battle.char_stats = character
+		battle.battle_stats = save_data.last_room.battle_stats
+		battle.relics = relic_handler
+	if battle != null:
+		battle.enter_post_victory_backdrop(true)
+
+
+func _open_battle_reward_overlay() -> BattleReward:
+	Events.relic_tooltip_hover_hide.emit()
+	Events.potion_tooltip_hover_hide.emit()
+	Events.status_tooltip_hover_hide.emit()
+	Events.intent_tooltip_hover_hide.emit()
+	Events.card_keyword_tooltip_hide.emit()
+	map.hide_map()
+	var reward_scene := BattleReward.open_on_tree(get_tree())
 	reward_scene.run_stats = stats
 	reward_scene.character_stats = character
 	reward_scene.relic_handler = relic_handler
+	reward_scene.potion_handler = potion_handler
+	return reward_scene
+
+
+func _debug_open_battle_reward() -> void:
+	var reward_scene := _open_battle_reward_overlay()
+	reward_scene.setup_from_run(false)
+
+
+## 大礼包等：在当前界面叠层发放战斗奖励（卡牌/药水/遗物/升级）
+func run_inline_reward_pack_flow() -> void:
+	var reward_scene := _open_battle_reward_overlay()
+	reward_scene.begin_inline_reward_pack()
+	await reward_scene.inline_flow_finished
+
+
+func _try_add_potion_reward(reward_scene: BattleReward) -> void:
+	if stats == null or reward_scene == null:
+		return
+	## 本场为新战斗胜利生成奖励，勿沿用上一场未离开奖励屏时写入的 potion_id
+	if save_data != null:
+		save_data.battle_reward_potion_id = ""
+	GameContent.clear_potion_template_cache()
+	var potion_offered := false
+	if stats.roll_battle_potion_drop():
+		var potion := POTION_REWARD_POOL.roll_reward(
+			potion_handler,
+			save_data.act_number if save_data else 1,
+			stats
+		)
+		if potion:
+			reward_scene.add_potion_reward(potion)
+			potion_offered = true
+	stats.adjust_battle_potion_drop_chance_after_reward(potion_offered)
+
+
+func _show_elite_battle_rewards() -> void:
+	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
 	
 	if map.last_room != null and map.last_room.battle_stats != null:
@@ -803,16 +1044,14 @@ func _show_elite_battle_rewards() -> void:
 	if relic:
 		reward_scene.add_relic_reward(relic)
 	
+	_try_add_potion_reward(reward_scene)
 	reward_scene.add_card_reward()
 	reward_scene.add_card_upgrade_reward()
 	reward_scene.save_initial_state()
 
 
 func _show_regular_battle_rewards() -> void:
-	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
-	reward_scene.run_stats = stats
-	reward_scene.character_stats = character
-	reward_scene.relic_handler = relic_handler
+	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
 
 	## 添加金币奖励（如果有战斗配置）
@@ -822,6 +1061,7 @@ func _show_regular_battle_rewards() -> void:
 		## 回退到默认金币奖励（控制台强制胜利时使用）
 		reward_scene.add_gold_reward(RNG.instance.randi_range(50, 80))
 	
+	_try_add_potion_reward(reward_scene)
 	reward_scene.add_card_reward()
 	## 所有奖励添加完成后，保存初始状态
 	reward_scene.save_initial_state()
@@ -829,20 +1069,11 @@ func _show_regular_battle_rewards() -> void:
 
 ## 层BOSS奖励：给予100-150金币和必定Rare的卡牌奖励
 func _show_act_boss_rewards() -> void:
-	## 直接给予金币奖励
 	var gold_reward := RNG.instance.randi_range(100, 150)
-	stats.gold += gold_reward
-	
-	## 创建奖励界面
-	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
-	reward_scene.run_stats = stats
-	reward_scene.character_stats = character
-	reward_scene.relic_handler = relic_handler
+	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
-	
-	## 添加金币奖励显示（已直接给予，但显示在奖励界面）
 	reward_scene.add_gold_reward(gold_reward)
-	
+	_try_add_potion_reward(reward_scene)
 	## 添加必定Rare的卡牌奖励
 	reward_scene.add_rare_card_reward()
 	
@@ -875,6 +1106,10 @@ func _on_act_reward_finished() -> void:
 
 
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
+	if not is_reload and save_data != null:
+		## 已进新战斗：若仍残留上一场战斗奖励 pending，清掉以免读档/roll 沿用旧药水
+		if save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:
+			save_data.clear_room_pending()
 	if not is_reload:
 		_save_combat_snapshot(room)
 	
@@ -909,7 +1144,9 @@ func _save_combat_snapshot(room: Room) -> void:
 	if save_data == null:
 		return
 	var current_relics := relic_handler.get_all_relics()
-	save_data.combat_snapshot = CombatSnapshot.create_from(character, current_relics, room)
+	save_data.combat_snapshot = CombatSnapshot.create_from(
+		character, current_relics, room, potion_handler
+	)
 	# 确保遗物 id 也被写入存档（作为后备）
 	save_data.sync_relics_for_save(current_relics)
 	_save_run(false)
@@ -930,10 +1167,7 @@ func _on_treasure_room_entered(is_reload: bool = false) -> void:
 
 
 func _on_treasure_room_exited(relic: Relic) -> void:
-	var reward_scene := _change_view(BATTLE_REWARD_SCENE) as BattleReward
-	reward_scene.run_stats = stats
-	reward_scene.character_stats = character
-	reward_scene.relic_handler = relic_handler
+	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
 
 	var treasure_gold := RNG.instance.randi_range(25, 50)
@@ -958,6 +1192,7 @@ func _on_shop_entered(is_reload: bool = false) -> void:
 	shop.char_stats = character
 	shop.run_stats = stats
 	shop.relic_handler = relic_handler
+	shop.potion_handler = potion_handler
 	Events.shop_entered.emit(shop)
 	shop.populate_shop(is_reload)
 
@@ -1123,6 +1358,7 @@ func _save_scene_entry_snapshot(room: Room) -> void:
 		character,
 		current_relics,
 		RNG.instance.seed,
-		RNG.instance.state
+		RNG.instance.state,
+		potion_handler
 	)
 	_save_run(false)

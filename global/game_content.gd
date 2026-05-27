@@ -4,15 +4,21 @@ extends RefCounted
 const CHAR_CARDS_ROOT := "res://characters"
 const COMMON_CARDS_DIR := "res://common_cards"
 const RELICS_DIR := "res://relics"
+const POTIONS_DIR := "res://potions"
 
 ## 已从奖励/图鉴等玩法池移除，资源文件仍保留在 `res://relics/` 供读档与日后启用。
 const DISABLED_RELIC_IDS: Array[String] = ["confusing_staff", "blinding_potion"]
 
 static var _relic_template_cache: Dictionary = {}
+static var _potion_template_cache: Dictionary = {}
 
 
 static func clear_relic_template_cache() -> void:
 	_relic_template_cache.clear()
+
+
+static func clear_potion_template_cache() -> void:
+	_potion_template_cache.clear()
 
 
 static func invalidate_relic_template(relic_id: String) -> void:
@@ -77,6 +83,59 @@ static func load_relics_from_ids(ids: PackedStringArray) -> Array[Relic]:
 		var relic := load_relic_for_save(String(relic_id))
 		if relic != null:
 			out.append(relic)
+	return out
+
+
+static func load_potion_template(potion_id: String) -> Potion:
+	var id := String(potion_id)
+	if id.is_empty():
+		return null
+	if _potion_template_cache.has(id):
+		return (_potion_template_cache[id] as Potion).duplicate(true) as Potion
+	for path: String in _list_tres_files(POTIONS_DIR):
+		if path.ends_with("potion_reward_pool.tres"):
+			continue
+		var res := load(path) as Potion
+		if res == null or res.id.is_empty():
+			continue
+		if res.id == id:
+			_potion_template_cache[id] = res.duplicate(true) as Potion
+			return (_potion_template_cache[id] as Potion).duplicate(true) as Potion
+	return null
+
+
+static func load_potion_for_save(potion_id: String) -> Potion:
+	return load_potion_template(potion_id)
+
+
+static func load_potions_from_ids(ids: PackedStringArray) -> Array[Potion]:
+	var out: Array[Potion] = []
+	for potion_id in ids:
+		var id := String(potion_id)
+		if id.is_empty():
+			out.append(null)
+			continue
+		out.append(load_potion_for_save(id))
+	return out
+
+
+static func load_all_potion_templates() -> Array[Potion]:
+	var by_id: Dictionary = {}
+	for path: String in _list_tres_files(POTIONS_DIR):
+		if path.ends_with("potion_reward_pool.tres"):
+			continue
+		var res := load(path) as Potion
+		if res == null or res.id.is_empty():
+			continue
+		if by_id.has(res.id):
+			continue
+		by_id[res.id] = res.duplicate(true) as Potion
+	var out: Array[Potion] = []
+	for k: Variant in by_id.keys():
+		out.append(by_id[k] as Potion)
+	out.sort_custom(func(a: Potion, b: Potion) -> bool:
+		return String(a.potion_name) < String(b.potion_name)
+	)
 	return out
 
 

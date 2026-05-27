@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="PotionRewardPool" format=3 uid="uid://cda8ds2inw3qb"]
+
+[ext_resource type="Script" uid="uid://kw0otrw1vavh" path="res://custom_resources/potion_reward_pool.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://d2ncjbf5mwqrk" path="res://custom_resources/potion.gd" id="2_potion"]
+[ext_resource type="Resource" uid="uid://bapmifpeou2hk" path="res://potions/strength_potion.tres" id="3_p0"]
+[ext_resource type="Resource" uid="uid://cney1xr07e5vj" path="res://potions/agility_potion.tres" id="4_p1"]
+[ext_resource type="Resource" uid="uid://bgkbbpa61e6ix" path="res://potions/flame_potion.tres" id="5_p2"]
+[ext_resource type="Resource" uid="uid://prn32xgwr15x" path="res://potions/milk_potion.tres" id="6_milk"]
+
+[resource]
+script = ExtResource("1_script")
+potions = Array[ExtResource("2_potion")]([ExtResource("3_p0"), ExtResource("4_p1"), ExtResource("5_p2"), ExtResource("6_milk")])

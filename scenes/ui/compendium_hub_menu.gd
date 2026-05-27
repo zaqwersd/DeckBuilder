@@ -3,10 +3,12 @@ extends Control
 
 signal card_compendium_requested
 signal relic_compendium_requested
+signal potion_compendium_requested
 signal closed
 
 @onready var _card_button: Button = %CardCompendiumButton
 @onready var _relic_button: Button = %RelicCompendiumButton
+@onready var _potion_button: Button = %PotionCompendiumButton
 @onready var _back_button: Button = %BackButton
 
 var _pointer_exclusive_registered := false
@@ -15,6 +17,7 @@ var _pointer_exclusive_registered := false
 func _ready() -> void:
 	_card_button.pressed.connect(func() -> void: card_compendium_requested.emit())
 	_relic_button.pressed.connect(func() -> void: relic_compendium_requested.emit())
+	_potion_button.pressed.connect(func() -> void: potion_compendium_requested.emit())
 	_back_button.pressed.connect(_close_hub)
 	visibility_changed.connect(_on_visibility_changed_pointer_exclusive)
 	_on_visibility_changed_pointer_exclusive()

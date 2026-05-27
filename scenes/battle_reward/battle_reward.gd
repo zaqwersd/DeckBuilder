@@ -1,7 +1,15 @@
 class_name BattleReward
 extends Control
 
+## 挂在 Run.BattleRewardLayer（layer 2）：高于 CurrentView，低于 TopBar(3)、选牌(6)/升级(7)/三选一(11)
+const BATTLE_REWARD_CANVAS_LAYER := 2
+
 const REWARD_BUTTON = preload("res://scenes/ui/reward_button.tscn")
+const BATTLE_REWARD_SCENE := preload("res://scenes/battle_reward/battle_reward.tscn")
+const RELIC_REWARD_POOL := preload("res://relics/relic_reward_pool.tres")
+const POTION_REWARD_POOL := preload("res://potions/potion_reward_pool.tres")
+
+signal inline_flow_finished
 const GOLD_ICON := preload("res://art/gold.png")
 const GOLD_TEXT := "%s 金币"
 const CARD_ICON := preload("res://art/rarity.png")
@@ -14,8 +22,14 @@ const UPGRADE_TEXT := "升级一张牌"
 @export var run_stats: RunStats
 @export var character_stats: CharacterStats
 @export var relic_handler: RelicHandler
+@export var potion_handler: PotionHandler
 
 @onready var rewards: VBoxContainer = %Rewards
+@onready var _title_label: Label = %TitleLabel
+@onready var _back_button: Button = %BackButton
+
+var _inline_grant_mode: bool = false
+var _pointer_exclusive_pushed: bool = false
 
 ## 奖励状态追踪
 var _gold_amount: int = 0
@@ -29,48 +43,126 @@ var _upgrade_offered: bool = false
 var _upgrade_taken: bool = false
 var _upgrade_flow_active: bool = false
 var _is_reload: bool = false
+var _potion: Potion = null
+var _potion_taken: bool = false
+var _potion_id_for_save: String = ""
 
 
 func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	var dim := get_node_or_null("Dim") as Control
+	if dim != null:
+		dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	if not _pointer_exclusive_pushed:
+		Events.begin_pointer_exclusive_ui(self)
+		_pointer_exclusive_pushed = true
 	for node: Node in rewards.get_children():
 		node.queue_free()
-	
-	## 设置与当前层数匹配的背景图
-	_setup_background()
+
+
+func _exit_tree() -> void:
+	if _pointer_exclusive_pushed:
+		Events.end_pointer_exclusive_ui(self)
+		_pointer_exclusive_pushed = false
+
+
+func _persists_to_run_save() -> bool:
+	return not _inline_grant_mode
+
+
+## 大礼包等：在当前界面打开奖励栏（不写入战斗奖励存档）
+func begin_inline_reward_pack() -> void:
+	_inline_grant_mode = true
+	if _title_label != null:
+		_title_label.text = "大礼包"
+	if _back_button != null:
+		_back_button.text = "完成"
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null or character_stats == null:
+		return
+	if run.save_data != null:
+		run.save_data.battle_reward_potion_id = ""
+	GameContent.clear_potion_template_cache()
+	var act_number := run.current_act
+	if run.save_data != null:
+		act_number = run.save_data.act_number
+	var potion := POTION_REWARD_POOL.roll_reward(potion_handler, act_number, run_stats)
+	if potion != null:
+		add_potion_reward(potion)
+	var relic := RELIC_REWARD_POOL.roll_reward(
+		character_stats, relic_handler, act_number, run_stats
+	)
+	if relic != null:
+		add_relic_reward(relic)
+	add_card_reward()
+	add_card_upgrade_reward()
 
 
 ## 从 Run 初始化奖励状态
 func setup_from_run(is_reload: bool) -> void:
 	_is_reload = is_reload
 	if is_reload:
-		_restore_reward_state_from_save()
-	## 非重载时：由外部调用 add_*_reward 添加奖励，最后调用 save_initial_state 保存
-
-
-## 设置与当前层数匹配的背景图
-func _setup_background() -> void:
-	var bg_rect := $Background as TextureRect
-	if bg_rect == null:
+		if is_node_ready():
+			_restore_reward_state_from_save()
+		else:
+			call_deferred("_restore_reward_state_from_save")
 		return
-	
-	var run := get_tree().get_first_node_in_group("run") as Run
+	_potion = null
+	_potion_id_for_save = ""
+	_potion_taken = false
+	## 非重载：由外部 add_*_reward 生成新奖励，最后 save_initial_state 写入存档
+
+
+static func open_on_tree(tree: SceneTree) -> BattleReward:
+	if tree == null:
+		return null
+	var run := tree.get_first_node_in_group("run") as Run
+	if run == null:
+		push_error("BattleReward.open_on_tree: 未找到 Run 节点")
+		return null
+	return open_on_run(run)
+
+
+static func open_on_run(run: Run) -> BattleReward:
+	var host := run.get_node_or_null("BattleRewardLayer") as CanvasLayer
+	if host == null:
+		push_error("BattleReward.open_on_run: Run 上缺少 BattleRewardLayer")
+		return null
+	for child: Node in host.get_children():
+		child.queue_free()
+	var inst := BATTLE_REWARD_SCENE.instantiate() as BattleReward
+	inst.set_anchors_preset(Control.PRESET_FULL_RECT)
+	inst.set_offsets_preset(Control.PRESET_FULL_RECT)
+	host.add_child(inst)
+	return inst
+
+
+static func dismiss_all_on_tree(tree: SceneTree) -> void:
+	if tree == null:
+		return
+	var run := tree.get_first_node_in_group("run") as Run
 	if run == null:
 		return
-	
-	## 根据当前层数设置对应背景图
-	match run.current_act:
-		1:
-			bg_rect.texture = preload("res://art/act1_background.png")
-		2:
-			bg_rect.texture = preload("res://art/act2_background.png")
-		3:
-			bg_rect.texture = preload("res://art/act3_background.png")
-		_:
-			bg_rect.texture = preload("res://art/background.png")
+	var host := run.get_node_or_null("BattleRewardLayer")
+	if host == null:
+		return
+	for child: Node in host.get_children():
+		child.queue_free()
+	## 兼容旧版挂在 root 上的奖励层
+	for node: Node in tree.root.get_children():
+		if node is CanvasLayer:
+			for child: Node in node.get_children():
+				if child is BattleReward:
+					node.queue_free()
+					break
+		elif node is BattleReward:
+			node.queue_free()
 
 
 ## 保存奖励初始状态到存档（在所有奖励添加完成后调用）
 func save_initial_state() -> void:
+	if not _persists_to_run_save():
+		return
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run == null:
 		return
@@ -83,7 +175,11 @@ func save_initial_state() -> void:
 	if _card_reward_offered and _card_reward_ids.is_empty():
 		_roll_or_restore_card_rewards()
 	run.persist_battle_reward_full_state(
-		_gold_amount, relics_to_save, _card_reward_offered, _upgrade_offered
+		_gold_amount,
+		relics_to_save,
+		_card_reward_offered,
+		_upgrade_offered,
+		_potion_id_for_save
 	)
 
 
@@ -121,11 +217,19 @@ func _restore_reward_state_from_save() -> void:
 	_gold_taken = false
 	_cards_taken = false
 	_upgrade_taken = false
+	_potion_taken = false
+	
+	var potion_id: String = state.get("potion_id", "")
+	_potion_id_for_save = potion_id
+	_potion = null
+	if not potion_id.is_empty():
+		_potion = GameContent.load_potion_template(potion_id)
 	
 	## 重置存档中的领取状态，确保下次保存也是未领取
 	run.save_data.battle_reward_gold_taken = false
 	run.save_data.battle_reward_cards_taken = false
 	run.save_data.battle_reward_upgrade_taken = false
+	run.save_data.battle_reward_potion_taken = false
 	for i: int in range(run.save_data.battle_reward_relics_taken.size()):
 		run.save_data.battle_reward_relics_taken[i] = 0
 	
@@ -156,6 +260,9 @@ func _rebuild_reward_ui() -> void:
 		_add_card_upgrade_reward_button()
 	elif _upgrade_offered and not _deck_has_upgradeable_card():
 		_auto_skip_card_upgrade_reward_if_deck_fully_upgraded()
+	
+	if _potion != null and not _potion_taken:
+		_add_potion_reward_button(_potion)
 
 
 ## 确保选牌界面关闭，回到奖励栏主界面
@@ -163,19 +270,19 @@ func _rebuild_reward_ui() -> void:
 func restore_card_picker_if_pending() -> void:
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run != null:
-		run.dismiss_reward_flow_overlays()
+		## 勿调用 dismiss_reward_flow_overlays：会把本层战斗奖励栏一并关掉
+		run.dismiss_modal_sub_overlays()
 	_close_any_sub_overlays()
 
 
-## 关闭所有子覆盖层
+## 关闭所有子覆盖层（不关闭战斗奖励栏本身）
 func _close_any_sub_overlays() -> void:
-	## 查找并关闭选牌层（通常挂在 root 上）
 	for child: Node in get_tree().root.get_children():
 		if child is CardPickOverlay:
 			child.queue_free()
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run != null:
-		run.dismiss_reward_flow_overlays()
+		run.dismiss_modal_sub_overlays()
 
 
 ## 用户点击卡牌奖励按钮时显示选牌界面
@@ -205,6 +312,19 @@ func _add_card_reward_button() -> void:
 	card_reward.reward_text = CARD_TEXT
 	card_reward.pressed.connect(_show_card_rewards)
 	rewards.add_child.call_deferred(card_reward)
+
+
+## 添加药水奖励按钮
+func _add_potion_reward_button(potion: Potion) -> void:
+	if not potion:
+		return
+	var potion_reward := REWARD_BUTTON.instantiate() as RewardButton
+	potion_reward.remove_on_press = false
+	potion_reward.reward_icon = potion.icon
+	potion_reward.reward_text = potion.potion_name
+	potion_reward.hover_potion = potion
+	potion_reward.pressed.connect(_on_potion_reward_taken)
+	rewards.add_child.call_deferred(potion_reward)
 
 
 ## 添加遗物奖励按钮
@@ -285,11 +405,12 @@ func _wait_deck_picker_nav(overlay: DeckPickerOverlay, captured: Dictionary) -> 
 		await get_tree().process_frame
 
 
-func _close_upgrade_reward_overlays(run: Run, overlay: Node) -> void:
-	if is_instance_valid(overlay):
-		overlay.queue_free()
+func _dismiss_upgrade_subflow(run: Run, overlay = null) -> void:
+	## 只关选牌/升级层，保留战斗奖励栏；overlay 可能已被 DeckPicker 自行释放
+	if overlay != null and is_instance_valid(overlay):
+		(overlay as Node).queue_free()
 	if run != null:
-		run.dismiss_reward_flow_overlays()
+		run.dismiss_modal_sub_overlays()
 
 
 func _show_card_upgrade_flow() -> void:
@@ -326,16 +447,16 @@ func _show_card_upgrade_flow() -> void:
 		var kind: String = String(captured.get("kind", ""))
 		if kind == "back":
 			_upgrade_flow_active = false
-			_close_upgrade_reward_overlays(run, overlay)
+			_dismiss_upgrade_subflow(run, overlay)
 			return
 		if kind != "confirm":
 			_upgrade_flow_active = false
-			_close_upgrade_reward_overlays(run, overlay)
+			_dismiss_upgrade_subflow(run, overlay)
 			return
 		var indices: Array = captured.get("indices", [])
 		if indices.is_empty():
 			_upgrade_flow_active = false
-			_close_upgrade_reward_overlays(run, overlay)
+			_dismiss_upgrade_subflow(run, overlay)
 			return
 		var idx := int(indices[0])
 		## 点选即确认（defer_free）：选牌层保持打开，升级层叠在上
@@ -343,10 +464,11 @@ func _show_card_upgrade_flow() -> void:
 		flow.begin(character_stats.deck, idx)
 		var result: int = await flow.finished
 		if result == CardUpgradeFlow.Result.BACK_TO_PICK:
-			if is_instance_valid(overlay):
-				overlay.clear_selection()
-			continue
-		_close_upgrade_reward_overlays(run, overlay)
+			## 升级层点「取消」：回到战斗奖励栏（不留在选牌层）
+			_upgrade_flow_active = false
+			_dismiss_upgrade_subflow(run, overlay)
+			return
+		_dismiss_upgrade_subflow(run, overlay)
 		if result == CardUpgradeFlow.Result.CANCELLED:
 			_upgrade_flow_active = false
 			return
@@ -366,7 +488,7 @@ func _resolve_upgrade_reward_skipped() -> void:
 		return
 	_upgrade_taken = true
 	var run := get_tree().get_first_node_in_group("run") as Run
-	if run != null:
+	if run != null and _persists_to_run_save():
 		run.take_battle_reward_upgrade()
 	_rebuild_reward_ui()
 
@@ -377,7 +499,8 @@ func _resolve_card_upgrade_reward(deck_index: int) -> void:
 	_upgrade_taken = true
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run != null:
-		run.take_battle_reward_upgrade()
+		if _persists_to_run_save():
+			run.take_battle_reward_upgrade()
 		if (
 			character_stats != null
 			and character_stats.deck != null
@@ -430,7 +553,8 @@ func add_rare_card_reward() -> void:
 			ids.append(c.id)
 		_card_reward_ids = ids
 		_card_reward_offered = true
-		run.persist_battle_reward_cards_pending(ids)
+		if _persists_to_run_save():
+			run.persist_battle_reward_cards_pending(ids)
 	
 	## 添加稀有卡牌奖励按钮（使用标准描述）
 	var card_reward := REWARD_BUTTON.instantiate() as RewardButton
@@ -439,6 +563,17 @@ func add_rare_card_reward() -> void:
 	card_reward.reward_text = CARD_TEXT  ## 使用标准常量"添加新卡牌"
 	card_reward.pressed.connect(_show_card_rewards)
 	rewards.add_child.call_deferred(card_reward)
+
+
+## 公共方法：添加药水奖励
+func add_potion_reward(potion: Potion) -> void:
+	if not potion:
+		return
+	_potion = potion
+	_potion_id_for_save = potion.id
+	_potion_taken = false
+	if not _is_reload:
+		_add_potion_reward_button(potion)
 
 
 ## 公共方法：添加遗物奖励
@@ -552,7 +687,8 @@ func _roll_or_restore_card_rewards() -> Array[Card]:
 			ids.append(c.id)
 		_card_reward_ids = ids
 		_card_reward_offered = true
-		run.persist_battle_reward_cards_pending(ids)
+		if _persists_to_run_save():
+			run.persist_battle_reward_cards_pending(ids)
 	return card_reward_array
 
 
@@ -586,7 +722,7 @@ func _resolve_card_reward_without_pick() -> void:
 		return
 	_cards_taken = true
 	var run := get_tree().get_first_node_in_group("run") as Run
-	if run != null:
+	if run != null and _persists_to_run_save():
 		run.take_battle_reward_cards()
 	_rebuild_reward_ui()
 
@@ -601,7 +737,7 @@ func _on_gold_reward_taken(amount: int) -> void:
 	
 	## 更新保存状态
 	var run := get_tree().get_first_node_in_group("run") as Run
-	if run != null:
+	if run != null and _persists_to_run_save():
 		run.take_battle_reward_gold()
 
 
@@ -621,11 +757,32 @@ func _on_card_reward_taken(picked_menu: Variant, from_global: Vector2) -> void:
 	_cards_taken = true
 	
 	if run != null:
-		run.take_battle_reward_cards()
+		if _persists_to_run_save():
+			run.take_battle_reward_cards()
 		run.play_deck_gain_card_visual_with_pick(menu, from_global)
 	
 	character_stats.deck.add_card(card)
 	_rebuild_reward_ui()
+
+
+## 药水奖励被领取
+func _on_potion_reward_taken() -> void:
+	if _potion_taken or _potion == null or potion_handler == null:
+		return
+	if not potion_handler.has_empty_slot():
+		return
+	if not potion_handler.add_potion(_potion):
+		return
+	_potion_taken = true
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null and _persists_to_run_save():
+		run.take_battle_reward_potion()
+	for child: Node in rewards.get_children():
+		if child is RewardButton:
+			var rb := child as RewardButton
+			if rb.hover_potion != null and rb.hover_potion.id == _potion.id:
+				child.queue_free()
+				break
 
 
 ## 遗物奖励被领取
@@ -635,6 +792,17 @@ func _on_relic_reward_taken(relic: Relic, index: int) -> void:
 	
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run == null:
+		return
+	
+	if _inline_grant_mode:
+		if index >= 0 and index < _relics_taken.size():
+			_relics_taken[index] = true
+		_rebuild_reward_ui()
+		await relic_handler.add_relic_async(relic)
+		if not relic_handler.has_relic(relic.id):
+			if index >= 0 and index < _relics_taken.size():
+				_relics_taken[index] = false
+			_rebuild_reward_ui()
 		return
 	
 	## 1. 先保存领取前的快照状态
@@ -712,8 +880,16 @@ func _save_battle_reward_pending_snapshot(run: Run, relic_index: int) -> void:
 	run._save_run(false)
 
 
+func _close_overlay_host() -> void:
+	queue_free()
+
+
 ## 返回按钮被按下
-func _on_back_button_pressed() -> void: 
+func _on_back_button_pressed() -> void:
+	_close_overlay_host()
+	if _inline_grant_mode:
+		inline_flow_finished.emit()
+		return
 	Events.battle_reward_exited.emit()
 
 

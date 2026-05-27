@@ -41,6 +41,11 @@ func initialize_status(_target: Node) -> void:
 	pass
 
 
+## 状态被提前移除或 UI 销毁前：撤销 `initialize_status` 挂上的修饰、信号等。
+func deactivate_status(_target: Node) -> void:
+	pass
+
+
 func apply_status(_target: Node) -> void:
 	status_applied.emit(self)
 

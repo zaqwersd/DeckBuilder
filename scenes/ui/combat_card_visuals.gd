@@ -93,6 +93,15 @@ func _apply_description_default_color_for_style() -> void:
 	description_label.add_theme_color_override("default_color", Color.WHITE)
 
 
+func _append_combat_effect_summary_line(raw: String, summary_line: String) -> String:
+	var close := raw.rfind("[/center]")
+	if close != -1:
+		return raw.substr(0, close) + "[br]" + summary_line + raw.substr(close)
+	if raw.contains("[center]"):
+		return raw + "[br]" + summary_line
+	return "[center]%s[/center][br][center]%s[/center]" % [raw, summary_line]
+
+
 func _prepend_intrinsic_line_bbcode(raw: String) -> String:
 	## 战斗中：只有 intrinsic == true 且卡牌显示固有描述时才添加
 	if card == null or not card.intrinsic:
@@ -124,6 +133,11 @@ func _refresh_description_text() -> void:
 			valid_player_modifiers, valid_enemy_modifiers, valid_combat_player
 		)
 	)
+	var summary := card.get_combat_effect_summary_bbcode(
+		valid_player_modifiers, valid_enemy_modifiers, valid_combat_player
+	)
+	if not summary.is_empty():
+		raw = _append_combat_effect_summary_line(raw, summary)
 	Card.pop_visual_number_bbcode_style()
 	_set_description_label_text(raw)
 	_apply_pick_through_nested_controls()

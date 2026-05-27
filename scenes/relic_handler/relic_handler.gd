@@ -69,29 +69,17 @@ func try_prevent_player_lethal(player: Player) -> bool:
 
 
 func add_relic(relic: Relic, apply_persistent_pickup: bool = true) -> void:
-	if has_relic(relic.id):
-		return
-	
-	var instance := relic.duplicate(true) as Relic
-	if instance == null:
-		push_warning("add_relic: 无法 duplicate 遗物 %s" % relic.id)
-		return
-	
-	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
-	relics.add_child(new_relic_ui)
-	new_relic_ui.relic = instance
-	if apply_persistent_pickup:
-		var run := get_tree().get_first_node_in_group("run") as Run
-		if run:
-			instance.apply_persistent_pickup_on_acquire(run)
-	new_relic_ui.relic.initialize_relic(new_relic_ui)
+	_attach_relic_instance(relic, apply_persistent_pickup)
 
 
 ## 异步添加遗物，等待 persistent_pickup 效果完成（用于战斗奖励领取流程）
-## 效果全部完成后再挂到遗物栏，避免「保存退出/读档」时栏上已有遗物但效果未确认。
+## 默认效果全部完成后再挂到遗物栏；`add_to_bar_before_persistent_pickup()` 为 true 时先挂栏再开效果。
 func add_relic_async(relic: Relic) -> void:
 	if has_relic(relic.id):
 		return
+	
+	if relic.add_to_bar_before_persistent_pickup():
+		_attach_relic_instance(relic, false)
 	
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run:
@@ -100,14 +88,23 @@ func add_relic_async(relic: Relic) -> void:
 	if has_relic(relic.id):
 		return
 	
+	_attach_relic_instance(relic, false)
+
+
+func _attach_relic_instance(relic: Relic, apply_persistent_pickup: bool) -> void:
+	if has_relic(relic.id):
+		return
 	var instance := relic.duplicate(true) as Relic
 	if instance == null:
-		push_warning("add_relic_async: 无法 duplicate 遗物 %s" % relic.id)
+		push_warning("add_relic: 无法 duplicate 遗物 %s" % relic.id)
 		return
-	
 	var new_relic_ui := RELIC_UI.instantiate() as RelicUI
 	relics.add_child(new_relic_ui)
 	new_relic_ui.relic = instance
+	if apply_persistent_pickup:
+		var run := get_tree().get_first_node_in_group("run") as Run
+		if run:
+			instance.apply_persistent_pickup_on_acquire(run)
 	new_relic_ui.relic.initialize_relic(new_relic_ui)
 
 

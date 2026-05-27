@@ -26,6 +26,7 @@ var _battle_ids: PackedStringArray = PackedStringArray()
 var _card_ids: PackedStringArray = PackedStringArray()
 var _event_ids: PackedStringArray = PackedStringArray()
 var _relic_ids: PackedStringArray = PackedStringArray()
+var _potion_ids: PackedStringArray = PackedStringArray()
 var _id_caches_built := false
 var _suggest_extra_height := 0.0
 
@@ -226,6 +227,7 @@ func _rebuild_id_caches() -> void:
 	_card_ids = _collect_all_card_basenames()
 	_event_ids = _collect_event_room_basenames()
 	_relic_ids = _collect_relic_ids()
+	_potion_ids = _collect_potion_ids()
 
 
 func _collect_battle_basenames() -> PackedStringArray:
@@ -277,6 +279,18 @@ func _is_valid_debug_event_id(basename: String) -> bool:
 	if basename.is_empty() or basename == "event_room_button":
 		return false
 	return basename.ends_with("_event")
+
+
+func _collect_potion_ids() -> PackedStringArray:
+	var out: Array[String] = []
+	for potion: Potion in GameContent.load_all_potion_templates():
+		if potion != null and not potion.id.is_empty():
+			out.append(potion.id)
+	out.sort()
+	var packed := PackedStringArray()
+	for s in out:
+		packed.append(s)
+	return packed
 
 
 func _collect_relic_ids() -> PackedStringArray:
@@ -349,6 +363,8 @@ func _refresh_suggestions() -> void:
 			pool = _event_ids
 		"relic":
 			pool = _relic_ids
+		"potion":
+			pool = _potion_ids
 		_:
 			_hide_suggestions()
 			return
@@ -401,6 +417,19 @@ func _parse_autocomplete_context(line: String) -> Dictionary:
 		if parts.size() > 1:
 			pref = parts[1].strip_edges()
 		return {"kind": "relic", "sub": sub, "prefix": pref}
+	if t.begins_with("\\potion"):
+		var rest5 := t.substr(7)
+		if rest5.begins_with(" "):
+			rest5 = rest5.substr(1)
+		var parts5 := rest5.split(" ", false, 1)
+		var sub5 := parts5[0].strip_edges().to_lower() if parts5.size() > 0 else ""
+		var pref5 := ""
+		if parts5.size() > 1:
+			pref5 = parts5[1].strip_edges()
+		elif sub5 != "list" and sub5 != "add":
+			pref5 = sub5
+			sub5 = ""
+		return {"kind": "potion", "sub": sub5, "prefix": pref5}
 	return {}
 
 
@@ -561,6 +590,8 @@ func _on_suggest_item_selected(index: int) -> void:
 			_line.text = "\\relic delete %s" % picked
 		else:
 			_line.text = "\\relic add %s" % picked
+	elif kind == "potion":
+		_line.text = "\\potion %s" % picked
 	_line.caret_column = _line.text.length()
 	_hide_suggestions()
 	_line.grab_focus()
@@ -598,6 +629,8 @@ func _run_command_with_async(text: String) -> String:
 			return _cmd_event(arg)
 		"\\relic":
 			return await _cmd_relic_async(arg)
+		"\\potion":
+			return _cmd_potion(arg)
 		"\\win":
 			return _cmd_win(arg)
 		"\\help":
@@ -628,6 +661,8 @@ func _run_command(text: String) -> String:
 			return _cmd_event(arg)
 		"\\relic":
 			return "请使用命令行输入 relic 命令"
+		"\\potion":
+			return _cmd_potion(arg)
 		"\\win":
 			return _cmd_win(arg)
 		"\\help":
@@ -834,6 +869,44 @@ func _cmd_relic_async(arg: String) -> String:
 	return "已添加遗物：%s（%s）" % [inst.relic_name, inst.id]
 
 
+func _cmd_potion(arg: String) -> String:
+	var bits := arg.split(" ", false)
+	if bits.is_empty() or bits[0].strip_edges().to_lower() == "list":
+		return _format_potion_id_list()
+	var potion_id: String
+	var head := bits[0].strip_edges().to_lower()
+	if head == "add":
+		if bits.size() < 2:
+			return "用法：\\potion <id> | \\potion add <id> | \\potion list"
+		potion_id = bits[1].strip_edges()
+	else:
+		potion_id = bits[0].strip_edges()
+	if potion_id.is_empty():
+		return "用法：\\potion <id> | \\potion add <id> | \\potion list"
+	_ensure_run()
+	if _run == null or not is_instance_valid(_run):
+		return "未找到 Run。"
+	var ph: PotionHandler = _run.potion_handler
+	if ph == null:
+		return "未找到 PotionHandler。"
+	var template := GameContent.load_potion_template(potion_id)
+	if template == null:
+		return "找不到药水 id：%s" % potion_id
+	if not ph.add_potion(template):
+		return "药水栏已满（最多 %d 格）。" % PotionHandler.MAX_SLOTS
+	return "已添加药水：%s（%s）" % [template.potion_name, template.id]
+
+
+func _format_potion_id_list() -> String:
+	_ensure_id_caches()
+	if _potion_ids.is_empty():
+		return "无已注册药水。"
+	var lines: PackedStringArray = PackedStringArray(["药水 id："])
+	for pid in _potion_ids:
+		lines.append("  %s" % pid)
+	return "\n".join(lines)
+
+
 func _cmd_health(arg: String) -> String:
 	if arg.is_empty():
 		return "\\health 需要整数，例如 30"
@@ -879,13 +952,14 @@ func _cmd_win(_arg: String) -> String:
 	
 	## 触发战斗胜利
 	battle.debug_force_win()
-	return "已触发战斗胜利！"
+	return "已将场上敌人生命值清零，请等待正常胜利结算。"
 
 
 func _cmd_help() -> String:
 	return """可用指令：
 战斗中：\\enemy <id> | \\card <位置> <id> [数量] | \\health <数值> | \\win
-任意时刻：\\money <数值> | \\event <id> | \\relic add/delete <id> | \\jump [on/off] | \\help"""
+任意时刻：\\money <数值> | \\event <id> | \\relic add/delete <id> | \\potion <id> | \\jump [on/off] | \\help
+\\potion list 列出全部药水 id；\\potion milk_potion 填入第一个空槽"""
 
 
 var _jump_mode: bool = false

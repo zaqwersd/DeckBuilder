@@ -46,6 +46,18 @@ func _on_mouse_entered_relic() -> void:
 
 
 func _on_mouse_exited_relic() -> void:
+	call_deferred("_deferred_emit_relic_tooltip_hide")
+
+
+func _deferred_emit_relic_tooltip_hide() -> void:
+	var viewport := get_viewport()
+	if viewport == null:
+		Events.relic_tooltip_hover_hide.emit()
+		return
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	var peers := TooltipHoverUtil.collect_sibling_controls(self, RelicUI)
+	if TooltipHoverUtil.pointer_over_control_or_peers(screen_pos, self, peers):
+		return
 	Events.relic_tooltip_hover_hide.emit()
 
 

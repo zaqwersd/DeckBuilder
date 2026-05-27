@@ -6,10 +6,7 @@
 [ext_resource type="Texture2D" path="res://art/gold.png" id="4_0iw0f"]
 
 [node name="ShopRelic" type="VBoxContainer"]
-custom_minimum_size = Vector2(180, 135)
-offset_right = 180
-offset_bottom = 189
-theme_override_constants/separation = 9
+theme_override_constants/separation = 4
 script = ExtResource("1_b84y1")
 relic = ExtResource("2_uujtg")
 
@@ -26,14 +23,14 @@ layout_mode = 2
 theme_override_constants/separation = 9
 alignment = 1
 
-[node name="PriceLabel" type="Label" parent="Price"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "999"
-
 [node name="GoldIcon" type="TextureRect" parent="Price"]
-custom_minimum_size = Vector2(45, 45)
+custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 texture = ExtResource("4_0iw0f")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="Price"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "999"

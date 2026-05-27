@@ -130,6 +130,8 @@ signal card_play_finished(card: Card)
 signal card_exhausted(card: Card)
 ## 玩家状态栏层数变化（如巨剑）：手牌需刷新攻击牌实际耗能显示。
 signal player_hand_cost_context_changed
+## 玩家战斗属性上下文变化（虚弱、脆弱等）：手牌需刷新攻击/格挡数字。
+signal player_combat_stat_context_changed
 
 # Player-related events
 signal player_hand_drawn
@@ -145,6 +147,8 @@ signal enemy_turn_ended
 signal enemy_died(enemy: Enemy)
 ## 攻击牌结算期间，玩家对敌人造成实际生命伤害（格挡后仍扣血）
 signal player_dealt_attack_damage_to_enemy(enemy: Enemy, amount: int)
+## 敌人对玩家造成未被格挡的生命伤害（格挡后仍扣血）
+signal enemy_dealt_unblocked_damage_to_player(enemy: Enemy, amount: int)
 
 # Battle-related events
 signal battle_over_screen_requested(text: String, type: BattleOverPanel.Type)
@@ -173,6 +177,7 @@ signal map_exited(room: Room)
 signal shop_entered(shop: Shop)
 signal shop_relic_bought(relic: Relic, gold_cost: int)
 signal shop_card_bought(card: Card, gold_cost: int, from_control: Control)
+signal shop_potion_bought(potion: Potion, gold_cost: int)
 signal shop_exited
 
 # Campfire-related events
@@ -187,6 +192,8 @@ signal treasure_room_exited(found_relic: Relic)
 # Relic-related事件：悬停显示说明；near_to 用于把提示框摆在遗物旁（RelicUI 等 Control）
 signal relic_tooltip_hover_show(relic: Relic, near_to: Control)
 signal relic_tooltip_hover_hide
+signal potion_tooltip_hover_show(potion: Potion, near_to: Control)
+signal potion_tooltip_hover_hide
 
 # Random Event room-related events
 signal event_room_exited

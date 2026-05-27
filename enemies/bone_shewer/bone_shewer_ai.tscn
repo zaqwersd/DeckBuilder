@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://enemies/bone_shewer/bone_shewer_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/bone_shewer/bone_shewer_debuff_action.gd" id="2_debuff"]
+[ext_resource type="Script" path="res://enemies/bone_shewer/bone_shewer_strike11_action.gd" id="3_strike"]
+[ext_resource type="Script" path="res://enemies/bone_shewer/bone_shewer_buff5_action.gd" id="4_buff"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
+
+[sub_resource type="Resource" id="Intent_weak"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "虚弱"
+
+[sub_resource type="Resource" id="Intent_frail"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "脆弱"
+
+[sub_resource type="Resource" id="Intent_strike"]
+script = ExtResource("5_intent")
+
+[sub_resource type="Resource" id="Intent_buff"]
+script = ExtResource("5_intent")
+kind = 2
+base_text = "+%d 力量"
+
+[node name="BoneShewerAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="BoneShewerDebuff" type="Node" parent="."]
+script = ExtResource("2_debuff")
+weak_intent = SubResource("Intent_weak")
+frail_intent = SubResource("Intent_frail")
+sound = ExtResource("7_blk")
+
+[node name="BoneShewerStrike11" type="Node" parent="."]
+script = ExtResource("3_strike")
+intent = SubResource("Intent_strike")
+sound = ExtResource("6_atk")
+
+[node name="BoneShewerBuff5" type="Node" parent="."]
+script = ExtResource("4_buff")
+intent = SubResource("Intent_buff")
+sound = ExtResource("7_blk")

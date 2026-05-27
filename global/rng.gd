@@ -133,3 +133,55 @@ func pick_weighted_distinct_relics(
 		out.append(choice)
 		remaining.erase(choice)
 	return out
+
+
+## 不放回抽取药水：按 COMMON / UNCOMMON / RARE / SPECIAL 权重 roll，再于桶内均匀随机。
+func pick_weighted_distinct_potions(
+	pool: Array[Potion],
+	count: int,
+	weight_common: float,
+	weight_uncommon: float,
+	weight_rare: float
+) -> Array[Potion]:
+	var remaining: Array[Potion] = pool.duplicate()
+	var out: Array[Potion] = []
+	for _i in range(count):
+		if remaining.is_empty():
+			break
+		var commons: Array[Potion] = []
+		var uncommons: Array[Potion] = []
+		var rares: Array[Potion] = []
+		var specials: Array[Potion] = []
+		for p: Potion in remaining:
+			match p.rarity:
+				Potion.Rarity.UNCOMMON:
+					uncommons.append(p)
+				Potion.Rarity.RARE:
+					rares.append(p)
+				Potion.Rarity.SPECIAL:
+					specials.append(p)
+				Potion.Rarity.COMMON:
+					commons.append(p)
+				_:
+					pass
+		var wc := weight_common if not commons.is_empty() else 0.0
+		var wu := weight_uncommon if not uncommons.is_empty() else 0.0
+		var wr := weight_rare if not rares.is_empty() else 0.0
+		var ws := 1.0 if not specials.is_empty() else 0.0
+		var tw := wc + wu + wr + ws
+		var choice: Potion = null
+		if tw <= 0.0:
+			choice = array_pick_random(remaining) as Potion
+		else:
+			var roll := instance.randf() * tw
+			var bucket: Array[Potion] = specials
+			if roll < wc:
+				bucket = commons
+			elif roll < wc + wu:
+				bucket = uncommons
+			elif roll < wc + wu + wr:
+				bucket = rares
+			choice = array_pick_random(bucket) as Potion
+		out.append(choice)
+		remaining.erase(choice)
+	return out

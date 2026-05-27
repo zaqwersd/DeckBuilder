@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="DexterityStatus" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="DexterityStatus" format=3 uid="uid://fnmp24cmntuo"]
 
-[ext_resource type="Texture2D" path="res://art/dexterity.png" id="1_icon"]
-[ext_resource type="Script" path="res://statuses/dexterity.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://qld08piksuwb" path="res://art/dexterity.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://bd6y8ho30jbjr" path="res://statuses/dexterity.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")

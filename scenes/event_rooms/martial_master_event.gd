@@ -4,7 +4,7 @@ const EVENT_SCENE_PATH := "res://scenes/event_rooms/martial_master_event.tscn"
 const DECK_OVERLAY := preload("res://scenes/ui/deck_picker_overlay.tscn")
 const CARD_MENU_UI := preload("res://scenes/ui/card_menu_ui.tscn")
 const IRON_WAVE := preload("res://common_cards/iron_wave.tres")
-const IRON_PREVIEW_SCALE := 0.8
+const IRON_PREVIEW_SCALE := 1.0
 const IRON_PREVIEW_GAP := 16.0
 
 @onready var option_strike_block: Button = %OptionStrikeBlock

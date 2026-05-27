@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="RatEnemyStats" format=3 uid="uid://dfo5cm16ctvi0"]
+
+[ext_resource type="Script" uid="uid://qls8m0yjwxea" path="res://enemies/rat/rat_enemy_stats.gd" id="1_stats"]
+[ext_resource type="PackedScene" path="res://enemies/rat/rat_enemy_ai.tscn" id="2_ai"]
+[ext_resource type="Texture2D" uid="uid://urvvjxbi3mcd" path="res://art/rat1.png" id="3_art1"]
+[ext_resource type="Texture2D" uid="uid://btc3b3aa6tgm5" path="res://art/rat2.png" id="4_art2"]
+[ext_resource type="Texture2D" uid="uid://b81j1aa2ndhxx" path="res://art/rat3.png" id="5_art3"]
+[ext_resource type="Texture2D" uid="uid://37bgcy4lhqbk" path="res://art/rat4.png" id="6_art4"]
+[ext_resource type="Texture2D" uid="uid://dq8owgvbbpt77" path="res://art/rat5.png" id="7_art5"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("2_ai")
+art_scale = Vector2(4, 4)
+art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2"), ExtResource("5_art3"), ExtResource("6_art4"), ExtResource("7_art5")])
+health_bar_width = 110
+status_bar_offset = Vector2(45, 50)
+max_health = 36
+art = ExtResource("3_art1")

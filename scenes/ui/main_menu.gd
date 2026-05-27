@@ -5,6 +5,7 @@ const RUN_SCENE = preload("res://scenes/run/run.tscn")
 const COMPENDIUM_HUB_SCENE := preload("res://scenes/ui/compendium_hub_menu.tscn")
 const CARD_COMPENDIUM_SCENE := preload("res://scenes/ui/card_compendium_view.tscn")
 const RELIC_COMPENDIUM_SCENE := preload("res://scenes/ui/relic_compendium_view.tscn")
+const POTION_COMPENDIUM_SCENE := preload("res://scenes/ui/potion_compendium_view.tscn")
 
 @export var run_startup: RunStartup
 
@@ -15,6 +16,7 @@ const RELIC_COMPENDIUM_SCENE := preload("res://scenes/ui/relic_compendium_view.t
 var _compendium_hub: CompendiumHubMenu
 var _card_compendium: CardCompendiumView
 var _relic_compendium: RelicCompendiumView
+var _potion_compendium: PotionCompendiumView
 
 
 func _ready() -> void:
@@ -29,6 +31,10 @@ func _ready() -> void:
 		Events.relic_tooltip_hover_show.connect(game_tooltip.show_tooltip)
 	if not Events.relic_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
 		Events.relic_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
+	if not Events.potion_tooltip_hover_show.is_connected(game_tooltip.show_potion_tooltip):
+		Events.potion_tooltip_hover_show.connect(game_tooltip.show_potion_tooltip)
+	if not Events.potion_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
+		Events.potion_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
 
 
 func _ensure_compendium_ui() -> void:
@@ -37,6 +43,7 @@ func _ensure_compendium_ui() -> void:
 		_compendium_layer.add_child(_compendium_hub)
 		_compendium_hub.card_compendium_requested.connect(_open_card_compendium)
 		_compendium_hub.relic_compendium_requested.connect(_open_relic_compendium)
+		_compendium_hub.potion_compendium_requested.connect(_open_potion_compendium)
 		_compendium_hub.closed.connect(_hide_all_compendium_ui)
 	if _card_compendium == null or not is_instance_valid(_card_compendium):
 		_card_compendium = CARD_COMPENDIUM_SCENE.instantiate() as CardCompendiumView
@@ -46,6 +53,10 @@ func _ensure_compendium_ui() -> void:
 		_relic_compendium = RELIC_COMPENDIUM_SCENE.instantiate() as RelicCompendiumView
 		_compendium_layer.add_child(_relic_compendium)
 		_relic_compendium.returned_to_hub.connect(_return_to_compendium_hub)
+	if _potion_compendium == null or not is_instance_valid(_potion_compendium):
+		_potion_compendium = POTION_COMPENDIUM_SCENE.instantiate() as PotionCompendiumView
+		_compendium_layer.add_child(_potion_compendium)
+		_potion_compendium.returned_to_hub.connect(_return_to_compendium_hub)
 
 
 func _hide_all_compendium_ui() -> void:
@@ -53,6 +64,8 @@ func _hide_all_compendium_ui() -> void:
 		_card_compendium.hide()
 	if is_instance_valid(_relic_compendium):
 		_relic_compendium.hide()
+	if is_instance_valid(_potion_compendium):
+		_potion_compendium.hide()
 	if is_instance_valid(_compendium_hub):
 		_compendium_hub.hide()
 
@@ -82,6 +95,7 @@ func _open_card_compendium() -> void:
 	_ensure_compendium_ui()
 	_compendium_hub.hide()
 	_relic_compendium.hide()
+	_potion_compendium.hide()
 	_card_compendium.show()
 
 
@@ -89,7 +103,16 @@ func _open_relic_compendium() -> void:
 	_ensure_compendium_ui()
 	_compendium_hub.hide()
 	_card_compendium.hide()
+	_potion_compendium.hide()
 	_relic_compendium.show_compendium()
+
+
+func _open_potion_compendium() -> void:
+	_ensure_compendium_ui()
+	_compendium_hub.hide()
+	_card_compendium.hide()
+	_relic_compendium.hide()
+	_potion_compendium.show_compendium()
 
 
 func _on_exit_pressed() -> void:

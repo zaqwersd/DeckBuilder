@@ -5,7 +5,6 @@
 
 [resource]
 script = ExtResource("1_hplv7")
-battle_tier = 1
 weight = 2.0
 gold_reward_min = 63
 gold_reward_max = 81

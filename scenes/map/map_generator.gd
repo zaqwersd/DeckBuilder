@@ -22,6 +22,9 @@ const MAX_ROOM_TYPE_ATTEMPTS := 256
 @export var battle_stats_pool: BattleStatsPool
 @export var event_room_pool: EventRoomPool
 
+const DEFAULT_BATTLE_POOL_PATH := "res://battles/battle_stats_pool.tres"
+const DEFAULT_EVENT_POOL_PATH := "res://scenes/event_rooms/event_room_pool.tres"
+
 var random_room_type_weights = {
 	Room.Type.MONSTER: 0.0,
 	Room.Type.CAMPFIRE: 0.0,
@@ -44,6 +47,8 @@ func generate_map(act: int = 1) -> Array[Array]:
 		for i in FLOORS - 1:
 			current_j = _setup_connection(i, current_j)
 			
+	if not _ensure_content_pools(act):
+		return map_data
 	battle_stats_pool.setup()
 	
 	_setup_boss_room()
@@ -51,6 +56,24 @@ func generate_map(act: int = 1) -> Array[Array]:
 	_setup_room_types()
 	
 	return map_data
+
+
+func _ensure_content_pools(act: int = 1) -> bool:
+	if battle_stats_pool == null:
+		var pool_path := DEFAULT_BATTLE_POOL_PATH
+		match act:
+			2:
+				pool_path = "res://battles/battle_stats_pool_act2.tres"
+			3:
+				pool_path = "res://battles/battle_stats_pool_act3.tres"
+		if ResourceLoader.exists(pool_path):
+			battle_stats_pool = load(pool_path) as BattleStatsPool
+	if event_room_pool == null and ResourceLoader.exists(DEFAULT_EVENT_POOL_PATH):
+		event_room_pool = load(DEFAULT_EVENT_POOL_PATH) as EventRoomPool
+	if battle_stats_pool == null:
+		push_error("MapGenerator: battle_stats_pool 未加载，请检查 battles/battle_stats_pool*.tres")
+		return false
+	return true
 
 
 func _generate_initial_grid() -> Array[Array]:

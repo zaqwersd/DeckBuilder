@@ -2,9 +2,12 @@ class_name BatEnemyAI
 extends EnemyActionPicker
 
 const ATTACK_ACTION_NAME := "BatAttackAction"
+const BUFF_ACTION_NAME := "BatBuffAction"
 
 var _last_action_name: String = ""
 var _consecutive_non_attack_turns: int = 0
+## 上回合执行强化后，本回合必须攻击（可打破「不连发同一意图」）。
+var must_attack_next_turn: bool = false
 
 
 func _ready() -> void:
@@ -19,15 +22,19 @@ func _exit_tree() -> void:
 
 
 func get_action() -> EnemyAction:
+	var attack := get_node_or_null(ATTACK_ACTION_NAME) as EnemyAction
+	if must_attack_next_turn:
+		must_attack_next_turn = false
+		if attack:
+			return attack
+
 	var pool := _build_action_pool()
 
 	# 已连续两回合未攻击时，本回合必须攻击（不得连续三回合不攻击）
 	if _consecutive_non_attack_turns >= 2:
 		pool = pool.filter(func(action: EnemyAction) -> bool: return action.name == ATTACK_ACTION_NAME)
-		if pool.is_empty():
-			var attack := get_node_or_null(ATTACK_ACTION_NAME) as EnemyAction
-			if attack:
-				pool = [attack]
+		if pool.is_empty() and attack:
+			pool = [attack]
 
 	return RNG.array_pick_random(pool) as EnemyAction
 
@@ -60,3 +67,5 @@ func _on_enemy_action_completed(completed_enemy: Enemy) -> void:
 		_consecutive_non_attack_turns = 0
 	else:
 		_consecutive_non_attack_turns += 1
+	if _last_action_name == BUFF_ACTION_NAME:
+		must_attack_next_turn = true

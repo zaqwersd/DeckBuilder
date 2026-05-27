@@ -27,10 +27,7 @@ func _on_player_dealt_attack_damage_to_enemy(_victim: Enemy, _amount: int) -> vo
 	var target: Node = RNG.array_pick_random(alive) as Node
 	if target == null:
 		return
-	var effect := DamageEffect.new()
-	effect.amount = bonus_damage
-	effect.receiver_modifier_type = Modifier.Type.NO_MODIFIER
-	effect.execute([target])
+	DamageEffect.create_fixed(bonus_damage).execute([target])
 	relic_ui.flash()
 
 

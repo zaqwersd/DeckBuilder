@@ -84,10 +84,7 @@ func _deal_damage_to_all_enemies() -> void:
 	if tree == null:
 		return
 	var enemies := tree.get_nodes_in_group("enemies")
-	var damage_effect := DamageEffect.new()
-	damage_effect.amount = damage
-	damage_effect.receiver_modifier_type = Modifier.Type.DMG_TAKEN
-	damage_effect.execute(enemies)
+	DamageEffect.create_fixed(damage).execute(enemies)
 
 
 func mark_spent() -> void:

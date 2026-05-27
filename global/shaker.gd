@@ -24,3 +24,23 @@ func shake(thing: Node2D, strength: float, duration: float = 0.2) -> void:
 			if is_instance_valid(thing):
 				thing.position = orig_pos
 	)
+
+
+func shake_control(ctrl: Control, strength: float = 5.0, duration: float = 0.12) -> void:
+	if not is_instance_valid(ctrl):
+		return
+	var orig_pos := ctrl.position
+	var shake_count := 8
+	var tween := create_tween()
+	for i in shake_count:
+		var shake_offset := Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0))
+		var target := orig_pos + strength * shake_offset
+		if i % 2 == 0:
+			target = orig_pos
+		tween.tween_property(ctrl, "position", target, duration / float(shake_count))
+		strength *= 0.75
+	tween.finished.connect(
+		func():
+			if is_instance_valid(ctrl):
+				ctrl.position = orig_pos
+	)

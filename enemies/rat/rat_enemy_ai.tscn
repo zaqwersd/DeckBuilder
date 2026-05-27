@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://enemies/rat/rat_enemy_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/rat/rat_strike5_weak_action.gd" id="2_s5w"]
+[ext_resource type="Script" path="res://enemies/rat/rat_strike13_action.gd" id="3_s13"]
+[ext_resource type="Script" path="res://enemies/rat/rat_strike9_action.gd" id="4_s9"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+
+[sub_resource type="Resource" id="Intent_strike"]
+script = ExtResource("5_intent")
+
+[sub_resource type="Resource" id="Intent_weak"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "虚弱"
+
+[node name="RatEnemyAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="RatStrike5Weak" type="Node" parent="."]
+script = ExtResource("2_s5w")
+intent = SubResource("Intent_strike")
+debuff_intent = SubResource("Intent_weak")
+sound = ExtResource("6_atk")
+
+[node name="RatStrike13" type="Node" parent="."]
+script = ExtResource("3_s13")
+intent = SubResource("Intent_strike")
+sound = ExtResource("6_atk")
+
+[node name="RatStrike9" type="Node" parent="."]
+script = ExtResource("4_s9")
+intent = SubResource("Intent_strike")
+sound = ExtResource("6_atk")

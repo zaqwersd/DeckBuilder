@@ -1,24 +1,31 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene format=3 uid="uid://bfu5gbxbm0aar"]
 
-[ext_resource type="Script" path="res://scenes/shop/shop.gd" id="1_oqoy8"]
-[ext_resource type="Texture2D" path="res://art/tile_0086.png" id="2_41omk"]
-[ext_resource type="Resource" path="res://relics/vip_card.tres" id="2_ccxow"]
-[ext_resource type="Resource" path="res://relics/lava_shard.tres" id="3_7lk2o"]
-[ext_resource type="Texture2D" path="res://art/shopkeeper_blink.png" id="3_uthr0"]
-[ext_resource type="Resource" path="res://relics/candle.tres" id="4_4u268"]
-[ext_resource type="Resource" path="res://relics/turtle_shell.tres" id="5_8ym3b"]
-[ext_resource type="Resource" path="res://relics/wooden_sword.tres" id="8_rq1it"]
-[ext_resource type="Resource" path="res://relics/defect_machine.tres" id="9_defmc"]
-[ext_resource type="Resource" path="res://relics/peerless_gem.tres" id="10_peerless"]
-[ext_resource type="Resource" path="res://relics/watermelon.tres" id="11_watermelon"]
-[ext_resource type="Resource" path="res://relics/crossbody_bag.tres" id="12_crossbody_bag"]
-[ext_resource type="Resource" path="res://relics/mobius_strip.tres" id="13_mobius"]
-[ext_resource type="Resource" path="res://relics/martial_scroll.tres" id="14_martial"]
-[ext_resource type="Resource" path="res://relics/emerald_axe.tres" id="15_emerald_axe"]
-[ext_resource type="Resource" path="res://relics/greatshield.tres" id="16_greatshield"]
-[ext_resource type="Resource" path="res://relics/fishbone.tres" id="17_fishbone"]
-[ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier_handler.tscn" id="11_863hj"]
-[ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier.tscn" id="12_xf6l8"]
+[ext_resource type="Script" uid="uid://blq2sa8cp64ly" path="res://scenes/shop/shop.gd" id="1_oqoy8"]
+[ext_resource type="Resource" uid="uid://nnuvl3yc7nrn" path="res://relics/vip_card.tres" id="2_ccxow"]
+[ext_resource type="Script" uid="uid://dmjnumrgrk62b" path="res://custom_resources/relic.gd" id="2_hbyua"]
+[ext_resource type="Resource" uid="uid://cgdh8eiirsp18" path="res://relics/lava_shard.tres" id="3_7lk2o"]
+[ext_resource type="Resource" uid="uid://tevwfx8p7puj" path="res://relics/candle.tres" id="4_4u268"]
+[ext_resource type="Resource" uid="uid://bn5rwde1qkvaa" path="res://relics/turtle_shell.tres" id="5_8ym3b"]
+[ext_resource type="Resource" uid="uid://cgsogoyh252sk" path="res://relics/wooden_sword.tres" id="8_rq1it"]
+[ext_resource type="Resource" uid="uid://37248vu5lkl0" path="res://relics/defect_machine.tres" id="9_defmc"]
+[ext_resource type="Resource" uid="uid://dyjwuq2mh8gtr" path="res://relics/peerless_gem.tres" id="10_peerless"]
+[ext_resource type="PackedScene" uid="uid://ctvxie3ni1ik4" path="res://scenes/modifier_handler/modifier_handler.tscn" id="11_863hj"]
+[ext_resource type="Resource" uid="uid://cod2sb7pcpgnn" path="res://relics/watermelon.tres" id="11_watermelon"]
+[ext_resource type="Resource" uid="uid://7vwghchanmp5" path="res://relics/crossbody_bag.tres" id="12_crossbody_bag"]
+[ext_resource type="PackedScene" uid="uid://bqefj5q31b84i" path="res://scenes/modifier_handler/modifier.tscn" id="12_xf6l8"]
+[ext_resource type="Resource" uid="uid://caglyx8wlt4xj" path="res://relics/mobius_strip.tres" id="13_mobius"]
+[ext_resource type="Resource" uid="uid://df00on56uhtqj" path="res://relics/martial_scroll.tres" id="14_martial"]
+[ext_resource type="Resource" uid="uid://g5fr1qga57ik" path="res://relics/emerald_axe.tres" id="15_emerald_axe"]
+[ext_resource type="Resource" uid="uid://cp0mad6uqyxv6" path="res://relics/greatshield.tres" id="16_greatshield"]
+[ext_resource type="Resource" uid="uid://xauh3bj7ne61" path="res://relics/fishbone.tres" id="17_fishbone"]
+[ext_resource type="Resource" path="res://relics/premium_pack.tres" id="18_premium_pack"]
+[ext_resource type="Theme" uid="uid://dq4qrshfstoha" path="res://main_theme.tres" id="18_theme"]
+[ext_resource type="Script" uid="uid://0sgofdybw8ve" path="res://scenes/shop/shop_layout_slot.gd" id="19_slot"]
+[ext_resource type="PackedScene" uid="uid://s1cmeonw55pa" path="res://scenes/ui/card_visuals.tscn" id="20_card_visuals"]
+[ext_resource type="Texture2D" uid="uid://dhmtctwb5ymhc" path="res://art/gold.png" id="21_gold"]
+[ext_resource type="PackedScene" path="res://scenes/shop/shop_relic.tscn" id="22_shop_relic"]
+[ext_resource type="PackedScene" path="res://scenes/shop/shop_potion.tscn" id="23_shop_potion"]
+[ext_resource type="Resource" uid="uid://prn32xgwr15x" path="res://potions/milk_potion.tres" id="25_milk"]
 
 [sub_resource type="Gradient" id="Gradient_sv6qe"]
 offsets = PackedFloat32Array(0.2125, 1)
@@ -33,46 +40,19 @@ metadata/_snap_count = 8
 
 [sub_resource type="Animation" id="Animation_wctye"]
 length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Shopkeeper:texture")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [ExtResource("2_41omk")]
-}
 
 [sub_resource type="Animation" id="Animation_1lyhw"]
 resource_name = "blink"
 length = 0.15
 step = 0.05
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Shopkeeper:texture")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0, 0.15),
-"transitions": PackedFloat32Array(1, 1),
-"update": 1,
-"values": [ExtResource("3_uthr0"), ExtResource("2_41omk")]
-}
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_c4845"]
 _data = {
-"RESET": SubResource("Animation_wctye"),
-"blink": SubResource("Animation_1lyhw")
+&"RESET": SubResource("Animation_wctye"),
+&"blink": SubResource("Animation_1lyhw")
 }
 
-[sub_resource type="LabelSettings" id="LabelSettings_cywyj"]
-font_size = 54
-
-[node name="Shop" type="Control"]
+[node name="Shop" type="Control" unique_id=392321875]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -80,101 +60,474 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme = ExtResource("18_theme")
 script = ExtResource("1_oqoy8")
-shop_relics = Array[Resource("res://custom_resources/relic.gd")]([ExtResource("2_ccxow"), ExtResource("3_7lk2o"), ExtResource("4_4u268"), ExtResource("5_8ym3b"), ExtResource("8_rq1it"), ExtResource("9_defmc"), ExtResource("10_peerless"), ExtResource("11_watermelon"), ExtResource("12_crossbody_bag"), ExtResource("13_mobius"), ExtResource("14_martial"), ExtResource("15_emerald_axe"), ExtResource("16_greatshield"), ExtResource("17_fishbone")])
+shop_relics = Array[ExtResource("2_hbyua")]([ExtResource("2_ccxow"), ExtResource("3_7lk2o"), ExtResource("4_4u268"), ExtResource("5_8ym3b"), ExtResource("8_rq1it"), ExtResource("9_defmc"), ExtResource("10_peerless"), ExtResource("11_watermelon"), ExtResource("12_crossbody_bag"), ExtResource("13_mobius"), ExtResource("14_martial"), ExtResource("15_emerald_axe"), ExtResource("16_greatshield"), ExtResource("17_fishbone"), ExtResource("18_premium_pack")])
 
-[node name="BackgroundLayer" type="CanvasLayer" parent="."]
+[node name="BackgroundLayer" type="CanvasLayer" parent="." unique_id=1743341951]
 layer = 0
 
-[node name="Background" type="TextureRect" parent="BackgroundLayer"]
+[node name="Background" type="TextureRect" parent="BackgroundLayer" unique_id=194145409]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 texture = SubResource("GradientTexture2D_lpow7")
 
-[node name="DecorationLayer" type="CanvasLayer" parent="."]
+[node name="DecorationLayer" type="CanvasLayer" parent="." unique_id=1072403657]
 
-[node name="Shopkeeper" type="TextureRect" parent="DecorationLayer"]
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 45
-offset_top = -405
-offset_right = 405
-offset_bottom = -45
-grow_vertical = 0
-texture = ExtResource("2_41omk")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="ShopkeeperAnimation" type="AnimationPlayer" parent="DecorationLayer"]
+[node name="ShopkeeperAnimation" type="AnimationPlayer" parent="DecorationLayer" unique_id=1174528500]
 unique_name_in_owner = true
-libraries = {
-"": SubResource("AnimationLibrary_c4845")
-}
+libraries/ = SubResource("AnimationLibrary_c4845")
 
-[node name="BlinkTimer" type="Timer" parent="DecorationLayer"]
+[node name="BlinkTimer" type="Timer" parent="DecorationLayer" unique_id=408934608]
 unique_name_in_owner = true
 one_shot = true
 
-[node name="UILayer" type="CanvasLayer" parent="."]
+[node name="UILayer" type="CanvasLayer" parent="." unique_id=997559415]
 layer = 2
 
-[node name="Title" type="Label" parent="UILayer"]
+[node name="ShopContent" type="Control" parent="UILayer" unique_id=1159444245]
+layout_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = 121.5
-offset_top = -220.5
-offset_right = 301.5
-offset_bottom = -166.5
+offset_left = -622.0
+offset_top = -266.0
+offset_right = 622.0
+offset_bottom = 346.0
 grow_horizontal = 2
 grow_vertical = 2
-text = "商店"
-label_settings = SubResource("LabelSettings_cywyj")
-horizontal_alignment = 1
-vertical_alignment = 1
+mouse_filter = 2
 
-[node name="BackButton" type="Button" parent="UILayer"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -441
-offset_top = -153
-offset_right = -261
-offset_bottom = -90
-grow_horizontal = 2
-grow_vertical = 2
-text = "离开"
-
-[node name="ShopContent" type="VBoxContainer" parent="UILayer"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -132.75
-offset_top = -157.5
-offset_right = 542.25
-offset_bottom = 301.5
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="ShopColumns" type="HBoxContainer" parent="UILayer/ShopContent"]
+[node name="CardSlot0" type="Control" parent="UILayer/ShopContent" unique_id=1279962472]
 unique_name_in_owner = true
+anchors_preset = 0
+offset_right = 248.0
+offset_bottom = 348.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/CardSlot0" unique_id=616698363]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" type="VBoxContainer" parent="UILayer/ShopContent/CardSlot0/Content" unique_id=612618939]
 layout_mode = 2
-theme_override_constants/separation = -30
+theme_override_constants/separation = 4
 alignment = 1
 
-[node name="ModifierHandler" parent="." instance=ExtResource("11_863hj")]
+[node name="CardVisuals" parent="UILayer/ShopContent/CardSlot0/Content/EditorPlaceholder" unique_id=135583791 instance=ExtResource("20_card_visuals")]
+layout_mode = 2
 
-[node name="ShopCostModifier" parent="ModifierHandler" instance=ExtResource("12_xf6l8")]
+[node name="Price" type="HBoxContainer" parent="UILayer/ShopContent/CardSlot0/Content/EditorPlaceholder" unique_id=615498638]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="UILayer/ShopContent/CardSlot0/Content/EditorPlaceholder/Price" unique_id=1517309077]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("21_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="UILayer/ShopContent/CardSlot0/Content/EditorPlaceholder/Price" unique_id=198234881]
+layout_mode = 2
+text = "999"
+
+[node name="CardSlot1" type="Control" parent="UILayer/ShopContent" unique_id=643879518]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 248.0
+offset_right = 496.0
+offset_bottom = 348.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/CardSlot1" unique_id=2144624345]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" type="VBoxContainer" parent="UILayer/ShopContent/CardSlot1/Content" unique_id=1818684734]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="CardVisuals" parent="UILayer/ShopContent/CardSlot1/Content/EditorPlaceholder" unique_id=1439585152 instance=ExtResource("20_card_visuals")]
+layout_mode = 2
+
+[node name="Price" type="HBoxContainer" parent="UILayer/ShopContent/CardSlot1/Content/EditorPlaceholder" unique_id=1475750252]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="UILayer/ShopContent/CardSlot1/Content/EditorPlaceholder/Price" unique_id=1357751272]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("21_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="UILayer/ShopContent/CardSlot1/Content/EditorPlaceholder/Price" unique_id=564407910]
+layout_mode = 2
+text = "999"
+
+[node name="CardSlot2" type="Control" parent="UILayer/ShopContent" unique_id=1160302793]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 496.0
+offset_right = 744.0
+offset_bottom = 348.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/CardSlot2" unique_id=2000507408]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" type="VBoxContainer" parent="UILayer/ShopContent/CardSlot2/Content" unique_id=296823392]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="CardVisuals" parent="UILayer/ShopContent/CardSlot2/Content/EditorPlaceholder" unique_id=1183408633 instance=ExtResource("20_card_visuals")]
+layout_mode = 2
+
+[node name="Price" type="HBoxContainer" parent="UILayer/ShopContent/CardSlot2/Content/EditorPlaceholder" unique_id=986708844]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="UILayer/ShopContent/CardSlot2/Content/EditorPlaceholder/Price" unique_id=145760122]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("21_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="UILayer/ShopContent/CardSlot2/Content/EditorPlaceholder/Price" unique_id=864748252]
+layout_mode = 2
+text = "999"
+
+[node name="CardSlot3" type="Control" parent="UILayer/ShopContent" unique_id=1991921584]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 744.0
+offset_right = 992.0
+offset_bottom = 348.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/CardSlot3" unique_id=809644618]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" type="VBoxContainer" parent="UILayer/ShopContent/CardSlot3/Content" unique_id=618228800]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="CardVisuals" parent="UILayer/ShopContent/CardSlot3/Content/EditorPlaceholder" unique_id=1580019133 instance=ExtResource("20_card_visuals")]
+layout_mode = 2
+
+[node name="Price" type="HBoxContainer" parent="UILayer/ShopContent/CardSlot3/Content/EditorPlaceholder" unique_id=1663443405]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="UILayer/ShopContent/CardSlot3/Content/EditorPlaceholder/Price" unique_id=862303112]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("21_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="UILayer/ShopContent/CardSlot3/Content/EditorPlaceholder/Price" unique_id=930997957]
+layout_mode = 2
+text = "999"
+
+[node name="CardSlot4" type="Control" parent="UILayer/ShopContent" unique_id=1431033453]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 992.0
+offset_right = 1240.0
+offset_bottom = 348.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/CardSlot4" unique_id=1615500252]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" type="VBoxContainer" parent="UILayer/ShopContent/CardSlot4/Content" unique_id=718616277]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="CardVisuals" parent="UILayer/ShopContent/CardSlot4/Content/EditorPlaceholder" unique_id=1594789190 instance=ExtResource("20_card_visuals")]
+layout_mode = 2
+
+[node name="Price" type="HBoxContainer" parent="UILayer/ShopContent/CardSlot4/Content/EditorPlaceholder" unique_id=542629785]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="UILayer/ShopContent/CardSlot4/Content/EditorPlaceholder/Price" unique_id=1818956017]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+texture = ExtResource("21_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="UILayer/ShopContent/CardSlot4/Content/EditorPlaceholder/Price" unique_id=1486908605]
+layout_mode = 2
+text = "999"
+
+[node name="RelicSlot0" type="Control" parent="UILayer/ShopContent" unique_id=1708630524]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 560.0
+offset_top = 405.0
+offset_right = 680.0
+offset_bottom = 495.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/RelicSlot0" unique_id=1569836729]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" parent="UILayer/ShopContent/RelicSlot0/Content" unique_id=1996540910 instance=ExtResource("22_shop_relic")]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="RelicSlot1" type="Control" parent="UILayer/ShopContent" unique_id=1488050814]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 690.0
+offset_top = 405.0
+offset_right = 810.0
+offset_bottom = 495.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/RelicSlot1" unique_id=110049182]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" parent="UILayer/ShopContent/RelicSlot1/Content" unique_id=1803816584 instance=ExtResource("22_shop_relic")]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="RelicSlot2" type="Control" parent="UILayer/ShopContent" unique_id=1303833301]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 820.0
+offset_top = 405.0
+offset_right = 940.0
+offset_bottom = 495.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/RelicSlot2" unique_id=1232849822]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" parent="UILayer/ShopContent/RelicSlot2/Content" unique_id=188133209 instance=ExtResource("22_shop_relic")]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PotionSlot0" type="Control" parent="UILayer/ShopContent" unique_id=1657797368]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 560.0
+offset_top = 525.0
+offset_right = 680.0
+offset_bottom = 615.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/PotionSlot0" unique_id=119328774]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" parent="UILayer/ShopContent/PotionSlot0/Content" unique_id=318971463 instance=ExtResource("23_shop_potion")]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+mouse_filter = 2
+potion = ExtResource("25_milk")
+
+[node name="PotionSlot1" type="Control" parent="UILayer/ShopContent" unique_id=1283761131]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 690.0
+offset_top = 525.0
+offset_right = 810.0
+offset_bottom = 615.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/PotionSlot1" unique_id=288212771]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" parent="UILayer/ShopContent/PotionSlot1/Content" unique_id=1693015625 instance=ExtResource("23_shop_potion")]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="PotionSlot2" type="Control" parent="UILayer/ShopContent" unique_id=181274506]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 820.0
+offset_top = 525.0
+offset_right = 940.0
+offset_bottom = 615.0
+mouse_filter = 2
+script = ExtResource("19_slot")
+
+[node name="Content" type="CenterContainer" parent="UILayer/ShopContent/PotionSlot2" unique_id=65793760]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="EditorPlaceholder" parent="UILayer/ShopContent/PotionSlot2/Content" unique_id=1125554795 instance=ExtResource("23_shop_potion")]
+modulate = Color(1, 1, 1, 0.35)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="RemoveCardButton" type="Button" parent="UILayer/ShopContent" unique_id=512935415]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 1000.0
+offset_top = 381.0
+offset_right = 1240.0
+offset_bottom = 541.0
+
+[node name="MarginContainer" type="MarginContainer" parent="UILayer/ShopContent/RemoveCardButton" unique_id=1988001001]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="VBox" type="VBoxContainer" parent="UILayer/ShopContent/RemoveCardButton/MarginContainer" unique_id=1988001002]
+layout_mode = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="RemoveCardTitle" type="Label" parent="UILayer/ShopContent/RemoveCardButton/MarginContainer/VBox" unique_id=1988001003]
+unique_name_in_owner = true
+layout_mode = 2
+text = "移除一张牌"
+horizontal_alignment = 1
+
+[node name="RemoveCardPriceRow" type="HBoxContainer" parent="UILayer/ShopContent/RemoveCardButton/MarginContainer/VBox" unique_id=1988001004]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="GoldIcon" type="TextureRect" parent="UILayer/ShopContent/RemoveCardButton/MarginContainer/VBox/RemoveCardPriceRow" unique_id=1988001005]
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("21_gold")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="RemoveCardPrice" type="Label" parent="UILayer/ShopContent/RemoveCardButton/MarginContainer/VBox/RemoveCardPriceRow" unique_id=1988001006]
+unique_name_in_owner = true
+layout_mode = 2
+text = "75"
+vertical_alignment = 1
+
+[node name="BackButton" type="Button" parent="UILayer/ShopContent" unique_id=1972244689]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 1000.0
+offset_top = 549.0
+offset_right = 1240.0
+offset_bottom = 612.0
+text = "离开"
+
+[node name="ModifierHandler" parent="." unique_id=510571292 instance=ExtResource("11_863hj")]
+
+[node name="ShopCostModifier" parent="ModifierHandler" unique_id=320802401 instance=ExtResource("12_xf6l8")]
 type = 3
 
-[connection signal="pressed" from="UILayer/BackButton" to="." method="_on_back_button_pressed"]
+[connection signal="pressed" from="UILayer/ShopContent/RemoveCardButton" to="." method="_on_remove_card_pressed"]
+[connection signal="pressed" from="UILayer/ShopContent/BackButton" to="." method="_on_back_button_pressed"]

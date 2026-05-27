@@ -104,14 +104,10 @@ func _combat_body_bbcode(
 			self, char_stats, combat_player, player_modifiers
 		)
 	var intrinsic := _intrinsic_damage_for_x(preview_x)
-	var modified := intrinsic
-	if player_modifiers:
-		modified = player_modifiers.get_modified_value(intrinsic, Modifier.Type.DMG_DEALT)
-	if enemy_modifiers:
-		modified = enemy_modifiers.get_modified_value(modified, Modifier.Type.DMG_TAKEN)
-	modified = OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, modified, type)
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
-		modified, intrinsic, is_upgrade_track_maxed("formula")
+		compute_attack_damage_dealt(intrinsic, player_modifiers, enemy_modifiers, combat_player),
+		intrinsic,
+		is_upgrade_track_maxed("formula")
 	)
 	return "[center]造成%s点伤害。[br](造成%s点伤害)[/center]" % [formula_bb, dmg_bb]
 
@@ -120,6 +116,8 @@ func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	var x := get_play_x()
 	var base := _intrinsic_damage_for_x(x)
 	var damage_effect := DamageEffect.new()
-	damage_effect.amount = modifiers.get_modified_value(base, Modifier.Type.DMG_DEALT)
+	damage_effect.amount = resolve_attack_damage_dealt(
+		base, modifiers, _get_combat_player_for_effects(targets)
+	)
 	damage_effect.sound = sound
 	damage_effect.execute(targets)

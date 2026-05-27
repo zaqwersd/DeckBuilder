@@ -1,40 +1,72 @@
 class_name EnemyHandler
 extends Node2D
 
+const ENEMY_SCENE := preload("res://scenes/enemy/enemy.tscn")
+const LITTLE_SKELTON_STATS := preload("res://enemies/little_skelton/little_skelton_enemy.tres")
+
+const META_SKELETON_SLOT := &"skeleton_slot"
+
 var acting_enemies: Array[Enemy] = []
+## 小骷髅等遭遇：槽位编号 1~5 → 布局局部坐标
+var slot_positions: Dictionary = {}
 
 
 func _ready() -> void:
 	Events.enemy_died.connect(_on_enemy_died)
 	Events.enemy_action_completed.connect(_on_enemy_action_completed)
 	Events.player_hand_drawn.connect(_on_player_hand_drawn)
+	if not Events.player_combat_stat_context_changed.is_connected(_on_player_combat_stat_context_changed):
+		Events.player_combat_stat_context_changed.connect(_on_player_combat_stat_context_changed)
 
 
 func setup_enemies(battle_stats: BattleStats) -> void:
 	if not battle_stats:
 		return
 	
+	slot_positions.clear()
 	for enemy: Enemy in get_children():
 		enemy.free()
 	
 	var all_new_enemies := battle_stats.enemies.instantiate()
 	
-	for new_enemy: Node2D in all_new_enemies.get_children():
-		var template := new_enemy as Enemy
+	for layout_child: Node in all_new_enemies.get_children():
+		if layout_child.name.begins_with("Slot"):
+			var slot_key := layout_child.name.trim_prefix("Slot")
+			if slot_key.is_valid_int():
+				slot_positions[int(slot_key)] = layout_child.position
+			continue
+		var template := layout_child as Enemy
 		if template == null:
 			continue
 		var new_enemy_child := template.duplicate() as Enemy
 		add_child(new_enemy_child)
-		new_enemy_child.status_handler.statuses_applied.connect(_on_enemy_statuses_applied.bind(new_enemy_child))
-		# duplicate() 后导出 Resource 偶发为 null，用模板再赋一次以触发 create_instance
+		new_enemy_child.status_handler.statuses_applied.connect(
+			_on_enemy_statuses_applied.bind(new_enemy_child)
+		)
 		if is_instance_valid(template.stats):
 			new_enemy_child.stats = template.stats
-		
+		if template.has_meta(META_SKELETON_SLOT):
+			var slot: int = int(template.get_meta(META_SKELETON_SLOT))
+			new_enemy_child.set_meta(META_SKELETON_SLOT, slot)
+			if slot_positions.has(slot):
+				new_enemy_child.position = slot_positions[slot]
+			if new_enemy_child.stats is LittleSkeltonEnemyStats:
+				LittleSkeltonEnemyStats.apply_initial_health_for_slot(new_enemy_child.stats, slot)
+	
 	all_new_enemies.free()
+	LittleSkeltonIntentCoordinator.reset_combat()
+	CrabIntentCoordinator.reset_combat()
+	BoneShewerIntentCoordinator.reset_combat()
 
 
 func reset_enemy_actions() -> void:
-	for enemy: Enemy in get_children():
+	LittleSkeltonIntentCoordinator.assign_for_handler(self)
+	CrabIntentCoordinator.assign_for_handler(self)
+	BoneShewerIntentCoordinator.assign_for_handler(self)
+	for child in get_children():
+		if not child is Enemy:
+			continue
+		var enemy := child as Enemy
 		enemy.current_action = null
 		enemy.update_action()
 
@@ -44,12 +76,69 @@ func start_turn() -> void:
 		push_error("EnemyHandler.start_turn: 场上没有敌人。")
 		return
 	
-	acting_enemies.clear()
+	var enemies: Array[Enemy] = []
 	for child in get_children():
 		if child is Enemy and is_instance_valid(child):
-			acting_enemies.append(child as Enemy)
+			enemies.append(child as Enemy)
+	enemies.sort_custom(_compare_enemy_turn_order)
+	acting_enemies.assign(enemies)
 	
 	_start_next_enemy_turn()
+
+
+## 行动顺序：槽位 1→5（左→右）；无槽位则按 position.x。
+func _compare_enemy_turn_order(a: Enemy, b: Enemy) -> bool:
+	return _enemy_turn_order_key(a) < _enemy_turn_order_key(b)
+
+
+func _enemy_turn_order_key(enemy: Enemy) -> int:
+	if enemy.has_meta(META_SKELETON_SLOT):
+		return int(enemy.get_meta(META_SKELETON_SLOT))
+	return int(enemy.position.x)
+
+
+func count_little_skeltons() -> int:
+	var n := 0
+	for child in get_children():
+		if child is Enemy and (child as Enemy).stats is LittleSkeltonEnemyStats:
+			n += 1
+	return n
+
+
+func pick_highest_empty_skeleton_slot() -> int:
+	var occupied: Dictionary = {}
+	for child in get_children():
+		if not child is Enemy:
+			continue
+		if child.has_meta(META_SKELETON_SLOT):
+			occupied[int(child.get_meta(META_SKELETON_SLOT))] = true
+	for slot in [5, 4, 3, 2, 1]:
+		if not occupied.has(slot) and slot_positions.has(slot):
+			return slot
+	return -1
+
+
+func try_spawn_little_skelton_from_osteogenesis() -> void:
+	spawn_little_skelton()
+
+
+func spawn_little_skelton() -> Enemy:
+	if count_little_skeltons() >= OsteogenesisStatus.MAX_LITTLE_SKELTONS:
+		return null
+	var slot := pick_highest_empty_skeleton_slot()
+	if slot < 0:
+		return null
+	if not slot_positions.has(slot):
+		return null
+	
+	var new_enemy := ENEMY_SCENE.instantiate() as Enemy
+	add_child(new_enemy)
+	new_enemy.stats = LITTLE_SKELTON_STATS
+	new_enemy.position = slot_positions[slot]
+	new_enemy.set_meta(META_SKELETON_SLOT, slot)
+	new_enemy.status_handler.statuses_applied.connect(_on_enemy_statuses_applied.bind(new_enemy))
+	new_enemy.clear_intent_display()
+	return new_enemy
 
 
 func _start_next_enemy_turn() -> void:
@@ -97,5 +186,14 @@ func _on_enemy_action_completed(enemy: Enemy) -> void:
 
 
 func _on_player_hand_drawn() -> void:
-	for enemy: Enemy in get_children():
-		enemy.update_intent()
+	_refresh_all_enemy_intents()
+
+
+func _on_player_combat_stat_context_changed() -> void:
+	_refresh_all_enemy_intents()
+
+
+func _refresh_all_enemy_intents() -> void:
+	for child in get_children():
+		if child is Enemy:
+			(child as Enemy).update_intent()

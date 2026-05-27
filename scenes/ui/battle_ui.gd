@@ -54,6 +54,10 @@ func _bind_combat_keyword_tooltip() -> void:
 		Events.card_keyword_tooltip_show.connect(_on_combat_keyword_tooltip_show)
 	if not Events.card_keyword_tooltip_hide.is_connected(_on_combat_keyword_tooltip_hide):
 		Events.card_keyword_tooltip_hide.connect(_on_combat_keyword_tooltip_hide)
+	if not Events.status_tooltip_hover_show.is_connected(_on_combat_status_tooltip_show):
+		Events.status_tooltip_hover_show.connect(_on_combat_status_tooltip_show)
+	if not Events.status_tooltip_hover_hide.is_connected(_on_combat_status_tooltip_hide):
+		Events.status_tooltip_hover_hide.connect(_on_combat_status_tooltip_hide)
 
 
 func _unbind_combat_keyword_tooltip() -> void:
@@ -63,6 +67,10 @@ func _unbind_combat_keyword_tooltip() -> void:
 		Events.card_keyword_tooltip_show.disconnect(_on_combat_keyword_tooltip_show)
 	if Events.card_keyword_tooltip_hide.is_connected(_on_combat_keyword_tooltip_hide):
 		Events.card_keyword_tooltip_hide.disconnect(_on_combat_keyword_tooltip_hide)
+	if Events.status_tooltip_hover_show.is_connected(_on_combat_status_tooltip_show):
+		Events.status_tooltip_hover_show.disconnect(_on_combat_status_tooltip_show)
+	if Events.status_tooltip_hover_hide.is_connected(_on_combat_status_tooltip_hide):
+		Events.status_tooltip_hover_hide.disconnect(_on_combat_status_tooltip_hide)
 	_combat_keyword_tooltip.hide_tooltip()
 	_combat_keyword_tooltip.queue_free()
 	_combat_keyword_tooltip = null
@@ -80,6 +88,22 @@ func _on_combat_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -
 
 
 func _on_combat_keyword_tooltip_hide() -> void:
+	if _combat_keyword_tooltip == null:
+		return
+	_combat_keyword_tooltip.hide_tooltip()
+
+
+func _on_combat_status_tooltip_show(
+	status: Status,
+	near_to: Control,
+	open_to_right: bool
+) -> void:
+	_bind_combat_keyword_tooltip()
+	_combat_keyword_tooltip.hide_tooltip_immediate()
+	_combat_keyword_tooltip.show_status_tooltip(status, near_to, open_to_right)
+
+
+func _on_combat_status_tooltip_hide() -> void:
 	if _combat_keyword_tooltip == null:
 		return
 	_combat_keyword_tooltip.hide_tooltip()

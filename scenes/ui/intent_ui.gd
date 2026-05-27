@@ -33,7 +33,7 @@ func update_intents(intents: Array[Intent]) -> void:
 	if intents.is_empty():
 		hide()
 		return
-	for intent: Intent in intents:
+	for intent: Intent in Intent.merge_by_kind_for_display(intents):
 		if intent == null:
 			continue
 		var slot := INTENT_SLOT.instantiate() as IntentSlot

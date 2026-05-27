@@ -1,46 +1,42 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scenes/enemy/enemy_action_picker.gd" id="1_pubwu"]
-[ext_resource type="Script" path="res://enemies/crab/crab_attack_action.gd" id="2_dvmrv"]
-[ext_resource type="Script" path="res://enemies/crab/crab_block_action.gd" id="3_mwt7u"]
-[ext_resource type="Script" path="res://enemies/crab/crab_mega_block_action.gd" id="4_5v028"]
-[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_vcx3h"]
-[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_fbtni"]
-[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_jkno0"]
+[ext_resource type="Script" path="res://enemies/crab/crab_enemy_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/crab/crab_strike7_block4_action.gd" id="2_s7b4"]
+[ext_resource type="Script" path="res://enemies/crab/crab_strike3x_turn_action.gd" id="3_s3n"]
+[ext_resource type="Script" path="res://enemies/crab/crab_block15_action.gd" id="4_b15"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
 
-[sub_resource type="Resource" id="Resource_t5j5y"]
-script = ExtResource("4_vcx3h")
-kind = 0
-base_text = "%s"
+[sub_resource type="Resource" id="Intent_strike"]
+script = ExtResource("5_intent")
 
-[sub_resource type="Resource" id="Resource_cidov"]
-script = ExtResource("4_vcx3h")
+[sub_resource type="Resource" id="Intent_block4"]
+script = ExtResource("5_intent")
 kind = 1
-base_text = ""
 
-[sub_resource type="Resource" id="Resource_fvhin"]
-script = ExtResource("4_vcx3h")
+[sub_resource type="Resource" id="Intent_multihit"]
+script = ExtResource("5_intent")
+
+[sub_resource type="Resource" id="Intent_block15"]
+script = ExtResource("5_intent")
 kind = 1
-base_text = ""
 
-[node name="CrabEnemyAI" type="Node" unique_id=361337051]
-script = ExtResource("1_pubwu")
+[node name="CrabEnemyAI" type="Node"]
+script = ExtResource("1_ai")
 
-[node name="AttackAction" type="Node" parent="." unique_id=1770351279]
-script = ExtResource("2_dvmrv")
-intent = SubResource("Resource_t5j5y")
-sound = ExtResource("5_fbtni")
-type = 1
-chance_weight = 1.0
+[node name="CrabStrike7Block4" type="Node" parent="."]
+script = ExtResource("2_s7b4")
+intent = SubResource("Intent_strike")
+block_intent = SubResource("Intent_block4")
+sound = ExtResource("6_atk")
 
-[node name="BlockAction" type="Node" parent="." unique_id=1245132530]
-script = ExtResource("3_mwt7u")
-intent = SubResource("Resource_cidov")
-sound = ExtResource("8_jkno0")
-type = 1
-chance_weight = 1.0
+[node name="CrabStrike4xTurn" type="Node" parent="."]
+script = ExtResource("3_s3n")
+intent = SubResource("Intent_multihit")
+sound = ExtResource("6_atk")
 
-[node name="MegaBlockAction" type="Node" parent="." unique_id=292948702]
-script = ExtResource("4_5v028")
-intent = SubResource("Resource_fvhin")
-sound = ExtResource("8_jkno0")
+[node name="CrabBlock15" type="Node" parent="."]
+script = ExtResource("4_b15")
+intent = SubResource("Intent_block15")
+sound = ExtResource("7_blk")

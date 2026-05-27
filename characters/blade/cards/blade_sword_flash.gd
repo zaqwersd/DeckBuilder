@@ -42,14 +42,10 @@ func get_updated_tooltip(
 	player_modifiers: ModifierHandler, enemy_modifiers: ModifierHandler, combat_player: Node = null
 ) -> String:
 	var d_base := _per_hit_damage()
-	var modified_dmg := d_base
-	if player_modifiers:
-		modified_dmg = player_modifiers.get_modified_value(d_base, Modifier.Type.DMG_DEALT)
-	if enemy_modifiers:
-		modified_dmg = enemy_modifiers.get_modified_value(modified_dmg, Modifier.Type.DMG_TAKEN)
-	modified_dmg = OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, modified_dmg, type)
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
-		modified_dmg, d_base, is_upgrade_track_maxed("damage")
+		compute_attack_damage_dealt(d_base, player_modifiers, enemy_modifiers, combat_player),
+		d_base,
+		is_upgrade_track_maxed("damage")
 	)
 	var h_base := _hit_count()
 	var hits_bb := bbcode_for_modified_number_with_upgrade_hint(
@@ -59,7 +55,9 @@ func get_updated_tooltip(
 
 
 func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
-	var per := modifiers.get_modified_value(_per_hit_damage(), Modifier.Type.DMG_DEALT)
+	var per := resolve_attack_damage_dealt(
+		_per_hit_damage(), modifiers, _get_combat_player_for_effects(targets)
+	)
 	var n := _hit_count()
 	var tree: SceneTree = null
 	for t in targets:

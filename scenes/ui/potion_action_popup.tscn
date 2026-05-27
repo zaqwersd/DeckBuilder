@@ -1,0 +1,37 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/potion_action_popup.gd" id="1_script"]
+
+[node name="PotionActionPopup" type="CanvasLayer"]
+layer = 4
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0)
+
+[node name="Panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+mouse_filter = 0
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="UseButton" type="Button" parent="Panel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "使用"
+
+[node name="DiscardButton" type="Button" parent="Panel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+text = "丢弃"

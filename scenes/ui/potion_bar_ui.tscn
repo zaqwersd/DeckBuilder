@@ -1,0 +1,36 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/potion_bar_ui.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+content_margin_left = 4.0
+content_margin_top = 0.0
+content_margin_right = 4.0
+content_margin_bottom = 0.0
+bg_color = Color(0.258824, 0.258824, 0.258824, 0.5)
+
+[node name="PotionBarUI" type="PanelContainer"]
+custom_minimum_size = Vector2(0, 64)
+size_flags_vertical = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+script = ExtResource("1_script")
+
+[node name="SlotsRow" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Slot0" type="TextureButton" parent="SlotsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Slot1" type="TextureButton" parent="SlotsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2
+
+[node name="Slot2" type="TextureButton" parent="SlotsRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+layout_mode = 2

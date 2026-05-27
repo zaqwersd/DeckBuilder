@@ -13,6 +13,7 @@ const SAVE_PATH := "user://savegame.tres"
 @export var current_health: int
 @export var current_max_health: int = -1
 @export var saved_relic_ids: PackedStringArray = PackedStringArray()
+@export var saved_potion_ids: PackedStringArray = PackedStringArray()
 @export var saved_spent_relic_ids: PackedStringArray = PackedStringArray()
 ## 与 saved_spent_relic_ids 同步的逗号分隔备份，避免部分环境下 PackedStringArray 未写入 .tres
 @export var saved_spent_relic_ids_csv: String = ""
@@ -58,7 +59,8 @@ const PENDING_BATTLE_REWARD := 4
 @export var pending_event_flags: PackedStringArray = PackedStringArray()
 @export var pending_card_template_ids: PackedStringArray = PackedStringArray()
 @export var pending_relic_ids: PackedStringArray = PackedStringArray()
-## 商店：前 3 项卡牌价、后 3 项遗物价、再 3 项卡牌售出(0/1)、再 3 项遗物售出(0/1)。
+@export var pending_potion_ids: PackedStringArray = PackedStringArray()
+## 商店 pending_shop_ints：5 卡价、3 遗物价、3 药水价、5 卡售出、3 遗物售出、3 药水售出、删牌次数（共 23）。
 @export var pending_shop_ints: PackedInt32Array = PackedInt32Array()
 
 ## 战斗奖励画面状态：保存奖励初始状态，用于读档后恢复"什么都没拿"的状态
@@ -70,6 +72,8 @@ const PENDING_BATTLE_REWARD := 4
 @export var battle_reward_card_offered: bool = false  ## 是否有「添加新卡牌」按钮（未必已 roll 出三张）
 @export var battle_reward_upgrade_offered: bool = false  ## 精英战等：是否有「升级一张牌」按钮
 @export var battle_reward_upgrade_taken: bool = false  ## 升级奖励是否已领取
+@export var battle_reward_potion_id: String = ""
+@export var battle_reward_potion_taken: bool = false
 
 ## 战斗奖励：遗物领取暂存状态（类似营火的 pending 机制）
 const BATTLE_REWARD_PENDING_NONE := 0
@@ -99,6 +103,7 @@ const BATTLE_REWARD_PENDING_RELIC := 1
 @export var battle_reward_entry_pre_spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var battle_reward_entry_pre_rng_seed: int = 0
 @export var battle_reward_entry_pre_rng_state: int = 0
+@export var battle_reward_entry_pre_potion_ids: PackedStringArray = PackedStringArray()
 
 
 func clear_room_pending() -> void:
@@ -108,6 +113,7 @@ func clear_room_pending() -> void:
 	pending_event_flags = PackedStringArray()
 	pending_card_template_ids = PackedStringArray()
 	pending_relic_ids = PackedStringArray()
+	pending_potion_ids = PackedStringArray()
 	pending_shop_ints = PackedInt32Array()
 	## 同时清除战斗奖励状态
 	battle_reward_gold = 0
@@ -118,6 +124,8 @@ func clear_room_pending() -> void:
 	battle_reward_card_offered = false
 	battle_reward_upgrade_offered = false
 	battle_reward_upgrade_taken = false
+	battle_reward_potion_id = ""
+	battle_reward_potion_taken = false
 	clear_battle_reward_entry_staging()
 	clear_battle_reward_pending_staging()
 
@@ -258,6 +266,22 @@ func get_effective_relic_ids() -> PackedStringArray:
 	return out
 
 
+func sync_potion_ids_for_save(from_ids: PackedStringArray) -> void:
+	saved_potion_ids = from_ids.duplicate()
+
+
+func get_effective_potion_ids() -> PackedStringArray:
+	var out := PackedStringArray()
+	out.resize(PotionHandler.MAX_SLOTS)
+	for i in range(PotionHandler.MAX_SLOTS):
+		out[i] = ""
+	if saved_potion_ids.is_empty():
+		return out
+	for i in range(mini(PotionHandler.MAX_SLOTS, saved_potion_ids.size())):
+		out[i] = String(saved_potion_ids[i])
+	return out
+
+
 func clear_campfire_pending_staging() -> void:
 	campfire_leave_pending = false
 	campfire_pending_kind = CAMPFIRE_PENDING_NONE
@@ -327,7 +351,8 @@ func stage_battle_reward_entry_snapshot(
 	character: CharacterStats,
 	relic_handler: RelicHandler,
 	rng_seed: int,
-	rng_state: int
+	rng_state: int,
+	potion_handler: PotionHandler = null
 ) -> void:
 	if character == null:
 		return
@@ -351,11 +376,18 @@ func stage_battle_reward_entry_snapshot(
 		)
 	battle_reward_entry_pre_rng_seed = rng_seed
 	battle_reward_entry_pre_rng_state = rng_state
+	battle_reward_entry_pre_potion_ids = PackedStringArray()
+	if potion_handler != null:
+		battle_reward_entry_pre_potion_ids = potion_handler.get_ids_for_save()
 	battle_reward_entry_staged = true
 
 
 ## 读档：回到战斗刚结束、尚未领取任何战斗奖励时的状态
-func apply_battle_reward_entry_rollback_to(ch: CharacterStats, relic_handler: RelicHandler) -> void:
+func apply_battle_reward_entry_rollback_to(
+	ch: CharacterStats,
+	relic_handler: RelicHandler,
+	potion_handler: PotionHandler = null
+) -> void:
 	if not battle_reward_entry_staged:
 		return
 	if relic_handler != null:
@@ -369,8 +401,7 @@ func apply_battle_reward_entry_rollback_to(ch: CharacterStats, relic_handler: Re
 		battle_reward_entry_pre_max_mana,
 		battle_reward_entry_pre_mana
 	)
-	if run_stats != null and battle_reward_entry_pre_gold >= 0:
-		run_stats.gold = battle_reward_entry_pre_gold
+	_restore_run_stats_gold(battle_reward_entry_pre_gold)
 	if ch.deck != null and not battle_reward_entry_pre_deck_cards.is_empty():
 		ch.deck.cards.clear()
 		for card in battle_reward_entry_pre_deck_cards:
@@ -382,6 +413,8 @@ func apply_battle_reward_entry_rollback_to(ch: CharacterStats, relic_handler: Re
 			true,
 			battle_reward_entry_pre_spent_relic_ids
 		)
+	if potion_handler != null:
+		potion_handler.restore_from_ids(battle_reward_entry_pre_potion_ids)
 	ch.stats_changed.emit()
 	_sync_character_stats_to_save(self, ch)
 	RNG.set_from_save_data(battle_reward_entry_pre_rng_seed, battle_reward_entry_pre_rng_state)
@@ -419,8 +452,7 @@ func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: 
 	)
 	
 	## 恢复金币
-	if run_stats != null and battle_reward_pending_pre_gold >= 0:
-		run_stats.gold = battle_reward_pending_pre_gold
+	_restore_run_stats_gold(battle_reward_pending_pre_gold)
 	
 	## 恢复卡组
 	if ch.deck != null and not battle_reward_pending_pre_deck_cards.is_empty():
@@ -626,6 +658,7 @@ static func delete_data() -> void:
 @export var scene_entry_gold: int = -1
 @export var scene_entry_deck_cards: Array[Card] = []
 @export var scene_entry_relic_ids: PackedStringArray = PackedStringArray()
+@export var scene_entry_potion_ids: PackedStringArray = PackedStringArray()
 @export var scene_entry_spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var scene_entry_rng_seed: int = 0
 @export var scene_entry_rng_state: int = 0
@@ -638,7 +671,8 @@ func save_scene_entry_snapshot(
 	character: CharacterStats,
 	relics: Array[Relic],
 	rng_seed: int,
-	rng_state: int
+	rng_state: int,
+	potion_handler: PotionHandler = null
 ) -> void:
 	"""保存进入场景时的初始状态快照"""
 	if character == null:
@@ -664,13 +698,20 @@ func save_scene_entry_snapshot(
 		if is_instance_valid(relic) and relic != null:
 			scene_entry_relic_ids.append(relic.id)
 	scene_entry_spent_relic_ids = collect_spent_relic_ids(relics)
+	scene_entry_potion_ids = PackedStringArray()
+	if potion_handler != null:
+		scene_entry_potion_ids = potion_handler.get_ids_for_save()
 	
 	scene_entry_rng_seed = rng_seed
 	scene_entry_rng_state = rng_state
 	has_scene_entry_snapshot = true
 
 
-func apply_scene_entry_snapshot(character: CharacterStats, relic_handler: RelicHandler) -> bool:
+func apply_scene_entry_snapshot(
+	character: CharacterStats,
+	relic_handler: RelicHandler,
+	potion_handler: PotionHandler = null
+) -> bool:
 	"""应用场景进入时的快照状态，返回是否成功应用"""
 	if not has_scene_entry_snapshot or character == null:
 		return false
@@ -690,8 +731,7 @@ func apply_scene_entry_snapshot(character: CharacterStats, relic_handler: RelicH
 	)
 	
 	# 恢复金币
-	if run_stats != null and scene_entry_gold >= 0:
-		run_stats.gold = scene_entry_gold
+	_restore_run_stats_gold(scene_entry_gold)
 	
 	# 恢复卡组
 	if character.deck != null and not scene_entry_deck_cards.is_empty():
@@ -704,12 +744,19 @@ func apply_scene_entry_snapshot(character: CharacterStats, relic_handler: RelicH
 		relic_handler.restore_relics_from_ids(
 			scene_entry_relic_ids, false, false, scene_entry_spent_relic_ids
 		)
+	if potion_handler != null:
+		potion_handler.restore_from_ids(scene_entry_potion_ids)
 	
 	# 恢复RNG状态
 	RNG.set_from_save_data(scene_entry_rng_seed, scene_entry_rng_state)
 	_sync_character_stats_to_save(self, character)
 	
 	return true
+
+
+func _restore_run_stats_gold(amount: int) -> void:
+	if run_stats != null and amount >= 0:
+		run_stats.set_gold(amount)
 
 
 func clear_scene_entry_snapshot() -> void:
@@ -723,6 +770,7 @@ func clear_scene_entry_snapshot() -> void:
 	scene_entry_gold = -1
 	scene_entry_deck_cards.clear()
 	scene_entry_relic_ids.clear()
+	scene_entry_potion_ids.clear()
 	scene_entry_spent_relic_ids.clear()
 	scene_entry_rng_seed = 0
 	scene_entry_rng_state = 0

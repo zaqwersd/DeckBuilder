@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3 uid="uid://c5lh2ywnicnfb"]
+
+[ext_resource type="Texture2D" uid="uid://dquuwbblgdjbb" path="res://art/premium_pack.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://xdyhwtn54iio" path="res://relics/premium_pack.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "大礼包"
+id = "premium_pack"
+type = 4
+rarity = 5
+icon = ExtResource("1_icon")
+tooltip = "拾起时，获得1组卡牌，1瓶药水，1个遗物，升级1张牌的奖励。"

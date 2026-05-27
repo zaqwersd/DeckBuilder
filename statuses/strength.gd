@@ -17,6 +17,14 @@ func _on_status_changed(target: Node) -> void:
 	var dmg_dealt_modifier: Modifier = target.modifier_handler.get_modifier(Modifier.Type.DMG_DEALT)
 	assert(dmg_dealt_modifier, "No dmg dealt modifier on %s" % target)
 	
+	if stacks <= 0:
+		dmg_dealt_modifier.remove_value("muscle")
+		if target is Player:
+			Events.player_combat_stat_context_changed.emit()
+		elif target is Enemy:
+			(target as Enemy).update_intent()
+		return
+	
 	var muscle_modifier_value := dmg_dealt_modifier.get_value("muscle")
 	
 	if not muscle_modifier_value:
@@ -24,4 +32,19 @@ func _on_status_changed(target: Node) -> void:
 		
 	muscle_modifier_value.flat_value = stacks
 	dmg_dealt_modifier.add_new_value(muscle_modifier_value)
+	if target is Player:
+		Events.player_combat_stat_context_changed.emit()
+	elif target is Enemy:
+		(target as Enemy).update_intent()
 
+
+func deactivate_status(target: Node) -> void:
+	if not target.get("modifier_handler"):
+		return
+	var dmg_dealt_modifier: Modifier = target.modifier_handler.get_modifier(Modifier.Type.DMG_DEALT)
+	if dmg_dealt_modifier:
+		dmg_dealt_modifier.remove_value("muscle")
+	if target is Player:
+		Events.player_combat_stat_context_changed.emit()
+	elif target is Enemy:
+		(target as Enemy).update_intent()

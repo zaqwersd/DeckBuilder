@@ -13,6 +13,7 @@ extends Node2D
 
 ## 已为 `start_battle()` 布置过敌人；用于忽略换波时短暂的 `enemy_handler` 空子节点，避免误判战斗胜利。
 var _combat_started: bool = false
+var _victory_backdrop_applied: bool = false
 
 
 func _ready() -> void:
@@ -159,25 +160,20 @@ func _get_default_background_for_act(act: int) -> Texture2D:
 	return preload("res://art/background.png")
 
 
-## 控制台指令用：强制触发战斗胜利
+## 控制台指令用：将所有敌人生命值清零，走正常击杀 → 胜利面板 → 奖励流程。
 func debug_force_win() -> void:
 	if Events.is_combat_ended():
 		return
-	
-	## 清除所有敌人
-	for enemy in enemy_handler.get_children():
-		if enemy is Enemy:
-			enemy.queue_free()
-	
-	## 标记战斗结束并触发胜利
-	Events.mark_combat_ended()
-	
-	## 激活战斗结束时的遗物效果
-	if is_instance_valid(relics):
-		relics.activate_relics_by_type(Relic.Type.END_OF_COMBAT)
-	
-	## 发射战斗胜利信号（Run._on_battle_won会处理后续）
-	Events.battle_won.emit()
+	if not is_instance_valid(enemy_handler):
+		return
+	for child in enemy_handler.get_children():
+		if not child is Enemy:
+			continue
+		var foe := child as Enemy
+		if not is_instance_valid(foe.stats) or foe.stats.health <= 0:
+			continue
+		var lethal := foe.stats.health + maxi(0, foe.stats.block)
+		foe.take_damage(maxi(lethal, 1), Modifier.Type.DMG_TAKEN)
 
 
 ## 调试控制台：替换当前战斗的敌人布局（BattleStats），不重置牌库与遗物。
@@ -203,6 +199,7 @@ func _on_enemies_child_order_changed() -> void:
 		return
 	if enemy_handler.get_child_count() == 0 and is_instance_valid(relics):
 		Events.mark_combat_ended()
+		_show_victory_backdrop_only()
 		relics.activate_relics_by_type(Relic.Type.END_OF_COMBAT)
 
 
@@ -229,6 +226,58 @@ func _on_enemy_turn_ended() -> void:
 func _on_player_died() -> void:
 	Events.mark_combat_ended()
 	Events.battle_over_screen_requested.emit("游戏结束！", BattleOverPanel.Type.LOSE)
+
+
+## 战斗胜利后定格：保留背景、玩家与空敌人区，仅收起可操作战斗 UI。
+func enter_post_victory_backdrop(is_reload: bool = false) -> void:
+	get_tree().paused = false
+	visible = true
+	if not is_reload and music != null:
+		MusicPlayer.play(music, true)
+	_setup_background()
+	if char_stats != null and is_instance_valid(player):
+		player.stats = char_stats
+		player.update_stats()
+		(player as CanvasItem).visible = true
+	if is_instance_valid(enemy_handler):
+		(enemy_handler as CanvasItem).visible = true
+		for child: Node in enemy_handler.get_children():
+			if child is Enemy:
+				child.queue_free()
+	_hide_victory_phase_ui()
+	_victory_backdrop_applied = true
+
+
+func _show_victory_backdrop_only() -> void:
+	if _victory_backdrop_applied:
+		return
+	_hide_victory_phase_ui()
+	_victory_backdrop_applied = true
+
+
+func _hide_victory_phase_ui() -> void:
+	if is_instance_valid(battle_ui):
+		for node_name: StringName in [
+			&"Hand", &"EndTurnButton", &"DrawPileButton", &"DiscardPileButton", &"ExhaustPileButton"
+		]:
+			var ctl := battle_ui.get_node_or_null("%" + String(node_name))
+			if ctl is CanvasItem:
+				(ctl as CanvasItem).visible = false
+		var mana := battle_ui.get_node_or_null("ManaUI")
+		if mana is CanvasItem:
+			(mana as CanvasItem).visible = false
+		if is_instance_valid(battle_ui.card_fx) and battle_ui.card_fx is CanvasItem:
+			(battle_ui.card_fx as CanvasItem).visible = false
+	for layer_name: StringName in [&"CardPileViews", &"StatusViewLayer"]:
+		var layer := get_node_or_null(NodePath(String(layer_name)))
+		if layer is CanvasItem:
+			(layer as CanvasItem).visible = false
+	for node_name: StringName in [&"CardTargetSelector", &"CardDropArea"]:
+		var node := get_node_or_null(NodePath(String(node_name)))
+		if node is CanvasItem:
+			(node as CanvasItem).visible = false
+		elif node is CollisionObject2D:
+			(node as CollisionObject2D).set_deferred("monitoring", false)
 
 
 func _on_relics_activated(type: Relic.Type) -> void:

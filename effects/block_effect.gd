@@ -7,9 +7,10 @@ var from_card_play: bool = false
 
 
 static func compute_card_block_amount(base: int, combat_player: Node = null) -> int:
-	if combat_player == null:
-		return base
-	return base + DexterityStatus.get_bonus_from_player(combat_player)
+	var block := base
+	if combat_player is Player:
+		block = combat_player.modifier_handler.get_modified_value(block, Modifier.Type.BLOCK_GAINED)
+	return block + DexterityStatus.get_bonus_from_player(combat_player)
 
 
 func execute(targets: Array[Node]) -> void:
@@ -19,6 +20,6 @@ func execute(targets: Array[Node]) -> void:
 		if target is Enemy or target is Player:
 			var total := amount
 			if from_card_play and target is Player:
-				total += DexterityStatus.get_bonus_from_player(target)
+				total = compute_card_block_amount(amount, target)
 			target.stats.block += total
 			SFXPlayer.play(sound)

@@ -1,7 +1,7 @@
-[gd_resource type="Resource" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="DemonsBellRelic" format=3 uid="uid://fy2jitede3my"]
 
-[ext_resource type="Texture2D" path="res://art/demons_bell.png" id="1_icon"]
-[ext_resource type="Script" path="res://relics/demons_bell.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://xo62cdk21sb2" path="res://art/demons_bell.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://bnerd2dhorjri" path="res://relics/demons_bell.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")

@@ -3,7 +3,7 @@
 [ext_resource type="Theme" uid="uid://dq4qrshfstoha" path="res://main_theme.tres" id="1_hiimn"]
 [ext_resource type="Script" uid="uid://ob012okcmmku" path="res://scenes/ui/card_visuals_base.gd" id="2_uk7ay"]
 [ext_resource type="Resource" uid="uid://byi0cfoedmlm0" path="res://characters/blade/cards/blade_slash.tres" id="3_t04tx"]
-[ext_resource type="Texture2D" uid="uid://dojlh80rte165" path="res://art/tile_0107.png" id="5_jxbv6"]
+[ext_resource type="Texture2D" uid="uid://dqhofl8e3dul3" path="res://art/all_out.png" id="4_x0ouv"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_x0ouv"]
 size = Vector2(194, 285)
@@ -72,7 +72,7 @@ offset_bottom = 58.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("5_jxbv6")
+texture = ExtResource("4_x0ouv")
 expand_mode = 1
 stretch_mode = 5
 
@@ -153,6 +153,7 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Area2D" type="Area2D" parent="." unique_id=657566441]
+visible = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1703471776]
 position = Vector2(109, 159.5)

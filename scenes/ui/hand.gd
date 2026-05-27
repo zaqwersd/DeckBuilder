@@ -79,6 +79,10 @@ func _ready() -> void:
 	process_priority = -128
 	if not Events.player_hand_cost_context_changed.is_connected(_on_player_hand_cost_context_changed):
 		Events.player_hand_cost_context_changed.connect(_on_player_hand_cost_context_changed)
+	if not Events.player_combat_stat_context_changed.is_connected(_on_player_combat_stat_context_changed):
+		Events.player_combat_stat_context_changed.connect(_on_player_combat_stat_context_changed)
+	if not Events.card_exhausted.is_connected(_on_card_exhausted_refresh_descriptions):
+		Events.card_exhausted.connect(_on_card_exhausted_refresh_descriptions)
 	# 连接词条链接刷新请求信号
 	if not Events.card_keyword_tooltip_refresh_requested.is_connected(_on_tooltip_refresh_requested):
 		Events.card_keyword_tooltip_refresh_requested.connect(_on_tooltip_refresh_requested)
@@ -99,6 +103,21 @@ func _on_player_hand_cost_context_changed() -> void:
 			continue
 		cui.refresh_mana_cost_display()
 		cui.playable = cui.char_stats.can_play_card(cui.card, cui.get_effective_mana_cost())
+
+
+func _on_player_combat_stat_context_changed() -> void:
+	_refresh_all_hand_combat_descriptions()
+
+
+func _on_card_exhausted_refresh_descriptions(_exhausted_card: Card) -> void:
+	_refresh_all_hand_combat_descriptions()
+
+
+func _refresh_all_hand_combat_descriptions() -> void:
+	for slot in get_children():
+		var cui := get_card_ui_in_slot(slot)
+		if cui and cui.card:
+			cui.refresh_combat_description()
 
 
 func get_mouse_foremost_hand_card() -> CardUI:

@@ -63,4 +63,5 @@ func make_final_player_damage_effect(final_damage: int) -> DamageEffect:
 	effect.amount = final_damage
 	effect.receiver_modifier_type = Modifier.Type.NO_MODIFIER
 	effect.sound = sound
+	effect.dealt_by_enemy = enemy
 	return effect

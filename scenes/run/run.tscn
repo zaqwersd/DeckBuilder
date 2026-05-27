@@ -13,6 +13,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/game_tooltip.tscn" id="10_gametip"]
 [ext_resource type="Script" path="res://scenes/run/pause_menu.gd" id="11_a4w7h"]
 [ext_resource type="Script" path="res://scenes/ui/run_card_fx.gd" id="12_runfx"]
+[ext_resource type="Script" path="res://scenes/potion_handler/potion_handler.gd" id="13_poth"]
+[ext_resource type="PackedScene" path="res://scenes/ui/potion_bar_ui.tscn" id="14_potbar"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_68deg"]
 font_size = 64
@@ -23,7 +25,14 @@ run_startup = ExtResource("2_wgfut")
 
 [node name="Map" parent="." unique_id=185881106 instance=ExtResource("1_7xwwf")]
 
+[node name="PotionHandler" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("13_poth")
+
 [node name="CurrentView" type="Node" parent="." unique_id=397618230]
+
+[node name="BattleRewardLayer" type="CanvasLayer" parent="."]
+layer = 2
 
 [node name="DebugButtons" type="VBoxContainer" parent="." unique_id=1005851527]
 visible = false
@@ -83,6 +92,7 @@ theme_override_constants/separation = 0
 custom_minimum_size = Vector2(0, 81)
 layout_mode = 2
 size_flags_horizontal = 3
+alignment = 1
 
 [node name="HealthUI" parent="TopBar/BarRoot/BarItems" unique_id=154204712 instance=ExtResource("4_k05q4")]
 unique_name_in_owner = true
@@ -94,6 +104,11 @@ show_max_hp = true
 unique_name_in_owner = true
 custom_minimum_size = Vector2(135, 0)
 layout_mode = 2
+
+[node name="PotionBarUI" parent="TopBar/BarRoot/BarItems" instance=ExtResource("14_potbar")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
 
 [node name="Spacer" type="Control" parent="TopBar/BarRoot/BarItems" unique_id=924062819]
 layout_mode = 2

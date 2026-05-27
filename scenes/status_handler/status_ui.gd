@@ -22,6 +22,11 @@ func _ready() -> void:
 	subscript = get_node_or_null("Subscript")
 	_sync_counter_label_font_sizes()
 	_apply_square_cell()
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	if not mouse_entered.is_connected(_on_mouse_entered_status):
+		mouse_entered.connect(_on_mouse_entered_status)
+	if not mouse_exited.is_connected(_on_mouse_exited_status):
+		mouse_exited.connect(_on_mouse_exited_status)
 
 
 func set_status(new_status: Status) -> void:
@@ -94,11 +99,9 @@ func _on_status_changed() -> void:
 	if not status:
 		return
 
-	if status.can_expire and status.duration <= 0:
-		queue_free()
-		
-	if status.stack_type == Status.StackType.INTENSITY and status.stacks == 0:
-		queue_free()
+	if _should_remove_status_ui():
+		_remove_status_ui()
+		return
 
 	var is_overwhelming := status.id == "overwhelming"
 	var is_alert := status.id == "alert"
@@ -175,6 +178,21 @@ func _set_superscript_value(value: int) -> void:
 	_apply_counter_value_color(superscript, value)
 
 
+func _should_remove_status_ui() -> bool:
+	if status.can_expire and status.duration <= 0:
+		return true
+	if status.stack_type == Status.StackType.INTENSITY and status.stacks <= 0:
+		return true
+	return false
+
+
+func _remove_status_ui() -> void:
+	var handler := get_parent() as StatusHandler
+	if handler != null:
+		status.deactivate_status(handler.status_owner)
+	queue_free()
+
+
 func _apply_counter_value_color(label: Label, value: int) -> void:
 	if label == null:
 		return
@@ -199,3 +217,22 @@ func _apply_square_cell() -> void:
 	icon.size = Vector2(side, side)
 	size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+
+func _on_mouse_entered_status() -> void:
+	if status == null or Events.is_combat_ended():
+		return
+	var sh := get_parent() as StatusHandler
+	var open_right := sh.tooltips_open_to_right if sh else true
+	Events.status_tooltip_hover_show.emit(status, self, open_right)
+
+
+func _on_mouse_exited_status() -> void:
+	call_deferred("_deferred_emit_status_tooltip_hide")
+
+
+func _deferred_emit_status_tooltip_hide() -> void:
+	var sh := get_parent() as StatusHandler
+	if sh != null and sh.is_pointer_over_status_ui(self):
+		return
+	Events.status_tooltip_hover_hide.emit()

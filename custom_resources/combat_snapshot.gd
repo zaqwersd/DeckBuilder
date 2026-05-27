@@ -7,6 +7,7 @@ extends Resource
 @export var deck_cards: Array[Card]
 ## 保存遗物ID而不是Resource引用，避免Resource失效问题
 @export var relic_ids: PackedStringArray
+@export var potion_ids: PackedStringArray = PackedStringArray()
 ## 进战瞬间的失效状态（仅 create_from 写入；战斗中途保存不修改，读档回退到此）
 @export var spent_relic_ids: PackedStringArray = PackedStringArray()
 @export var room: Room
@@ -21,7 +22,12 @@ extends Resource
 func has_shadow_samurai_cycle() -> bool:
 	return shadow_samurai_cycle_slots.size() == 4
 
-static func create_from(character: CharacterStats, current_relics: Array[Relic], current_room: Room) -> CombatSnapshot:
+static func create_from(
+	character: CharacterStats,
+	current_relics: Array[Relic],
+	current_room: Room,
+	potion_handler: PotionHandler = null
+) -> CombatSnapshot:
 	var snapshot := CombatSnapshot.new()
 	snapshot.health = character.health
 	snapshot.deck_cards = []
@@ -35,6 +41,10 @@ static func create_from(character: CharacterStats, current_relics: Array[Relic],
 		if is_instance_valid(relic) and relic != null and not relic.id.is_empty():
 			snapshot.relic_ids.append(relic.id)
 	
+	if potion_handler != null:
+		snapshot.potion_ids = _normalize_potion_ids(potion_handler.get_ids_for_save())
+	else:
+		snapshot.potion_ids = _empty_potion_ids()
 	snapshot.room = current_room
 	snapshot.timestamp = Time.get_unix_time_from_system() as int
 	# 保存当前RNG状态
@@ -43,7 +53,11 @@ static func create_from(character: CharacterStats, current_relics: Array[Relic],
 	return snapshot
 
 
-func apply_to(character: CharacterStats, relic_handler: RelicHandler) -> void:
+func apply_to(
+	character: CharacterStats,
+	relic_handler: RelicHandler,
+	potion_handler: PotionHandler = null
+) -> void:
 	if character == null:
 		return
 	character.health = health
@@ -60,5 +74,22 @@ func apply_to(character: CharacterStats, relic_handler: RelicHandler) -> void:
 		else:
 			var spent_apply := SaveGame.resolve_spent_relic_ids(spent_relic_ids)
 			relic_handler.restore_relics_from_ids(ids_to_restore, false, true, spent_apply)
+	if potion_handler != null:
+		potion_handler.restore_from_ids(_normalize_potion_ids(potion_ids))
 	# 恢复RNG状态，确保抽牌结果与第一次进入时相同
 	RNG.set_from_save_data(rng_seed, rng_state)
+
+
+static func _empty_potion_ids() -> PackedStringArray:
+	var out := PackedStringArray()
+	out.resize(PotionHandler.MAX_SLOTS)
+	for i in range(PotionHandler.MAX_SLOTS):
+		out[i] = ""
+	return out
+
+
+static func _normalize_potion_ids(ids: PackedStringArray) -> PackedStringArray:
+	var out := _empty_potion_ids()
+	for i in range(mini(PotionHandler.MAX_SLOTS, ids.size())):
+		out[i] = String(ids[i])
+	return out

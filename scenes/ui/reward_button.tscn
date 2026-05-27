@@ -10,6 +10,7 @@ offset_bottom = 63
 script = ExtResource("1_0k6p2")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
+mouse_filter = 2
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -27,6 +28,7 @@ theme_override_constants/separation = 9
 
 [node name="CustomIcon" type="TextureRect" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+mouse_filter = 2
 custom_minimum_size = Vector2(45, 45)
 layout_mode = 2
 texture = ExtResource("1_q1h24")
@@ -35,6 +37,7 @@ stretch_mode = 5
 
 [node name="CustomText" type="Label" parent="MarginContainer/HBoxContainer"]
 unique_name_in_owner = true
+mouse_filter = 2
 layout_mode = 2
 size_flags_vertical = 1
 text = "99 金币"

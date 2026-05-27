@@ -11,6 +11,16 @@ const HEAL_FLOAT_COLOR := Color(0.35, 1.0, 0.5, 1.0)
 @onready var status_handler: StatusHandler = $StatusBar/StatusHandler
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
 
+var _pending_damage_dealer: Enemy
+
+
+func set_pending_damage_dealer(dealer: Enemy) -> void:
+	_pending_damage_dealer = dealer
+
+
+func clear_pending_damage_dealer() -> void:
+	_pending_damage_dealer = null
+
 
 func _ready() -> void:
 	status_handler.status_owner = self
@@ -69,6 +79,8 @@ func _disconnect_stats_combat_signals(s: Stats) -> void:
 
 func _on_stats_unblocked_damage_taken(amount: int) -> void:
 	FloatingCombatNumber.spawn(self, _floating_number_anchor_local(), amount, Color.WHITE)
+	if amount > 0 and is_instance_valid(_pending_damage_dealer) and not Events.is_combat_ended():
+		Events.enemy_dealt_unblocked_damage_to_player.emit(_pending_damage_dealer, amount)
 
 
 func _on_stats_healing_applied(amount: int) -> void:
@@ -119,6 +131,11 @@ func _die_from_lethal() -> void:
 	queue_free()
 
 
+func _apply_damage_to_stats(amount: int) -> void:
+	stats.take_damage(amount)
+	clear_pending_damage_dealer()
+
+
 func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bool = true) -> void:
 	if stats.health <= 0:
 		return
@@ -128,7 +145,7 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 	
 	if not use_tween_delay:
 		Shaker.shake(self, 72, 0.15)
-		stats.take_damage(modified_damage)
+		_apply_damage_to_stats(modified_damage)
 		sprite_2d.material = null
 		if stats.health <= 0:
 			if handle_lethal_if_needed():
@@ -138,7 +155,7 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 	
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
-	tween.tween_callback(stats.take_damage.bind(modified_damage))
+	tween.tween_callback(_apply_damage_to_stats.bind(modified_damage))
 	tween.tween_interval(0.17)
 	
 	tween.finished.connect(
@@ -161,7 +178,7 @@ func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
 	if not use_tween_delay:
 		Shaker.shake(self, 72, 0.15)
-		stats.take_damage(final_damage)
+		_apply_damage_to_stats(final_damage)
 		sprite_2d.material = null
 		if stats.health <= 0:
 			if handle_lethal_if_needed():
@@ -170,7 +187,7 @@ func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
 		return
 	var tween := create_tween()
 	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
-	tween.tween_callback(stats.take_damage.bind(final_damage))
+	tween.tween_callback(_apply_damage_to_stats.bind(final_damage))
 	tween.tween_interval(0.17)
 	tween.finished.connect(
 		func():

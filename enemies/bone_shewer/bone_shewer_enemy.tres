@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="BoneShewerEnemyStats" format=3 uid="uid://glx7wofr8nuo"]
+
+[ext_resource type="Script" uid="uid://crlydo3bp8wlh" path="res://enemies/bone_shewer/bone_shewer_enemy_stats.gd" id="1_stats"]
+[ext_resource type="PackedScene" path="res://enemies/bone_shewer/bone_shewer_ai.tscn" id="2_ai"]
+[ext_resource type="Texture2D" uid="uid://b6j06gvkfonkd" path="res://art/bone_chewer1.png" id="3_art1"]
+[ext_resource type="Texture2D" uid="uid://pu4yyixxi0ar" path="res://art/bone_chewer2.png" id="4_art2"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("2_ai")
+art_scale = Vector2(4, 4)
+art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2")])
+health_bar_width = 250
+status_bar_offset = Vector2(0, 70)
+intent_ui_offset = Vector2(0, 10)
+max_health = 98
+art = ExtResource("3_art1")

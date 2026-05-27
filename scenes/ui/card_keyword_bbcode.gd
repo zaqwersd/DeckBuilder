@@ -30,6 +30,12 @@ const TOOLTIP_BODY_TRANSFORM_PLAIN := TOOLTIP_BODY_TRANSFORM_WITH_LINKS
 const TOOLTIP_BODY_VULNERABLE_WITH_LINKS := "[color=#ffdd33][b]易伤[/b][/color]\n受到的伤害增加50%。"
 const TOOLTIP_BODY_VULNERABLE_PLAIN := TOOLTIP_BODY_VULNERABLE_WITH_LINKS
 
+const TOOLTIP_BODY_WEAK_WITH_LINKS := "[color=#ffdd33][b]虚弱[/b][/color]\n攻击造成的伤害减少25%。"
+const TOOLTIP_BODY_WEAK_PLAIN := TOOLTIP_BODY_WEAK_WITH_LINKS
+
+const TOOLTIP_BODY_FRAIL_WITH_LINKS := "[color=#ffdd33][b]脆弱[/b][/color]\n从卡牌中获得的格挡值减少25%。"
+const TOOLTIP_BODY_FRAIL_PLAIN := TOOLTIP_BODY_FRAIL_WITH_LINKS
+
 const TOOLTIP_BODY_STRENGTH_WITH_LINKS := "[color=#ffdd33][b]力量[/b][/color]\n增加造成的伤害。"
 const TOOLTIP_BODY_STRENGTH_PLAIN := TOOLTIP_BODY_STRENGTH_WITH_LINKS
 
@@ -69,6 +75,8 @@ const _AUTO_WRAP: Array[Dictionary] = [
 	{"word": "变化", "id": "transform"},
 	{"word": "消耗", "id": "exhaust"},
 	{"word": "易伤", "id": "vulnerable"},
+	{"word": "虚弱", "id": "weak"},
+	{"word": "脆弱", "id": "frail"},
 	{"word": "力量", "id": "strength"},
 	{"word": "敏捷", "id": "dexterity"},
 	{"word": "能量", "id": "mana"},
@@ -232,6 +240,10 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_TRANSFORM_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_TRANSFORM_PLAIN
 		"vulnerable":
 			return TOOLTIP_BODY_VULNERABLE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_VULNERABLE_PLAIN
+		"weak":
+			return TOOLTIP_BODY_WEAK_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_WEAK_PLAIN
+		"frail":
+			return TOOLTIP_BODY_FRAIL_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_FRAIL_PLAIN
 		"strength":
 			return TOOLTIP_BODY_STRENGTH_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_STRENGTH_PLAIN
 		"dexterity":

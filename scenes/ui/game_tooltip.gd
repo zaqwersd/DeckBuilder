@@ -25,26 +25,102 @@ var _active_relic: Relic
 var _active_source: Control
 var _titled_meta_rtl: RichTextLabel = null
 var _pending_keyword_restore: Dictionary = {}
+var _hover_anchor_id: int = INVALID_ANCHOR_ID
+var _hover_placement: Placement = Placement.ICON_RIGHT
+var _hover_poll_active: bool = false
+var _active_potion: Potion = null
+var _hide_request_serial: int = 0
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = true
+	set_process(false)
 	if is_instance_valid(panel_root):
 		panel_root.hide()
 	if is_instance_valid(vbox):
 		vbox.alignment = BoxContainer.ALIGNMENT_BEGIN
 
 
+func _process(_delta: float) -> void:
+	if not _hover_poll_active:
+		return
+	if not is_instance_valid(panel_root) or not panel_root.visible:
+		_stop_hover_poll()
+		return
+	var anchor := _resolve_anchor(_hover_anchor_id)
+	if anchor == null:
+		hide_tooltip_immediate()
+		return
+	var viewport := get_viewport()
+	if viewport == null:
+		hide_tooltip_immediate()
+		return
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	if not CombatPointer.control_has_screen_point(anchor, screen_pos):
+		hide_tooltip_immediate()
+		return
+	if _hover_poll_respects_obscured() and Events.is_pointer_ui_obscured_for(anchor):
+		hide_tooltip_immediate()
+		return
+
+
+func _stop_hover_poll() -> void:
+	_hover_poll_active = false
+	_hover_anchor_id = INVALID_ANCHOR_ID
+	set_process(false)
+
+
 func _ensure_full_opacity() -> void:
 	modulate.a = 1.0
 
 
+## 悬停离开信号：延迟一帧，若指针已移到新锚点（如相邻商店药水）则不关闭。
 func hide_tooltip() -> void:
+	_hide_request_serial += 1
+	var serial := _hide_request_serial
+	call_deferred("_deferred_hide_tooltip", serial)
+
+
+func hide_tooltip_immediate() -> void:
+	_hide_request_serial += 1
+	_apply_hide_tooltip()
+
+
+func _deferred_hide_tooltip(serial: int) -> void:
+	if serial != _hide_request_serial:
+		return
+	if _pointer_still_over_hover_anchor():
+		return
+	_apply_hide_tooltip()
+
+
+func _pointer_still_over_hover_anchor() -> bool:
+	var anchor := _resolve_anchor(_hover_anchor_id)
+	if anchor == null:
+		return false
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	if not CombatPointer.control_has_screen_point(anchor, screen_pos):
+		return false
+	if _hover_poll_respects_obscured() and Events.is_pointer_ui_obscured_for(anchor):
+		return false
+	return true
+
+
+func _hover_poll_respects_obscured() -> bool:
+	return Events.get_pointer_exclusive_leaf() != null
+
+
+func _apply_hide_tooltip() -> void:
 	_layout_generation += 1
+	_stop_hover_poll()
 	_clear_titled_meta()
 	_active_relic = null
 	_active_source = null
+	_active_potion = null
 	Events.card_keyword_tooltip_visible = false
 	Events.card_keyword_tooltip_render_pending = false
 	_clear_vbox()
@@ -63,6 +139,27 @@ func show_keyword_blocks(ids: PackedStringArray, near_to: Control) -> void:
 	Events.card_keyword_tooltip_render_pending = true
 	await _render_keyword_blocks(ids, _capture_anchor_id(near_to), Placement.CARD_RIGHT)
 	Events.card_keyword_tooltip_render_pending = false
+
+
+## 药水 Events 兼容
+func show_potion_tooltip(potion: Potion, near_to: Control = null) -> void:
+	if potion == null:
+		return
+	if (
+		is_instance_valid(panel_root)
+		and panel_root.visible
+		and _active_potion != null
+		and potion != null
+		and _active_potion.id == potion.id
+		and _active_source == near_to
+		and is_instance_valid(near_to)
+	):
+		return
+	_active_relic = null
+	_active_potion = potion
+	_active_source = near_to
+	var body := CardKeywordBbcode.inject_keywords(potion.tooltip.strip_edges())
+	await show_titled(potion.potion_name, body, near_to, Placement.ICON_RIGHT, true)
 
 
 ## 遗物 Events 兼容
@@ -90,7 +187,7 @@ func show_status_tooltip(status: Status, near_to: Control = null, open_to_right:
 	_active_relic = null
 	var placement := Placement.ICON_RIGHT if open_to_right else Placement.ICON_LEFT
 	var body := CardKeywordBbcode.inject_keywords(status.get_tooltip().strip_edges())
-	await show_titled(status.get_display_name(), body, near_to, placement, false)
+	await show_titled(status.get_display_name(), body, near_to, placement, false, false)
 
 
 ## 意图 Events 兼容；bbcode 已含标题（Intent.build_intent_hover_bbcode）
@@ -107,17 +204,19 @@ func show_titled(
 	body_bbcode: String,
 	near_to: Control,
 	placement: Placement,
-	enable_keyword_meta: bool = false
+	enable_keyword_meta: bool = false,
+	enable_hover_poll: bool = true
 ) -> void:
 	var full := TooltipBbcode.titled(title, body_bbcode)
-	await show_titled_bbcode(full, near_to, placement, enable_keyword_meta)
+	await show_titled_bbcode(full, near_to, placement, enable_keyword_meta, enable_hover_poll)
 
 
 func show_titled_bbcode(
 	full_bbcode: String,
 	near_to: Control,
 	placement: Placement,
-	enable_keyword_meta: bool = false
+	enable_keyword_meta: bool = false,
+	enable_hover_poll: bool = true
 ) -> void:
 	var trimmed := full_bbcode.strip_edges()
 	if trimmed.is_empty():
@@ -125,6 +224,8 @@ func show_titled_bbcode(
 	_layout_generation += 1
 	var gen := _layout_generation
 	var anchor_id := _capture_anchor_id(near_to)
+	_hover_anchor_id = anchor_id
+	_stop_hover_poll()
 	_conceal_panel()
 	_clear_vbox()
 	_clear_titled_meta()
@@ -141,8 +242,14 @@ func show_titled_bbcode(
 	if not _anchor_still_valid(anchor_id):
 		_conceal_panel()
 		return
-	if not await _present_tooltip_when_ready(gen, anchor_id, placement):
-		return
+	if await _present_tooltip_when_ready(gen, anchor_id, placement):
+		# 意图 / 状态：由 Enemy / StatusHandler 发 show-hide，勿轮询（易误判离开）
+		if placement == Placement.INTENT_LEFT or not enable_hover_poll:
+			return
+		_hover_anchor_id = anchor_id
+		_hover_placement = placement
+		_hover_poll_active = true
+		set_process(true)
 
 
 func _capture_anchor_id(near_to: Variant) -> int:
@@ -457,7 +564,10 @@ func _position_panel(near_to: Variant, placement: Placement) -> void:
 				if pos.x + sz.x > vp.position.x + vp.size.x - VIEWPORT_MARGIN:
 					pos.x = gr.position.x - GAP_FROM_SOURCE - sz.x
 			Placement.ICON_RIGHT:
-				pos = Vector2(gr.end.x + GAP_FROM_ICON, gr.get_center().y - sz.y * 0.5)
+				var icon_gap := GAP_FROM_ICON
+				if anchor.has_meta(&"tooltip_icon_gap"):
+					icon_gap = float(anchor.get_meta(&"tooltip_icon_gap"))
+				pos = Vector2(gr.end.x + icon_gap, gr.get_center().y - sz.y * 0.5)
 			Placement.ICON_LEFT:
 				pos = Vector2(gr.position.x - GAP_FROM_ICON - sz.x, gr.get_center().y - sz.y * 0.5)
 			Placement.INTENT_LEFT:

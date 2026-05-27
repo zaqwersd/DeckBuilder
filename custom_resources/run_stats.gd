@@ -16,10 +16,42 @@ const RELIC_UNCOMMON_WEIGHT := 2.0
 const RELIC_RARE_WEIGHT := 1.0
 
 @export var gold := STARTING_GOLD : set = set_gold
+## 本局在商店成功删牌次数（用于全局涨价，跨店累计）
+@export var shop_card_removals := 0
 @export var card_rewards := BASE_CARD_REWARDS
 @export_range(0.0, 100.0) var common_weight := BASE_COMMON_WEIGHT
 @export_range(0.0, 100.0) var uncommon_weight := BASE_UNCOMMON_WEIGHT
 @export_range(0.0, 100.0) var rare_weight := BASE_RARE_WEIGHT
+## 战后药水奖励：基础 40%；本场奖励未出现药水则下场 +8%，出现则下场 -5%（有上下限）。
+const BASE_POTION_DROP_CHANCE := 0.4
+const POTION_DROP_CHANCE_ON_MISS := 0.08
+const POTION_DROP_CHANCE_ON_HIT := 0.05
+const POTION_DROP_CHANCE_MIN := 0.05
+const POTION_DROP_CHANCE_MAX := 0.85
+
+@export_range(0.0, 1.0) var battle_potion_drop_chance: float = BASE_POTION_DROP_CHANCE
+
+
+func roll_battle_potion_drop() -> bool:
+	return RNG.instance.randf() < battle_potion_drop_chance
+
+
+## 本场战后是否实际提供了药水奖励按钮（roll 成功且栏位未满抽到药水）。
+func adjust_battle_potion_drop_chance_after_reward(potion_reward_offered: bool) -> void:
+	if potion_reward_offered:
+		battle_potion_drop_chance = maxf(
+			POTION_DROP_CHANCE_MIN,
+			battle_potion_drop_chance - POTION_DROP_CHANCE_ON_HIT
+		)
+	else:
+		battle_potion_drop_chance = minf(
+			POTION_DROP_CHANCE_MAX,
+			battle_potion_drop_chance + POTION_DROP_CHANCE_ON_MISS
+		)
+
+
+func reset_potion_drop_chance() -> void:
+	battle_potion_drop_chance = BASE_POTION_DROP_CHANCE
 
 
 func set_gold(new_amount: int) -> void:

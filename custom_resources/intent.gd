@@ -67,17 +67,32 @@ static func _default_icon_for_kind(k: Kind) -> Texture2D:
 			return preload("res://art/tile_0106.png") as Texture2D
 
 
+## 意图条 UI：同 `kind` 只保留第一个槽位（如双减益只显示一个减益图标）。
+static func merge_by_kind_for_display(intents: Array[Intent]) -> Array[Intent]:
+	var merged: Array[Intent] = []
+	var seen_kinds: Dictionary = {}
+	for intent in intents:
+		if intent == null:
+			continue
+		if seen_kinds.has(intent.kind):
+			continue
+		seen_kinds[intent.kind] = true
+		merged.append(intent)
+	return merged
+
+
 ## 悬停说明正文（一句中文，不含 BBCode）。
 static func build_intent_hover_sentence(intents: Array[Intent]) -> String:
-	if intents.size() == 1:
-		var intent := intents[0]
+	var display_intents := merge_by_kind_for_display(intents)
+	if display_intents.size() == 1:
+		var intent := display_intents[0]
 		if intent != null:
 			if intent.kind == Kind.STUNNED:
 				return STUNNED_PHRASE_FULL
 			if intent.kind == Kind.SLEEP:
 				return SLEEP_PHRASE_FULL
 	var parts: PackedStringArray = PackedStringArray()
-	for intent in intents:
+	for intent in display_intents:
 		if intent == null:
 			continue
 		if intent.kind == Kind.STUNNED:
@@ -109,9 +124,9 @@ static func _phrase_for_intent_hover(intent: Intent) -> String:
 		Kind.BLOCK:
 			return "进行格挡"
 		Kind.BUFF:
-			return "给自己施加正面效果"
+			return "施加正面效果"
 		Kind.DEBUFF:
-			return "对你施加负面效果"
+			return "施加负面效果"
 		Kind.EROSION:
 			return "对你的卡牌实施干扰"
 		Kind.SLEEP:

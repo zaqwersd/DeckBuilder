@@ -33,6 +33,9 @@ var current_action: EnemyAction : set = set_current_action
 var _intent_hover_tooltip_active: bool = false
 
 var _art_frame_index: int = 0
+var _skelton_art_sequence: PackedInt32Array = PackedInt32Array()
+var _skelton_art_seq_step: int = 0
+var _skelton_last_was_long_seq: bool = false
 var _art_anim_timer: Timer
 var _awaiting_interrupt_action: bool = false
 ## take_damage 调用时若在攻击牌窗口内计数；实际扣血后发出 player_dealt_attack_damage_to_enemy（tween 晚于 end_attack_card_effects）
@@ -77,8 +80,15 @@ func _process(_delta: float) -> void:
 	if planned.is_empty() or not intent_ui.visible:
 		_hide_intent_hover_tooltip_if_active()
 		return
-	var gp := get_global_mouse_position()
-	var over := _pointer_over_enemy_body(gp) or _pointer_over_intent_ui(gp)
+	var viewport := get_viewport()
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	var over_body := CombatPointer.node2d_shape_has_world_point(
+		self, collision_shape_2d, get_global_mouse_position()
+	)
+	var over_intent := CombatPointer.control_has_screen_point(intent_ui, screen_pos)
+	var over := over_body or over_intent
+	if over and Events.is_pointer_ui_obscured_for(intent_ui):
+		over = false
 	var bb := Intent.build_intent_hover_bbcode(planned)
 	if bb.is_empty():
 		over = false
@@ -92,20 +102,13 @@ func _process(_delta: float) -> void:
 
 
 func _pointer_over_intent_ui(screen_global: Vector2) -> bool:
-	if not intent_ui.visible:
-		return false
-	return intent_ui.get_global_rect().has_point(screen_global)
+	return CombatPointer.control_has_screen_point(intent_ui, screen_global)
 
 
-func _pointer_over_enemy_body(screen_global: Vector2) -> bool:
-	if not is_instance_valid(collision_shape_2d) or collision_shape_2d.shape == null:
-		return false
-	var rect_shape := collision_shape_2d.shape as RectangleShape2D
-	if rect_shape == null:
-		return false
-	var inv := collision_shape_2d.global_transform.affine_inverse()
-	var local_p: Vector2 = inv * screen_global
-	return Rect2(-rect_shape.size * 0.5, rect_shape.size).has_point(local_p)
+func _pointer_over_enemy_body(_screen_global: Vector2 = Vector2.ZERO) -> bool:
+	return CombatPointer.node2d_shape_has_world_point(
+		self, collision_shape_2d, get_global_mouse_position()
+	)
 
 
 func _hide_intent_hover_tooltip_if_active() -> void:
@@ -225,11 +228,13 @@ func update_action() -> void:
 	
 	if not current_action:
 		current_action = enemy_action_picker.get_action()
+		update_intent()
 		return
 	
 	var new_conditional_action := enemy_action_picker.get_first_conditional_action()
 	if new_conditional_action and current_action != new_conditional_action:
 		current_action = new_conditional_action
+		update_intent()
 
 
 func update_enemy() -> void:
@@ -369,6 +374,18 @@ static func _map_texel_aabb_to_sprite_local(sprite: Sprite2D, opaque: Rect2i, re
 	return Rect2(p0, p1 - p0).abs()
 
 
+func clear_intent_display() -> void:
+	current_action = null
+	_apply_intent_ui_hidden()
+
+
+func _apply_intent_ui_hidden() -> void:
+	if is_instance_valid(intent_ui):
+		intent_ui.update_intents([])
+	set_process(false)
+	_hide_intent_hover_tooltip_if_active()
+
+
 func update_intent() -> void:
 	var planned: Array[Intent] = []
 	if current_action:
@@ -504,6 +521,9 @@ func set_display_texture(tex: Texture2D) -> void:
 
 
 func _apply_enemy_art() -> void:
+	if _uses_sequence_art():
+		_begin_sequence_art()
+		return
 	if stats.art_frames.size() >= 2:
 		_art_frame_index = 0
 		sprite_2d.texture = stats.art_frames[0]
@@ -511,6 +531,84 @@ func _apply_enemy_art() -> void:
 	else:
 		_stop_art_animation()
 		sprite_2d.texture = stats.art
+
+
+func _uses_sequence_art() -> bool:
+	if stats is LittleSkeltonEnemyStats:
+		return (stats as LittleSkeltonEnemyStats).uses_multi_sequence_art()
+	if stats is CrabEnemyStats:
+		return (stats as CrabEnemyStats).uses_multi_sequence_art()
+	if stats is RatEnemyStats:
+		return (stats as RatEnemyStats).uses_multi_sequence_art()
+	return false
+
+
+func _begin_sequence_art() -> void:
+	_skelton_art_sequence = _pick_sequence_art(false)
+	_skelton_art_seq_step = 0
+	_apply_sequence_art_frame()
+	_start_sequence_art_animation()
+
+
+func _pick_sequence_art(advance_cycle: bool) -> PackedInt32Array:
+	if stats is LittleSkeltonEnemyStats:
+		var skel_stats := stats as LittleSkeltonEnemyStats
+		if advance_cycle:
+			var seq := skel_stats.pick_art_sequence(_skelton_last_was_long_seq)
+			_skelton_last_was_long_seq = LittleSkeltonEnemyStats.is_long_sequence(seq)
+			return seq
+		return skel_stats.pick_art_sequence()
+	if stats is CrabEnemyStats:
+		return (stats as CrabEnemyStats).pick_art_sequence()
+	if stats is RatEnemyStats:
+		var rat_stats := stats as RatEnemyStats
+		if advance_cycle:
+			var rat_seq := rat_stats.pick_art_sequence(_skelton_last_was_long_seq)
+			_skelton_last_was_long_seq = RatEnemyStats.is_long_sequence(rat_seq)
+			return rat_seq
+		return rat_stats.pick_art_sequence()
+	return PackedInt32Array()
+
+
+func _sequence_art_frame_interval(seq: PackedInt32Array) -> float:
+	if stats is LittleSkeltonEnemyStats:
+		return (stats as LittleSkeltonEnemyStats).frame_interval_for_sequence(seq)
+	if stats is CrabEnemyStats:
+		return (stats as CrabEnemyStats).frame_interval_for_sequence(seq)
+	if stats is RatEnemyStats:
+		return (stats as RatEnemyStats).frame_interval_for_sequence(seq)
+	return 0.5
+
+
+func _apply_sequence_art_frame() -> void:
+	if _skelton_art_sequence.is_empty() or stats == null:
+		return
+	var frame_idx: int = _skelton_art_sequence[_skelton_art_seq_step]
+	if frame_idx < 0 or frame_idx >= stats.art_frames.size():
+		return
+	sprite_2d.texture = stats.art_frames[frame_idx]
+	_sync_hitbox_to_sprite()
+	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
+	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
+
+
+func _start_sequence_art_animation() -> void:
+	if not _uses_sequence_art():
+		return
+	_ensure_art_anim_timer()
+	_art_anim_timer.wait_time = _sequence_art_frame_interval(_skelton_art_sequence)
+	if not _art_anim_timer.is_stopped():
+		_art_anim_timer.stop()
+	_art_anim_timer.start()
+
+
+func _advance_sequence_art() -> void:
+	_skelton_art_seq_step += 1
+	if _skelton_art_seq_step >= _skelton_art_sequence.size():
+		_skelton_art_sequence = _pick_sequence_art(true)
+		_skelton_art_seq_step = 0
+	_apply_sequence_art_frame()
+	_art_anim_timer.wait_time = _sequence_art_frame_interval(_skelton_art_sequence)
 
 
 func _ensure_art_anim_timer() -> void:
@@ -523,6 +621,9 @@ func _ensure_art_anim_timer() -> void:
 
 
 func _start_art_animation() -> void:
+	if _uses_sequence_art():
+		_start_sequence_art_animation()
+		return
 	if stats == null or stats.art_frames.size() < 2:
 		return
 	_ensure_art_anim_timer()
@@ -538,6 +639,9 @@ func _stop_art_animation() -> void:
 
 
 func _on_art_anim_timer_timeout() -> void:
+	if _uses_sequence_art():
+		_advance_sequence_art()
+		return
 	if stats == null or stats.art_frames.size() < 2:
 		return
 	_art_frame_index = (_art_frame_index + 1) % stats.art_frames.size()

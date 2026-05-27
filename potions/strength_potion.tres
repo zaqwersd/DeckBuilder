@@ -1,0 +1,11 @@
+[gd_resource type="Resource" format=3 uid="uid://bapmifpeou2hk"]
+
+[ext_resource type="Texture2D" uid="uid://c2mst803n7xrw" path="res://art/strength_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://d20ejp4jluay" path="res://potions/strength_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "力量药水"
+id = "strength_potion"
+icon = ExtResource("1_icon")
+tooltip = "获得2点力量。"

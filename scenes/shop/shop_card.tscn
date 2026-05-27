@@ -5,33 +5,35 @@
 [ext_resource type="Texture2D" path="res://art/gold.png" id="2_s11cf"]
 
 [node name="ShopCard" type="VBoxContainer"]
-custom_minimum_size = Vector2(120, 170)
-offset_right = 180
-offset_bottom = 180
 theme_override_constants/separation = 9
 script = ExtResource("1_ojxkp")
 card = ExtResource("2_k75is")
 
 [node name="CardContainer" type="Control" parent="."]
 unique_name_in_owner = true
-clip_contents = true
+clip_contents = false
 custom_minimum_size = Vector2(94, 122)
 layout_mode = 2
 
-[node name="Price" type="HBoxContainer" parent="."]
+[node name="PriceWrap" type="CenterContainer" parent="."]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 9
+size_flags_horizontal = 3
+
+[node name="Price" type="HBoxContainer" parent="PriceWrap"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 6
 alignment = 1
 
-[node name="PriceLabel" type="Label" parent="Price"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "999"
-
-[node name="GoldIcon" type="TextureRect" parent="Price"]
+[node name="GoldIcon" type="TextureRect" parent="PriceWrap/Price"]
 custom_minimum_size = Vector2(28, 28)
 layout_mode = 2
 texture = ExtResource("2_s11cf")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="PriceLabel" type="Label" parent="PriceWrap/Price"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "999"

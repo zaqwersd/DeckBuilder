@@ -6,6 +6,16 @@ const _SHADOW_SAMURAI_BATTLE_SCENE := preload("res://battles/shadow_samurai.tscn
 const _EVIL_SPIRIT_BATTLE_SCENE := preload("res://battles/evil_spirit.tscn")
 const _HEAVEN_GUARDIAN_BATTLE_SCENE := preload("res://battles/heaven_guardian.tscn")
 
+## 旧战斗场景路径 → 新路径（统一 id_数量 命名）
+const BATTLE_SCENE_PATH_RENAMES: Dictionary = {
+	"res://battles/bats2.tscn": "res://battles/bats_2.tscn",
+	"res://battles/bats3.tscn": "res://battles/bats_3.tscn",
+	"res://battles/little_skeltons_4.tscn": "res://battles/little_skelton_4.tscn",
+	"res://battles/little_skeltons_3.tscn": "res://battles/little_skelton_3.tscn",
+	"res://battles/crab_and_bat.tscn": "res://battles/bat_crab.tscn",
+	"res://battles/bat_rat.tscn": "res://battles/bat_rat_crab.tscn",
+}
+
 ## 旧遗物 id → 新 id（读档时统一替换）
 const RELIC_ID_RENAMES: Dictionary = {
 	"healing_potion": "lycoris",
@@ -63,6 +73,9 @@ static func patch_save_file_text(text: String) -> String:
 			text = text.replace(path, _DEPRECATED_RELIC_SCRIPT)
 		elif path.ends_with(".tres"):
 			text = text.replace(path, _DEPRECATED_RELIC_TRES)
+	for old_path: String in BATTLE_SCENE_PATH_RENAMES.keys():
+		var new_path: String = String(BATTLE_SCENE_PATH_RENAMES[old_path])
+		text = text.replace(old_path, new_path)
 	return text
 
 
@@ -164,6 +177,11 @@ static func _remap_legacy_battle_scene(enemies: PackedScene) -> PackedScene:
 	if enemies == null:
 		return null
 	var path := enemies.resource_path
+	if BATTLE_SCENE_PATH_RENAMES.has(path):
+		var renamed := String(BATTLE_SCENE_PATH_RENAMES[path])
+		if ResourceLoader.exists(renamed):
+			var scene := load(renamed) as PackedScene
+			return scene if scene else enemies
 	if path.is_empty() or not path.contains("battles/tier_"):
 		return enemies
 	const PREFIX := "res://battles/tier_"

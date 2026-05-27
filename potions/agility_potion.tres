@@ -1,0 +1,11 @@
+[gd_resource type="Resource" format=3 uid="uid://cney1xr07e5vj"]
+
+[ext_resource type="Texture2D" uid="uid://bduo1yk8esgsr" path="res://art/agility_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://cyv0gaa1gyp81" path="res://potions/agility_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "敏捷药水"
+id = "agility_potion"
+icon = ExtResource("1_icon")
+tooltip = "获得2点敏捷。"

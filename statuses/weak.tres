@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WeakStatus" format=3]
+
+[ext_resource type="Texture2D" path="res://art/weak.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/weak.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "weak"
+stack_type = 2
+polarity = 1
+can_expire = true
+duration = 1
+icon = ExtResource("1_icon")
+name = "虚弱"
+tooltip = "%s回合内，攻击造成的伤害减少25%%。"

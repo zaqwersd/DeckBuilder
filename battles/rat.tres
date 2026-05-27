@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://kbesyf2oax5d"]
+
+[ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://battles/rat.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_script")
+weight = 1.0
+gold_reward_min = 50
+gold_reward_max = 68
+enemies = ExtResource("2_scene")
