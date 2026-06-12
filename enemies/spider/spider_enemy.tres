@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="SpiderEnemyStats" format=3 uid="uid://dh0jxugl535rq"]
+
+[ext_resource type="Script" uid="uid://ccp1enohykkd0" path="res://enemies/spider/spider_enemy_stats.gd" id="1_stats"]
+[ext_resource type="PackedScene" path="res://enemies/spider/spider_enemy_ai.tscn" id="2_ai"]
+[ext_resource type="Texture2D" uid="uid://b84wfk6hm50pj" path="res://art/spider1.png" id="3_art1"]
+[ext_resource type="Texture2D" uid="uid://ipewh0a3i5qq" path="res://art/spider2.png" id="4_art2"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("2_ai")
+art_scale = Vector2(4, 4)
+art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2")])
+health_bar_width = 150
+status_bar_offset = Vector2(29, 80)
+max_health = 46
+art = ExtResource("3_art1")

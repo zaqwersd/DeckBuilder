@@ -7,6 +7,8 @@ extends RefCounted
 
 static func bb_value(text: String, ugp_track: String = "") -> String:
 	var esc := str(text)
+	if Card.is_visual_number_bbcode_listing_plain():
+		return esc
 	if ugp_track.is_empty():
 		return "[color=%s]%s[/color]" % [CardUpgradeUiColors.BB_VALUE, esc]
 	return "[url=ugp:%s][color=%s]%s[/color][/url]" % [ugp_track, CardUpgradeUiColors.BB_VALUE, esc]
@@ -14,6 +16,8 @@ static func bb_value(text: String, ugp_track: String = "") -> String:
 
 static func bb_negative_removable(text: String, ugp_track: String = "") -> String:
 	var esc := str(text)
+	if Card.is_visual_number_bbcode_listing_plain():
+		return esc
 	if ugp_track.is_empty():
 		return "[color=%s]%s[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, esc]
 	return "[url=ugp:%s][color=%s]%s[/color][/url]" % [
@@ -25,6 +29,8 @@ static func bb_negative_removable(text: String, ugp_track: String = "") -> Strin
 
 static func bb_inactive_keyword(text: String, ugp_track: String = "") -> String:
 	var esc := str(text)
+	if Card.is_visual_number_bbcode_listing_plain():
+		return esc
 	if ugp_track.is_empty():
 		return CardUpgradeUiColors.bbcode_inactive_keyword(esc)
 	return "[url=ugp:%s][color=%s]%s[/color][/url]" % [
@@ -36,4 +42,6 @@ static func bb_inactive_keyword(text: String, ugp_track: String = "") -> String:
 
 ## 与 `CardKeywordBbcode` 的 `kw:` meta 一致，用于在脚本里手写可点词条（不自动包色，便于自定义）。
 static func bb_mechanic_link(display: String, kw_id: String) -> String:
-	return "[url=kw:%s]%s[/url]" % [kw_id, str(display)]
+	return "[url=kw:%s][color=%s]%s[/color][/url]" % [
+		kw_id, CardKeywordBbcode.KEYWORD_FACE_COLOR, str(display)
+	]

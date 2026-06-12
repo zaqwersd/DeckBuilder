@@ -51,6 +51,8 @@ func compute_damage_against_player(base_damage: int) -> int:
 	var player := target as Player
 	if not player or not enemy:
 		return base_damage
+	if player.status_handler:
+		player.status_handler.sync_combat_modifiers_with_statuses()
 	var after_player := player.modifier_handler.get_modified_value(
 		base_damage, Modifier.Type.DMG_TAKEN
 	)

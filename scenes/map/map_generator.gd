@@ -49,7 +49,9 @@ func generate_map(act: int = 1) -> Array[Array]:
 			
 	if not _ensure_content_pools(act):
 		return map_data
-	battle_stats_pool.setup()
+	var act_pool := BattleStatsPool.get_pool_for_act(act)
+	if act_pool != null:
+		act_pool.reset_draw_decks()
 	
 	_setup_boss_room()
 	_setup_random_room_weights()
@@ -189,7 +191,6 @@ func _setup_room_types() -> void:
 	for room: Room in map_data[0]:
 		if room.next_rooms.size() > 0:
 				room.type = Room.Type.MONSTER
-				room.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 0)
 
 	# 9th floor is always a treasure
 	for room: Room in map_data[8]:
@@ -246,16 +247,6 @@ func _set_room_randomly(room_to_set: Room) -> void:
 		
 	room_to_set.type = type_candidate
 
-	if type_candidate == Room.Type.MONSTER:
-		## 第 1–5 层（row 0–4）：弱怪 tier 0；第 6 层起小怪 tier 1
-		var tier_for_monster_rooms := 0
-		if room_to_set.row >= 5:
-			tier_for_monster_rooms = 1
-		room_to_set.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, tier_for_monster_rooms)
-	
-	if type_candidate == Room.Type.ELITE:
-		room_to_set.battle_stats = battle_stats_pool.get_battle_for_act_and_tier(current_act, 2)
-	
 	if type_candidate == Room.Type.EVENT:
 		room_to_set.event_scene = event_room_pool.get_random_for_act(current_act)
 
@@ -283,6 +274,21 @@ func _room_has_parent_of_type(room: Room, type: Room.Type) -> bool:
 			return true
 	
 	return false
+
+
+## 第 1–5 层（row 0–4）弱怪 tier 0；第 6 层起小怪 tier 1
+static func battle_tier_for_room(room: Room) -> int:
+	match room.type:
+		Room.Type.BOSS:
+			return 3
+		Room.Type.ELITE:
+			return 2
+		Room.Type.MONSTER:
+			if room.row >= 5:
+				return 1
+			return 0
+		_:
+			return 0
 
 
 func _get_random_room_type_by_weight() -> Room.Type:

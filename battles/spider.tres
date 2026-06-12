@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://krypcsvuive7"]
+
+[ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://dxdwd7ui5vn8e" path="res://battles/spider.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_script")
+weight = 1.0
+enemies = ExtResource("2_scene")

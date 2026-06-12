@@ -7,12 +7,16 @@ extends Resource
 @export var tier_1_pool: Array[BattleStats]
 @export var tier_2_pool: Array[BattleStats]
 @export var tier_3_pool: Array[BattleStats]
-## 旧版单列表 pool（已废弃）；若 tier_* 为空且此项有数据，setup 时按遭遇内 battle_tier 拆分。
+## 旧版单列表 pool（已废弃）；若 tier_* 为空且此项有 data，setup 时按遭遇内 battle_tier 拆分。
 @export var pool: Array[BattleStats]
 
 var total_weights_by_tier := [0.0, 0.0, 0.0, 0.0]
 ## 每张地图按 tier 洗牌抽取，用尽后重新洗牌（同 tier 内尽量不重复）
 var _draw_decks: Array = []
+var _last_encounter_key: String = ""
+var _last_family_by_tier: Array = []
+var _tier_turn_number: Array = [0, 0, 0, 0]
+var _family_last_turn_by_tier: Array = []
 
 ## 静态缓存，按层存储不同的池实例
 static var _act_pools: Dictionary = {}
@@ -74,23 +78,118 @@ func _refill_draw_deck(tier: int) -> void:
 	_draw_decks[tier] = deck
 
 
-## 从当前 tier 的洗牌牌堆顶抽取一场战斗；该 tier 抽完后重新洗牌再继续。
+func _ensure_deck_has_cards(tier: int) -> void:
+	if tier < 0 or tier >= 4:
+		return
+	if _draw_decks.size() <= tier or (_draw_decks[tier] as Array).is_empty():
+		_refill_draw_deck(tier)
+
+
+func _remove_battle_from_deck(tier: int, battle: BattleStats) -> void:
+	if _draw_decks.size() <= tier:
+		return
+	var deck: Array = _draw_decks[tier]
+	var index := deck.find(battle)
+	if index >= 0:
+		deck.remove_at(index)
+
+
+func _family_needs_reappear(tier: int, turn_no: int, family_key: String) -> bool:
+	while _family_last_turn_by_tier.size() <= tier:
+		_family_last_turn_by_tier.append({})
+	var last_turn: int = int(_family_last_turn_by_tier[tier].get(family_key, 0))
+	return turn_no - last_turn >= EnemyIntentRotation.MAX_TURNS_WITHOUT_INTENT
+
+
+func _build_draw_candidates(tier: int, turn_no: int) -> Array:
+	var deck: Array = _draw_decks[tier]
+	var pool_battles := _get_all_battles_for_tier(tier)
+	var candidates: Array = []
+	for battle: BattleStats in pool_battles:
+		var in_deck := battle in deck
+		var family := battle.get_encounter_family_key()
+		if in_deck or _family_needs_reappear(tier, turn_no, family):
+			candidates.append(battle)
+	return candidates
+
+
+func _filter_battle_candidates(candidates: Array, tier: int, turn_no: int) -> Array:
+	var filtered: Array = candidates.duplicate()
+	if not _last_encounter_key.is_empty():
+		filtered = EnemyIntentRotation.filter_no_consecutive_repeat(
+			filtered,
+			_last_encounter_key,
+			func(battle: BattleStats) -> String: return battle.get_encounter_key(),
+		)
+	var last_tier_family := ""
+	if _last_family_by_tier.size() > tier:
+		last_tier_family = str(_last_family_by_tier[tier])
+	filtered = EnemyIntentRotation.filter_no_consecutive_repeat(
+		filtered,
+		last_tier_family,
+		func(battle: BattleStats) -> String: return battle.get_encounter_family_key(),
+	)
+	while _family_last_turn_by_tier.size() <= tier:
+		_family_last_turn_by_tier.append({})
+	filtered = EnemyIntentRotation.filter_must_reappear(
+		filtered,
+		turn_no,
+		func(family_key: String) -> int: return int(_family_last_turn_by_tier[tier].get(family_key, 0)),
+		func(battle: BattleStats) -> String: return battle.get_encounter_family_key(),
+	)
+	if filtered.is_empty():
+		return candidates
+	return filtered
+
+
+func _record_battle_drawn(tier: int, battle: BattleStats) -> void:
+	_last_encounter_key = battle.get_encounter_key()
+	while _last_family_by_tier.size() <= tier:
+		_last_family_by_tier.append("")
+	var family := battle.get_encounter_family_key()
+	_last_family_by_tier[tier] = family
+	while _family_last_turn_by_tier.size() <= tier:
+		_family_last_turn_by_tier.append({})
+	_family_last_turn_by_tier[tier][family] = _tier_turn_number[tier]
+
+
+## 从当前 tier 的洗牌牌堆抽取一场战斗；该 tier 抽完后重新洗牌再继续。
 func draw_battle_for_tier(tier: int) -> BattleStats:
 	if tier < 0 or tier >= 4:
 		return get_random_battle_for_tier(tier)
-	if _draw_decks.size() <= tier or (_draw_decks[tier] as Array).is_empty():
-		_refill_draw_deck(tier)
+
+	_ensure_deck_has_cards(tier)
+	_tier_turn_number[tier] = int(_tier_turn_number[tier]) + 1
+	var turn_no: int = _tier_turn_number[tier]
 	var deck: Array = _draw_decks[tier]
 	if deck.is_empty():
 		return get_random_battle_for_tier(tier)
-	return _stamp_tier(deck.pop_back() as BattleStats, tier)
+
+	var candidates: Array = _build_draw_candidates(tier, turn_no)
+	if candidates.is_empty():
+		candidates = deck.duplicate()
+	candidates = _filter_battle_candidates(candidates, tier, turn_no)
+	var picked := candidates[RNG.instance.randi() % candidates.size()] as BattleStats
+	_remove_battle_from_deck(tier, picked)
+	if (_draw_decks[tier] as Array).is_empty():
+		_refill_draw_deck(tier)
+	_record_battle_drawn(tier, picked)
+	return _stamp_tier(picked, tier)
 
 
 func setup() -> void:
 	_migrate_legacy_pool_if_needed()
-	## 每次生成地图时重建各层池副本，避免静态缓存仍指向旧 pool 内容（例如新加强怪战后热重载仍抽不到）。
 	_act_pools.clear()
+	reset_draw_decks()
+
+
+## 新地图生成时重置各 tier 洗牌牌堆，不清静态 act 缓存。
+func reset_draw_decks() -> void:
 	_draw_decks.clear()
+	_last_encounter_key = ""
+	_last_family_by_tier.clear()
+	_tier_turn_number = [0, 0, 0, 0]
+	_family_last_turn_by_tier.clear()
 	for i in 4:
 		_setup_weight_for_tier(i)
 		_refill_draw_deck(i)
@@ -153,11 +252,11 @@ static func get_pool_for_act(act: int) -> BattleStatsPool:
 	return pool_copy
 
 
-## 按层数和tier获取战斗（支持三层游戏结构）
+## 按层数和 tier 获取战斗（支持三层游戏结构）
 func get_battle_for_act_and_tier(act: int, tier: int) -> BattleStats:
 	## 获取对应层的池
 	var act_pool := get_pool_for_act(act)
-	if act_pool != null and act_pool != self:
+	if act_pool != null:
 		return act_pool.draw_battle_for_tier(tier)
 
 	## 回退到当前池

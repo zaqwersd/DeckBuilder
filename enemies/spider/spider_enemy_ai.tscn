@@ -1,0 +1,41 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://enemies/spider/spider_enemy_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/spider/spider_entangled1_action.gd" id="2_ent"]
+[ext_resource type="Script" path="res://enemies/spider/spider_strike6_exposed_action.gd" id="3_s6e"]
+[ext_resource type="Script" path="res://enemies/spider/spider_strike12_action.gd" id="4_s12"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
+
+[sub_resource type="Resource" id="Intent_entangled"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "缠身"
+
+[sub_resource type="Resource" id="Intent_strike"]
+script = ExtResource("5_intent")
+
+[sub_resource type="Resource" id="Intent_exposed"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "易伤"
+
+[node name="SpiderEnemyAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="SpiderEntangled1" type="Node" parent="."]
+script = ExtResource("2_ent")
+intent = SubResource("Intent_entangled")
+sound = ExtResource("7_blk")
+
+[node name="SpiderStrike6Exposed" type="Node" parent="."]
+script = ExtResource("3_s6e")
+intent = SubResource("Intent_strike")
+debuff_intent = SubResource("Intent_exposed")
+sound = ExtResource("6_atk")
+
+[node name="SpiderStrike12" type="Node" parent="."]
+script = ExtResource("4_s12")
+intent = SubResource("Intent_strike")
+sound = ExtResource("6_atk")

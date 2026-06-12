@@ -1,12 +1,14 @@
-# Player turn order:
-# 0. 激活敌人上回合挂上但未生效的状态（图标已显示）
-# 1. START_OF_TURN Relics 
-# 2. START_OF_TURN Statuses
-# 3. Draw Hand
-# 4. End Turn 
-# 5. END_OF_TURN Relics 
-# 6. END_OF_TURN Statuses
-# 7. Discard Hand
+# 玩家回合开始（PlayerHandler._run_player_turn_start_pipeline 统一编排）：
+# 1. 重置格挡 / 能量
+# 2. 激活上回合挂上、本回合才生效的状态（易伤、缠身等）
+# 3. 战斗开始入手牌类遗物（仅首场一次）
+# 4. START_OF_TURN 遗物
+# 5. START_OF_TURN 状态 tick（扣回合、易伤到期等）
+# 6. 显示敌人意图
+# 7. 刷新手牌战斗数字 → 抽牌
+#
+# 玩家回合进行中：打牌 → End Turn
+# END_OF_TURN 遗物 → END_OF_TURN 状态 → 弃牌
 class_name PlayerHandler
 extends Node
 
@@ -54,7 +56,7 @@ func start_battle_prep(char_stats: CharacterStats) -> void:
 	var intr: Array[Card] = []
 	var rest: Array[Card] = []
 	for c: Card in raw_pile.cards:
-		c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+		c.sync_upgraded_flags()
 		if c.intrinsic:
 			intr.append(c)
 		else:
@@ -80,18 +82,49 @@ func start_battle(char_stats: CharacterStats) -> void:
 
 func start_turn() -> void:
 	if Events.is_combat_ended():
+		Events.end_player_turn_start_resolving()
 		return
 	if not is_instance_valid(player) or not is_instance_valid(player.status_handler):
+		Events.end_player_turn_start_resolving()
 		return
+	
+	Events.begin_player_turn_start_resolving()
+	
+	# 1. 重置格挡 / 能量
 	character.block = 0
 	character.reset_mana()
-	if is_instance_valid(player.status_handler):
-		player.status_handler.activate_awaiting_statuses()
+	
+	# 2. 激活待生效状态（须先于 START_OF_TURN tick，配合 skip_next_start_of_turn_tick）
+	player.status_handler.activate_awaiting_statuses()
+	
+	# 3. 战斗开始入手牌（仅首场一次）
 	if not _battle_start_hand_cards_granted:
 		_battle_start_hand_cards_granted = true
 		_grant_battle_start_hand_cards()
-	relics.activate_relics_by_type(Relic.Type.START_OF_TURN, _first_turn_of_battle)
+	
+	if Events.is_combat_ended():
+		Events.end_player_turn_start_resolving()
+		return
+	
+	# 4. 回合开始遗物 → 5. START_OF_TURN tick（由信号链接，见 _on_relics_activated / _on_statuses_applied）
+	var instant_relics := _first_turn_of_battle
 	_first_turn_of_battle = false
+	if is_instance_valid(relics):
+		relics.activate_relics_by_type(Relic.Type.START_OF_TURN, instant_relics)
+	else:
+		player.status_handler.apply_statuses_by_type(Status.Type.START_OF_TURN)
+
+
+## 阶段 5 完成后：同步修饰器 → 显示意图 → 刷新手牌 → 抽牌。
+func _finish_player_turn_start_setup() -> void:
+	if Events.is_combat_ended():
+		Events.end_player_turn_start_resolving()
+		return
+	player.status_handler.prepare_combat_context_for_intent()
+	Events.player_turn_intent_context_ready.emit()
+	Events.player_combat_stat_context_changed.emit()
+	Events.end_player_turn_start_resolving()
+	draw_cards(character.cards_per_turn, true)
 
 
 func end_turn() -> void:
@@ -415,7 +448,7 @@ func _on_card_played(card: Card) -> void:
 func _on_statuses_applied(type: Status.Type) -> void:
 	match type:
 		Status.Type.START_OF_TURN:
-			draw_cards(character.cards_per_turn, true)
+			_finish_player_turn_start_setup()
 		Status.Type.END_OF_TURN:
 			discard_cards()
 

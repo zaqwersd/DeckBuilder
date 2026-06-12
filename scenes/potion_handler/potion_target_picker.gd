@@ -7,8 +7,8 @@ signal finished(confirmed: bool, target: Enemy)
 
 const ARC_POINTS := 8
 
-@onready var _area: Area2D = $Area2D
 @onready var _aim_arc: Line2D = $CanvasLayer/CardArc
+@onready var _arc_head: Sprite2D = $CanvasLayer/CardArc/ArcHead
 
 var _active := false
 var _last_confirmed := false
@@ -21,7 +21,7 @@ func _ready() -> void:
 	hide()
 	set_process(false)
 	set_process_unhandled_input(false)
-	_aim_arc.clear_points()
+	CardTargetingArc.clear_visual(_aim_arc, _arc_head)
 
 
 func start_pick_and_wait(aim_anchor: Control = null) -> Array:
@@ -39,24 +39,28 @@ func start_pick() -> void:
 	_last_confirmed = false
 	_await_target = null
 	_hovered_enemy = null
-	_area.monitoring = true
-	_area.monitorable = true
-	_aim_arc.clear_points()
+	CardTargetingArc.clear_visual(_aim_arc, _arc_head)
 	show()
 	set_process(true)
 	set_process_unhandled_input(true)
-	_area.position = get_local_mouse_position()
 
 
 func _process(_delta: float) -> void:
 	if not _active:
 		return
-	_area.position = get_local_mouse_position()
-	_hovered_enemy = _pick_nearest_overlapping_enemy()
-	var arc_end_local := get_local_mouse_position()
-	if _hovered_enemy != null:
-		arc_end_local = to_local(_enemy_aim_point_global(_hovered_enemy))
-	_aim_arc.points = _get_arc_points(arc_end_local)
+	var mouse := get_global_mouse_position()
+	_hovered_enemy = EnemyTargeting.pick_enemy_under_mouse(mouse, get_tree())
+	_refresh_all_feedback(mouse, _hovered_enemy)
+	var points := PackedVector2Array(_get_arc_points(to_local(mouse)))
+	CardTargetingArc.apply_visual(_aim_arc, _arc_head, points, _hovered_enemy != null)
+
+
+func _refresh_all_feedback(mouse: Vector2, best: Enemy) -> void:
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if not node is Enemy:
+			continue
+		var e := node as Enemy
+		e.set_card_targeting_feedback(_active, e == best, mouse)
 
 
 func _get_arc_points(arc_end_local: Vector2) -> Array:
@@ -100,33 +104,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
-func _enemy_aim_point_global(e: Enemy) -> Vector2:
-	if not is_instance_valid(e):
-		return Vector2.ZERO
-	var spr := e.sprite_2d
-	if is_instance_valid(spr) and spr.texture:
-		var r := spr.get_rect()
-		return e.to_global(spr.position + r.get_center())
-	return e.global_position
-
-
-func _pick_nearest_overlapping_enemy() -> Enemy:
-	var best: Enemy = null
-	var best_d2 := INF
-	var mp := get_global_mouse_position()
-	for a in _area.get_overlapping_areas():
-		if not a is Enemy:
-			continue
-		var e := a as Enemy
-		if not is_instance_valid(e) or not e.is_inside_tree():
-			continue
-		var d2 := _enemy_aim_point_global(e).distance_squared_to(mp)
-		if d2 < best_d2:
-			best_d2 = d2
-			best = e
-	return best
-
-
 func _end_pick(confirmed: bool, target: Enemy) -> void:
 	if not _active:
 		return
@@ -135,9 +112,8 @@ func _end_pick(confirmed: bool, target: Enemy) -> void:
 	_await_target = target
 	_hovered_enemy = null
 	_aim_anchor = null
-	_aim_arc.clear_points()
-	_area.monitoring = false
-	_area.monitorable = false
+	CardTargetingArc.clear_visual(_aim_arc, _arc_head)
+	EnemyTargeting.clear_all_card_targeting_feedback(get_tree())
 	hide()
 	set_process(false)
 	set_process_unhandled_input(false)

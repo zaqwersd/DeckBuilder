@@ -28,7 +28,8 @@ static func compute_mana_to_spend(
 static func can_play(
 	card: Card,
 	char_stats: CharacterStats,
-	effective_mana_cost: int = -1
+	effective_mana_cost: int = -1,
+	combat_player: Node = null
 ) -> bool:
 	if card == null or char_stats == null:
 		return false
@@ -36,7 +37,19 @@ static func can_play(
 		return false
 	if not card.meets_play_requirements(char_stats):
 		return false
+	var player := _resolve_combat_player(combat_player)
+	if EntangledStatus.blocks_attack_card(card, player):
+		return false
 	return can_afford_mana(card, char_stats, effective_mana_cost)
+
+
+static func _resolve_combat_player(combat_player: Node) -> Player:
+	if combat_player is Player:
+		return combat_player as Player
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.get_first_node_in_group("player") as Player
 
 
 ## 仅判断能量是否足够，不检查 meets_play_requirements（手牌费用着色等）。

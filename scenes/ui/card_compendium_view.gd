@@ -8,6 +8,8 @@ signal returned_to_hub
 enum Category { BLADE, COMMON }
 
 var _category_tabs: HBoxContainer
+var _show_upgraded_icon: TextureButton
+var _show_upgraded_label: Label
 var _current_category: Category = Category.BLADE
 var _tab_entries: Array[Dictionary] = []
 
@@ -53,12 +55,40 @@ func _ready() -> void:
 	back_button.pressed.disconnect(hide)
 	back_button.pressed.connect(_on_compendium_back_pressed)
 	title.text = "卡牌图鉴"
+	_show_upgraded_icon = get_node_or_null("%ShowUpgradedIcon") as TextureButton
+	_show_upgraded_label = get_node_or_null("%ShowUpgradedLabel") as Label
+	if _show_upgraded_icon:
+		_apply_show_upgraded_icon_style()
+		_show_upgraded_icon.toggled.connect(_on_show_upgraded_toggled)
+	if _show_upgraded_label:
+		_show_upgraded_label.gui_input.connect(_on_show_upgraded_label_gui_input)
 	_category_tabs = get_node_or_null("%CategoryTabs") as HBoxContainer
 	if _category_tabs:
 		_category_tabs.mouse_filter = Control.MOUSE_FILTER_STOP
 		_build_category_tabs()
 	_refresh_category_tabs_visual()
 	_refresh_compendium_grid()
+
+
+## 小方框与文字分节点固定布局；TextureButton 仍继承 Button 主题，清掉外层 panel。
+func _apply_show_upgraded_icon_style() -> void:
+	if _show_upgraded_icon == null:
+		return
+	var empty := StyleBoxEmpty.new()
+	for style_name: StringName in [&"normal", &"hover", &"pressed", &"disabled", &"focus"]:
+		_show_upgraded_icon.add_theme_stylebox_override(style_name, empty)
+
+
+func _is_show_upgraded_enabled() -> bool:
+	return _show_upgraded_icon != null and _show_upgraded_icon.button_pressed
+
+
+func _on_show_upgraded_label_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
+		return
+	if _show_upgraded_icon == null:
+		return
+	_show_upgraded_icon.button_pressed = not _show_upgraded_icon.button_pressed
 
 
 func _build_category_tabs() -> void:
@@ -100,6 +130,31 @@ func _select_category(cat: Category) -> void:
 	_refresh_compendium_grid()
 
 
+func _on_show_upgraded_toggled(_on: bool) -> void:
+	Events.card_keyword_tooltip_hide.emit()
+	_update_compendium_card_displays()
+
+
+func _update_compendium_card_displays() -> void:
+	var list := _cards_for_category(_current_category)
+	if cards.get_child_count() != list.size():
+		_refresh_compendium_grid()
+		return
+	for i in range(list.size()):
+		var menu := cards.get_child(i) as CardMenuUI
+		if menu == null:
+			_refresh_compendium_grid()
+			return
+		menu.card = _display_card_for_compendium(list[i])
+
+
+func _display_card_for_compendium(template: Card) -> Card:
+	var display := template.duplicate(true) as Card
+	if _is_show_upgraded_enabled():
+		display.apply_upgrade()
+	return display
+
+
 func _refresh_category_tabs_visual() -> void:
 	for e: Dictionary in _tab_entries:
 		var p: Panel = e.get("panel") as Panel
@@ -136,8 +191,7 @@ func _refresh_compendium_grid() -> void:
 	for card: Card in list:
 		var new_card := create_listing_card_menu()
 		cards.add_child(new_card)
-		# 图鉴使用默认的 LISTING_UPGRADE 样式，由 ListingCardVisuals 自动处理
-		new_card.card = card
+		new_card.card = _display_card_for_compendium(card)
 		_connect_listing_card_pick(new_card)
 		_apply_pile_card_transform(new_card)
 	if not is_equal_approx(display_scale, 1.0):

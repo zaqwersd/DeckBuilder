@@ -1031,9 +1031,9 @@ func _show_elite_battle_rewards() -> void:
 	reward_scene.setup_from_run(false)
 	
 	if map.last_room != null and map.last_room.battle_stats != null:
-		reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward())
+		reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward(current_act))
 	else:
-		reward_scene.add_gold_reward(RNG.instance.randi_range(80, 105))
+		reward_scene.add_gold_reward(BattleGoldRewards.roll(current_act, 2))
 	
 	var relic: Relic = RELIC_REWARD_POOL.roll_reward(
 		character,
@@ -1056,10 +1056,10 @@ func _show_regular_battle_rewards() -> void:
 
 	## 添加金币奖励（如果有战斗配置）
 	if map.last_room != null and map.last_room.battle_stats != null:
-		reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward())
+		reward_scene.add_gold_reward(map.last_room.battle_stats.roll_gold_reward(current_act))
 	else:
 		## 回退到默认金币奖励（控制台强制胜利时使用）
-		reward_scene.add_gold_reward(RNG.instance.randi_range(50, 80))
+		reward_scene.add_gold_reward(BattleGoldRewards.roll(current_act, 0))
 	
 	_try_add_potion_reward(reward_scene)
 	reward_scene.add_card_reward()
@@ -1069,7 +1069,7 @@ func _show_regular_battle_rewards() -> void:
 
 ## 层BOSS奖励：给予100-150金币和必定Rare的卡牌奖励
 func _show_act_boss_rewards() -> void:
-	var gold_reward := RNG.instance.randi_range(100, 150)
+	var gold_reward := BattleGoldRewards.roll(current_act, 3)
 	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
 	reward_scene.add_gold_reward(gold_reward)
@@ -1105,7 +1105,19 @@ func _on_act_reward_finished() -> void:
 	_save_run(true)
 
 
+func _ensure_room_battle_assigned(room: Room) -> void:
+	if room == null or room.battle_stats != null:
+		return
+	var tier := MapGenerator.battle_tier_for_room(room)
+	var act_pool := BattleStatsPool.get_pool_for_act(current_act)
+	if act_pool == null:
+		push_error("Run: battle_stats_pool 未加载，无法分配战斗")
+		return
+	room.battle_stats = act_pool.draw_battle_for_tier(tier)
+
+
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
+	_ensure_room_battle_assigned(room)
 	if not is_reload and save_data != null:
 		## 已进新战斗：若仍残留上一场战斗奖励 pending，清掉以免读档/roll 沿用旧药水
 		if save_data.pending_room_kind == SaveGame.PENDING_BATTLE_REWARD:

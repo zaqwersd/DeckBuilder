@@ -12,7 +12,7 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 		"damage":
 			return PackedInt32Array([29, 37])
 		"strength_loss":
-			return PackedInt32Array([2, 1])
+			return PackedInt32Array([2, 2])
 		_:
 			return PackedInt32Array()
 
@@ -66,23 +66,18 @@ func _bbcode_strength_loss(amount: int) -> String:
 
 
 func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
+	var player := _get_combat_player_for_effects(targets)
+
 	var damage_effect := DamageEffect.new()
 	damage_effect.amount = resolve_attack_damage_dealt(
-		_intrinsic_damage(), modifiers, _get_combat_player_for_effects(targets)
+		_intrinsic_damage(), modifiers, player
 	)
 	damage_effect.sound = sound
 	damage_effect.execute(targets)
 
-	var player := _find_player(targets)
 	if not player or not player.get("status_handler"):
 		return
 	var handler: StatusHandler = player.status_handler
 	var dec := MUSCLE_STATUS.duplicate()
-	dec.stacks = -_intrinsic_strength_loss()
+	dec.set_stacks(-_intrinsic_strength_loss())
 	handler.add_status(dec)
-
-
-func _find_player(targets: Array[Node]) -> Node:
-	if not targets.is_empty() and is_instance_valid(targets[0]) and targets[0].is_inside_tree():
-		return targets[0].get_tree().get_first_node_in_group("player")
-	return null

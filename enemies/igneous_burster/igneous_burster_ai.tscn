@@ -1,26 +1,26 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://enemies/igneous_burster/igneous_burster_ai.gd" id="1_ai"]
-[ext_resource type="Script" path="res://enemies/igneous_burster/igneous_strike_action.gd" id="2_st"]
+[ext_resource type="Script" path="res://enemies/igneous_burster/igneous_strike7_action.gd" id="2_st"]
 [ext_resource type="Script" path="res://enemies/igneous_burster/igneous_explode_action.gd" id="3_ex"]
 [ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_int"]
 [ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_atk"]
 
-[sub_resource type="Resource" id="R_atk5"]
+[sub_resource type="Resource" id="R_atk7"]
 script = ExtResource("4_int")
 
-[sub_resource type="Resource" id="R_atk25"]
+[sub_resource type="Resource" id="R_atk30"]
 script = ExtResource("4_int")
 
 [node name="IgneousBursterAI" type="Node" unique_id=1695313493]
 script = ExtResource("1_ai")
 
-[node name="Strike5" type="Node" parent="." unique_id=844514858]
+[node name="Strike7" type="Node" parent="." unique_id=844514858]
 script = ExtResource("2_st")
-intent = SubResource("R_atk5")
+intent = SubResource("R_atk7")
 sound = ExtResource("5_atk")
 
-[node name="Explode" type="Node" parent="." unique_id=1406099137]
+[node name="Explode30" type="Node" parent="." unique_id=1406099137]
 script = ExtResource("3_ex")
-intent = SubResource("R_atk25")
+intent = SubResource("R_atk30")
 sound = ExtResource("5_atk")

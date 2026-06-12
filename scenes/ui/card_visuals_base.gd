@@ -45,7 +45,8 @@ const MIN_SCREEN_CARD_TEXT_PX := 16
 
 ## 至少升级过一次的卡：名称与升级角标字色（与战斗增益绿 #5dff7a 一致）
 const UPGRADED_CARD_ACCENT := Color(0x5d / 255.0, 0xff / 255.0, 0x7a / 255.0, 1.0)
-const UPGRADED_FONT_OUTLINE := Color(0x05 / 255.0, 0x6f / 255.0, 0.0 / 255.0, 1.0)
+## 升级角标占位图（待替换为正式资源）
+const UPGRADE_ICON_TEXTURE := preload("res://art/upgraded.png")
 
 ## 卡面描述 RichTextLabel 字号
 const CARD_DESC_FONT_NORMAL_PX := 20
@@ -54,7 +55,7 @@ const CARD_DESC_FONT_BOLD_PX := 21
 var _cost_upgrade_flow_cb: Callable = Callable()
 
 ## 数字BBCode样式，用于控制卡牌描述中数字的显示方式
-@export var number_bbcode_style: Card.NumberBbcodeStyle = Card.NumberBbcodeStyle.LISTING_UPGRADE
+@export var number_bbcode_style: Card.NumberBbcodeStyle = Card.NumberBbcodeStyle.LISTING_PLAIN
 
 @export var card: Card : set = set_card
 
@@ -70,6 +71,7 @@ var _cost_upgrade_flow_cb: Callable = Callable()
 @onready var description_label: RichTextLabel = %CardDescription
 @onready var upgrade_level_panel: Panel = $UpgradeLevelPanel
 @onready var upgrade_level_label: Label = $UpgradeLevelPanel/UpgradeLevel
+@onready var upgrade_icon: TextureRect = $UpgradeLevelPanel/UpgradeIcon
 @onready var area_2d: Area2D = $Area2D
 
 var _player_modifiers: ModifierHandler
@@ -219,6 +221,7 @@ func _ensure_card_text_alignments() -> void:
 		description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		description_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		description_label.meta_underlined = false
 
 
 ## 去掉 [center]：该标签会缩小可排版宽度导致过早换行；行内居中由 RichTextLabel 对齐负责。
@@ -415,6 +418,8 @@ func _apply_pick_through_nested_controls() -> void:
 		type_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if is_instance_valid(upgrade_level_label):
 		upgrade_level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if is_instance_valid(upgrade_icon):
+		upgrade_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	# 升级模式下禁用 Area2D 输入，让 description 优先
 	if is_instance_valid(area_2d):
@@ -596,6 +601,34 @@ func _inner_panel_style_opaque(rarity: Card.Rarity, fill: Color) -> StyleBoxFlat
 ## 同步费用标签样式（子类实现不同逻辑）
 func _sync_cost_label_style() -> void:
 	pass
+
+
+func _sync_upgrade_badge() -> void:
+	if not is_instance_valid(upgrade_level_panel) or card == null:
+		return
+	var upgraded := card.is_upgraded
+	upgrade_level_panel.visible = upgraded
+	if is_instance_valid(upgrade_level_label):
+		upgrade_level_label.visible = false
+	if is_instance_valid(upgrade_icon):
+		upgrade_icon.visible = upgraded
+		if upgraded:
+			upgrade_icon.texture = UPGRADE_ICON_TEXTURE
+
+
+func _apply_upgraded_name_style() -> void:
+	if card == null or not is_instance_valid(name_label):
+		return
+	if card.is_upgraded:
+		name_label.add_theme_color_override("font_color", UPGRADED_CARD_ACCENT)
+	else:
+		_clear_upgraded_name_style()
+
+
+func _clear_upgraded_name_style() -> void:
+	if not is_instance_valid(name_label):
+		return
+	name_label.remove_theme_color_override("font_color")
 
 
 ## 同步卡牌信息（子类实现不同逻辑）

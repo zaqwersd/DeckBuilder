@@ -3,6 +3,8 @@
 [ext_resource type="StyleBox" uid="uid://cqdg4q8yisvsm" path="res://scenes/card_ui/card_base_stylebox.tres" id="1_cof14"]
 [ext_resource type="StyleBox" uid="uid://ckekdoebsn0h8" path="res://scenes/card_ui/card_hover_stylebox.tres" id="1_lro6f"]
 [ext_resource type="FontFile" uid="uid://c30fkeil6tur2" path="res://art/Unifont点阵黑.ttf" id="3_0omi4"]
+[ext_resource type="Texture2D" uid="uid://rcns1rktu00i" path="res://art/unchecked.png" id="4_unchecked"]
+[ext_resource type="Texture2D" uid="uid://bkn7buwpnipjv" path="res://art/checked.png" id="5_checked"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r8u4k"]
 bg_color = Color(0.5019608, 0.54901963, 0.5019608, 0.5019608)
@@ -31,5 +33,7 @@ Button/styles/focus = SubResource("StyleBoxEmpty_dmy1r")
 Button/styles/hover = ExtResource("1_lro6f")
 Button/styles/normal = ExtResource("1_cof14")
 Button/styles/pressed = SubResource("StyleBoxFlat_6ipyv")
+CheckBox/icons/checked = ExtResource("5_checked")
+CheckBox/icons/unchecked = ExtResource("4_unchecked")
 Panel/styles/panel = ExtResource("1_cof14")
 PanelContainer/styles/panel = ExtResource("1_cof14")

@@ -8,9 +8,9 @@ func get_upgrade_track_ids() -> PackedStringArray:
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
 		"block":
-			return PackedInt32Array([8, 11, 14])
+			return PackedInt32Array([8, 12])
 		"draw":
-			return PackedInt32Array([1, 2])
+			return PackedInt32Array([1, 1])
 		_:
 			return PackedInt32Array()
 

@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://dxdwd7ui5vn8e"]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
+[ext_resource type="Resource" uid="uid://dh0jxugl535rq" path="res://enemies/spider/spider_enemy.tres" id="2_spider"]
+
+[node name="Spider" type="Node2D" unique_id=1404060277]
+
+[node name="Enemy" parent="." unique_id=2105156237 instance=ExtResource("1_enemy")]
+position = Vector2(860, 320)
+stats = ExtResource("2_spider")

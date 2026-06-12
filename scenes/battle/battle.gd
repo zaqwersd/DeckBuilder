@@ -185,6 +185,8 @@ func debug_replace_battle(new_stats: BattleStats) -> void:
 	enemy_handler.setup_enemies(battle_stats)
 	enemy_handler.reset_enemy_actions()
 	_combat_started = true
+	## 调试换波不走玩家回合开始流程，须手动揭示意图。
+	Events.player_turn_intent_context_ready.emit()
 
 
 func _on_enemies_child_order_changed() -> void:
@@ -219,8 +221,8 @@ func _on_enemy_turn_ended() -> void:
 		return
 	if Events.is_combat_ended():
 		return
-	player_handler.start_turn()
 	enemy_handler.reset_enemy_actions()
+	player_handler.start_turn()
 
 
 func _on_player_died() -> void:

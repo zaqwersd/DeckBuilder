@@ -3,6 +3,8 @@ extends RefCounted
 
 ## 卡面 RichText meta：词条说明由 GameTooltip / Events 统一显示
 const META_KW_PREFIX := "kw:"
+## 卡面可悬停词条字色（与 tooltip 黄一致；勿加入 strip_listing_highlight_bbcode）
+const KEYWORD_FACE_COLOR := "#ffdd33"
 
 ## 词条说明正文（可含嵌套 `[url=kw:…]`，嵌套展示时用 plain 版避免递归）
 const TOOLTIP_BODY_ETHEREAL_WITH_LINKS := (
@@ -36,11 +38,17 @@ const TOOLTIP_BODY_WEAK_PLAIN := TOOLTIP_BODY_WEAK_WITH_LINKS
 const TOOLTIP_BODY_FRAIL_WITH_LINKS := "[color=#ffdd33][b]脆弱[/b][/color]\n从卡牌中获得的格挡值减少25%。"
 const TOOLTIP_BODY_FRAIL_PLAIN := TOOLTIP_BODY_FRAIL_WITH_LINKS
 
+const TOOLTIP_BODY_ENTANGLED_WITH_LINKS := "[color=#ffdd33][b]缠身[/b][/color]\n无法打出攻击牌。"
+const TOOLTIP_BODY_ENTANGLED_PLAIN := TOOLTIP_BODY_ENTANGLED_WITH_LINKS
+
 const TOOLTIP_BODY_STRENGTH_WITH_LINKS := "[color=#ffdd33][b]力量[/b][/color]\n增加造成的伤害。"
 const TOOLTIP_BODY_STRENGTH_PLAIN := TOOLTIP_BODY_STRENGTH_WITH_LINKS
 
 const TOOLTIP_BODY_DEXTERITY_WITH_LINKS := "[color=#ffdd33][b]敏捷[/b][/color]\n从卡牌中获得额外格挡。"
 const TOOLTIP_BODY_DEXTERITY_PLAIN := TOOLTIP_BODY_DEXTERITY_WITH_LINKS
+
+const TOOLTIP_BODY_BLOCK_WITH_LINKS := "[color=#ffdd33][b]格挡[/b][/color]\n在下回合前，抵消受到的伤害。"
+const TOOLTIP_BODY_BLOCK_PLAIN := TOOLTIP_BODY_BLOCK_WITH_LINKS
 
 const TOOLTIP_BODY_INTRINSIC := (
 	"[color=#ffdd33][b]固有[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
@@ -77,8 +85,10 @@ const _AUTO_WRAP: Array[Dictionary] = [
 	{"word": "易伤", "id": "vulnerable"},
 	{"word": "虚弱", "id": "weak"},
 	{"word": "脆弱", "id": "frail"},
+	{"word": "缠身", "id": "entangled"},
 	{"word": "力量", "id": "strength"},
 	{"word": "敏捷", "id": "dexterity"},
+	{"word": "格挡", "id": "block"},
 	{"word": "能量", "id": "mana"},
 ]
 
@@ -174,6 +184,10 @@ static func collect_tooltip_ids_from_raw_description(raw: String) -> PackedStrin
 		ids.append("strength")
 	if raw.find("敏捷") != -1:
 		ids.append("dexterity")
+	if raw.find("格挡") != -1:
+		ids.append("block")
+	if raw.find("缠身") != -1:
+		ids.append("entangled")
 	if raw.find("能量") != -1:
 		ids.append("mana")
 	return ids
@@ -244,10 +258,14 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_WEAK_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_WEAK_PLAIN
 		"frail":
 			return TOOLTIP_BODY_FRAIL_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_FRAIL_PLAIN
+		"entangled":
+			return TOOLTIP_BODY_ENTANGLED_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_ENTANGLED_PLAIN
 		"strength":
 			return TOOLTIP_BODY_STRENGTH_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_STRENGTH_PLAIN
 		"dexterity":
 			return TOOLTIP_BODY_DEXTERITY_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_DEXTERITY_PLAIN
+		"block":
+			return TOOLTIP_BODY_BLOCK_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_BLOCK_PLAIN
 		"intrinsic":
 			return TOOLTIP_BODY_INTRINSIC
 		"retain":
@@ -267,7 +285,9 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 static func _wrap_each_token(text: String, word: String, meta_key: String) -> String:
 	var out := text
 	var pos := 0
-	var wrap := "[url=%s]%s[/url]" % [meta_key, word]
+	var wrap := "[url=%s][color=%s]%s[/color][/url]" % [
+		meta_key, KEYWORD_FACE_COLOR, word
+	]
 	while true:
 		var f := out.find(word, pos)
 		if f == -1:

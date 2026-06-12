@@ -4,13 +4,11 @@ const EXPOSED_STATUS = preload("res://statuses/exposed.tres")
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["cost", "damage", "exposed_duration"])
+	return PackedStringArray(["damage", "exposed_duration"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
-		"cost":
-			return PackedInt32Array([2, 1])
 		"damage":
 			return PackedInt32Array([8, 12])
 		"exposed_duration":
@@ -28,28 +26,12 @@ func get_upgrade_pick_description_bbcode() -> String:
 	]
 
 
-func _intrinsic_cost() -> int:
-	return get_upgrade_value_at("cost")
-
-
 func _intrinsic_damage() -> int:
 	return get_upgrade_value_at("damage")
 
 
 func _intrinsic_exposed_duration() -> int:
 	return get_upgrade_value_at("exposed_duration")
-
-
-func should_visualize_cost_as_upgradeable() -> bool:
-	var ch := get_upgrade_chain("cost")
-	if ch.is_empty():
-		return false
-	return not is_upgrade_track_maxed("cost")
-
-
-func increment_upgrade_track(track_id: String) -> void:
-	super.increment_upgrade_track(track_id)
-	cost = _intrinsic_cost()
 
 
 func _body_bbcode(

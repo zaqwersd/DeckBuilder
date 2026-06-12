@@ -9,9 +9,10 @@ script = ExtResource("2_script")
 id = "blade_destiny"
 type = 1
 rarity = 3
-cost = 1
+cost = 3
 exhausts = true
+intrinsic = true
 card_name = "宿命"
 icon = ExtResource("1_48hi1")
-tooltip_text = "[center]从本角色全卡池中选择一张，[url=ugp:pick_upgrade][color=#b0bec5]将其升级[/color][/url]并加入你的抽牌堆底部。消耗。[/center]"
+tooltip_text = "[center]从本角色全卡池中选择一张牌，并加入你的抽牌堆底部。消耗。[/center]"
 sound = ExtResource("3_48hi1")

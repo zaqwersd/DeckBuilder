@@ -15,4 +15,4 @@ static func get_bonus_from_player(player: Node) -> int:
 	var dex := status_handler.get_status_by_id("dexterity") as DexterityStatus
 	if dex == null:
 		return 0
-	return maxi(0, dex.stacks)
+	return dex.stacks

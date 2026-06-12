@@ -9,6 +9,12 @@ const META_SKELETON_SLOT := &"skeleton_slot"
 var acting_enemies: Array[Enemy] = []
 ## 小骷髅等遭遇：槽位编号 1~5 → 布局局部坐标
 var slot_positions: Dictionary = {}
+## 玩家回合开始：状态结算完成前隐藏意图，禁止刷新。
+var _intent_reveal_pending := false
+## 回合开始刚显示意图后，跳过至抽牌完成前的多余刷新（避免 UI 重建闪变）。
+var _turn_start_intent_refresh_locked := false
+## 力量/易伤等状态同步时，意图刷新会再次触发同步；防止递归栈溢出。
+var _player_combat_intent_refresh_depth := 0
 
 
 func _ready() -> void:
@@ -17,6 +23,12 @@ func _ready() -> void:
 	Events.player_hand_drawn.connect(_on_player_hand_drawn)
 	if not Events.player_combat_stat_context_changed.is_connected(_on_player_combat_stat_context_changed):
 		Events.player_combat_stat_context_changed.connect(_on_player_combat_stat_context_changed)
+	if not Events.player_turn_intent_context_ready.is_connected(_on_player_turn_intent_context_ready):
+		Events.player_turn_intent_context_ready.connect(_on_player_turn_intent_context_ready)
+
+
+func is_intent_reveal_pending() -> bool:
+	return _intent_reveal_pending
 
 
 func setup_enemies(battle_stats: BattleStats) -> void:
@@ -55,20 +67,64 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 	
 	all_new_enemies.free()
 	LittleSkeltonIntentCoordinator.reset_combat()
-	CrabIntentCoordinator.reset_combat()
 	BoneShewerIntentCoordinator.reset_combat()
 
 
 func reset_enemy_actions() -> void:
+	_intent_reveal_pending = true
+	_turn_start_intent_refresh_locked = false
+	_ensure_enemy_action_pickers_ready()
 	LittleSkeltonIntentCoordinator.assign_for_handler(self)
-	CrabIntentCoordinator.assign_for_handler(self)
 	BoneShewerIntentCoordinator.assign_for_handler(self)
+	var enemies: Array[Enemy] = []
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		var enemy := child as Enemy
+		enemies.append(enemy)
+		enemy.clear_intent_display()
+	for enemy in enemies:
+		enemy.update_action(false)
+
+
+func _ensure_enemy_action_pickers_ready() -> void:
 	for child in get_children():
 		if not child is Enemy:
 			continue
 		var enemy := child as Enemy
-		enemy.current_action = null
-		enemy.update_action()
+		if not is_instance_valid(enemy.stats):
+			continue
+		if enemy.enemy_action_picker == null:
+			enemy.setup_ai()
+
+
+func reveal_all_enemy_intents() -> void:
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		var enemy := child as Enemy
+		if enemy.current_action == null:
+			enemy.update_action(false)
+		enemy.update_intent()
+
+
+func _is_live_enemy(node: Node) -> bool:
+	if not node is Enemy or not is_instance_valid(node):
+		return false
+	var enemy := node as Enemy
+	if not enemy.is_inside_tree():
+		return false
+	if not is_instance_valid(enemy.stats) or enemy.stats.health <= 0:
+		return false
+	return true
+
+
+func _on_player_turn_intent_context_ready() -> void:
+	if not _intent_reveal_pending:
+		return
+	_intent_reveal_pending = false
+	_turn_start_intent_refresh_locked = true
+	reveal_all_enemy_intents()
 
 
 func start_turn() -> void:
@@ -78,8 +134,9 @@ func start_turn() -> void:
 	
 	var enemies: Array[Enemy] = []
 	for child in get_children():
-		if child is Enemy and is_instance_valid(child):
-			enemies.append(child as Enemy)
+		if not _is_live_enemy(child):
+			continue
+		enemies.append(child as Enemy)
 	enemies.sort_custom(_compare_enemy_turn_order)
 	acting_enemies.assign(enemies)
 	
@@ -118,11 +175,11 @@ func pick_highest_empty_skeleton_slot() -> int:
 	return -1
 
 
-func try_spawn_little_skelton_from_osteogenesis() -> void:
-	spawn_little_skelton()
+func try_spawn_little_skelton_from_osteogenesis(summoner: Enemy) -> void:
+	spawn_little_skelton(summoner)
 
 
-func spawn_little_skelton() -> Enemy:
+func spawn_little_skelton(summoner: Enemy = null) -> Enemy:
 	if count_little_skeltons() >= OsteogenesisStatus.MAX_LITTLE_SKELTONS:
 		return null
 	var slot := pick_highest_empty_skeleton_slot()
@@ -134,6 +191,8 @@ func spawn_little_skelton() -> Enemy:
 	var new_enemy := ENEMY_SCENE.instantiate() as Enemy
 	add_child(new_enemy)
 	new_enemy.stats = LITTLE_SKELTON_STATS
+	if new_enemy.stats is LittleSkeltonEnemyStats and is_instance_valid(summoner):
+		LittleSkeltonEnemyStats.apply_spawned_health_from_summoner(new_enemy.stats, summoner)
 	new_enemy.position = slot_positions[slot]
 	new_enemy.set_meta(META_SKELETON_SLOT, slot)
 	new_enemy.status_handler.statuses_applied.connect(_on_enemy_statuses_applied.bind(new_enemy))
@@ -185,15 +244,47 @@ func _on_enemy_action_completed(enemy: Enemy) -> void:
 	enemy.status_handler.apply_statuses_by_type(Status.Type.END_OF_TURN)
 
 
+func _should_block_enemy_intent_refresh() -> bool:
+	return _intent_reveal_pending or _turn_start_intent_refresh_locked
+
+
 func _on_player_hand_drawn() -> void:
+	if _turn_start_intent_refresh_locked:
+		_turn_start_intent_refresh_locked = false
+		return
+	if _should_block_enemy_intent_refresh():
+		return
+	if not _any_enemy_intent_visible():
+		return
 	_refresh_all_enemy_intents()
 
 
 func _on_player_combat_stat_context_changed() -> void:
+	if _player_combat_intent_refresh_depth > 0:
+		return
+	if _should_block_enemy_intent_refresh():
+		return
+	if not _any_enemy_intent_visible():
+		return
+	_player_combat_intent_refresh_depth += 1
 	_refresh_all_enemy_intents()
+	_player_combat_intent_refresh_depth -= 1
+
+
+func _any_enemy_intent_visible() -> bool:
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		if (child as Enemy).is_intent_display_visible():
+			return true
+	return false
 
 
 func _refresh_all_enemy_intents() -> void:
 	for child in get_children():
-		if child is Enemy:
-			(child as Enemy).update_intent()
+		if not _is_live_enemy(child):
+			continue
+		var enemy := child as Enemy
+		if enemy.is_intent_suppressed():
+			continue
+		enemy.update_intent()

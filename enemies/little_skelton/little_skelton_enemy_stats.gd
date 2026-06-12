@@ -1,9 +1,19 @@
 class_name LittleSkeltonEnemyStats
 extends EnemyStats
 
-const MIN_HEALTH := 11
-const MAX_HEALTH := 16
-const SLOT_5_FIXED_HEALTH := 19
+const MIN_HEALTH_DEFAULT := 11
+const MAX_HEALTH_DEFAULT := 16
+const MIN_SPAWNED_HEALTH := 9
+const SPAWN_HEALTH_DELTA_MIN := 3
+const SPAWN_HEALTH_DELTA_MAX := 5
+
+const SLOT_2_MIN_HEALTH := 11
+const SLOT_2_MAX_HEALTH := 16
+const SLOT_3_MIN_HEALTH := 14
+const SLOT_3_MAX_HEALTH := 17
+const SLOT_4_HEALTH := 18
+const SLOT_5_HEALTH := 19
+
 ## 两套循环动画总时长（秒）
 const ART_SEQUENCE_DURATION := 0.5
 ## 长套 1-3-4-5-1 的抽取概率（且不与上一套连续重复长套）
@@ -36,17 +46,46 @@ func frame_interval_for_sequence(seq: PackedInt32Array) -> float:
 	return ART_SEQUENCE_DURATION / float(maxi(seq.size(), 1))
 
 
+func setup_battle_visual(enemy: Enemy) -> void:
+	enemy.apply_fixed_hitbox_from_art_frames(art_frames)
+
+
 func create_instance() -> Resource:
 	var instance := super.create_instance() as EnemyStats
-	var rolled := RNG.instance.randi_range(MIN_HEALTH, MAX_HEALTH)
+	var rolled := RNG.instance.randi_range(MIN_HEALTH_DEFAULT, MAX_HEALTH_DEFAULT)
 	instance.max_health = rolled
 	instance.health = rolled
 	return instance
 
 
-## 遭遇布局：5 号槽位小骷髅开战血量固定为 19（其余槽位仍 11~16 随机）。
+## 遭遇布局：按槽位设定开战血量（2:11~16，3:14~17，4:18，5:19）。
 static func apply_initial_health_for_slot(stats: EnemyStats, slot: int) -> void:
-	if stats == null or slot != 5:
+	if stats == null:
 		return
-	stats.max_health = SLOT_5_FIXED_HEALTH
-	stats.health = SLOT_5_FIXED_HEALTH
+	var hp := _roll_initial_health_for_slot(slot)
+	if stats is Stats:
+		(stats as Stats).initialize_health(hp)
+
+
+## 骨生召唤：比召唤者 max_health 少 3~5，下限 9。
+static func apply_spawned_health_from_summoner(stats: EnemyStats, summoner: Enemy) -> void:
+	if stats == null or summoner == null or not is_instance_valid(summoner.stats):
+		return
+	var delta := RNG.instance.randi_range(SPAWN_HEALTH_DELTA_MIN, SPAWN_HEALTH_DELTA_MAX)
+	var hp := maxi(MIN_SPAWNED_HEALTH, summoner.stats.max_health - delta)
+	if stats is Stats:
+		(stats as Stats).initialize_health(hp)
+
+
+static func _roll_initial_health_for_slot(slot: int) -> int:
+	match slot:
+		2:
+			return RNG.instance.randi_range(SLOT_2_MIN_HEALTH, SLOT_2_MAX_HEALTH)
+		3:
+			return RNG.instance.randi_range(SLOT_3_MIN_HEALTH, SLOT_3_MAX_HEALTH)
+		4:
+			return SLOT_4_HEALTH
+		5:
+			return SLOT_5_HEALTH
+		_:
+			return RNG.instance.randi_range(MIN_HEALTH_DEFAULT, MAX_HEALTH_DEFAULT)

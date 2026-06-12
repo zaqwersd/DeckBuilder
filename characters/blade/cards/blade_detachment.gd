@@ -13,7 +13,7 @@ func get_upgrade_track_ids() -> PackedStringArray:
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
 		"block":
-			return PackedInt32Array([8, 11, 15])
+			return PackedInt32Array([8, 10])
 		"discard_mode":
 			return PackedInt32Array([0, 0])
 		_:

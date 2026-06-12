@@ -134,13 +134,17 @@ func add_status(status: Status) -> void:
 	
 	# If it's duration-stackable, expand it
 	if status.can_expire and status.stack_type == Status.StackType.DURATION:
-		_get_status(status.id).duration += status.duration
+		var existing := _get_status(status.id)
+		existing.set_duration(existing.duration + status.duration)
 		_emit_player_hand_cost_context_if_needed()
 		return
 	
 	# If it's stackable, stack it
 	if status.stack_type == Status.StackType.INTENSITY:
-		_get_status(status.id).stacks += status.stacks
+		var existing_intensity := _get_status(status.id)
+		existing_intensity.set_stacks(existing_intensity.stacks + status.stacks)
+		if not existing_intensity.awaits_turn_start:
+			existing_intensity.initialize_status(status_owner)
 		_emit_player_hand_cost_context_if_needed()
 
 
@@ -203,6 +207,8 @@ func remove_status_by_id(status_id: String) -> void:
 
 func _emit_player_combat_stat_context_if_needed() -> void:
 	if status_owner is Player:
+		if Events.is_player_turn_start_resolving():
+			return
 		Events.player_combat_stat_context_changed.emit()
 
 
@@ -227,10 +233,35 @@ func activate_awaiting_statuses() -> void:
 		st.status_changed.emit()
 
 
+## 回合开始 tick 后、显示敌人意图前：以状态栏为准同步修饰器（含清除残留易伤）。
+func prepare_combat_context_for_intent() -> void:
+	sync_combat_modifiers_with_statuses()
+
+
+## 状态栏 ↔ 修饰器对齐；意图伤害与实际伤害共用同一套判定。
+func sync_combat_modifiers_with_statuses() -> void:
+	if not status_owner is Player:
+		return
+	var player := status_owner as Player
+	for status_ui: StatusUI in get_children():
+		var st := status_ui.status
+		if st == null:
+			continue
+		if st.can_expire and st.duration <= 0:
+			st.deactivate_status(status_owner)
+			continue
+		if st.awaits_turn_start:
+			continue
+		st.initialize_status(status_owner)
+	ExposedStatus.sync_modifier_with_status(player)
+
+
 func _on_status_applied(status: Status) -> void:
 	if status.skip_next_start_of_turn_tick:
 		status.skip_next_start_of_turn_tick = false
 		return
 	if status.can_expire:
-		status.duration -= 1
+		status.set_duration(status.duration - 1)
+		if status.duration <= 0:
+			status.deactivate_status(status_owner)
 

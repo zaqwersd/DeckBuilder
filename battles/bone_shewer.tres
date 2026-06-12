@@ -6,6 +6,4 @@
 [resource]
 script = ExtResource("1_script")
 weight = 2.0
-gold_reward_min = 58
-gold_reward_max = 76
 enemies = ExtResource("2_scene")

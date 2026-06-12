@@ -19,8 +19,7 @@ func enter() -> void:
 	card_ui.card_visuals.panel.set("theme_override_styles/panel", card_ui.card_visuals.main_panel_style_base)
 	card_ui.z_index = 0
 	card_ui.z_as_relative = true
-	# 打出时 _play_resolved 在 await 前已挂到 ui_layer 并清空 hand_slot；或从手牌拖出打出时 hand_slot 仍在
-	# 但 parent 已是 ui_layer。Released→BASE 若再 emit，Hand 会把牌 reparent 到 HBox 根上 → 满宽空槽。
+	card_ui.set_process_input(false)
 	if not is_instance_valid(card_ui.hand_slot):
 		var walk: Node = card_ui.get_parent()
 		while is_instance_valid(walk):
@@ -48,10 +47,9 @@ func on_gui_input(event: InputEvent) -> void:
 		and event.is_action_pressed("left_mouse")
 	):
 		card_ui.pivot_offset = card_ui.get_global_mouse_position() - card_ui.global_position
-		transition_requested.emit(self, CardState.State.CLICKED)
+		transition_requested.emit(self, CardState.State.DRAGGING)
 
 
-## 手牌抬起 / z / 底板由 Hand 每帧 `sync_hand_hover_presentation` 驱动，此处不处理，避免与几何不同步。
 func on_mouse_entered() -> void:
 	pass
 

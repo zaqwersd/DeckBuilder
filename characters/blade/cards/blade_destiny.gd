@@ -1,84 +1,53 @@
 extends Card
 
 const DRAFTABLE_POOL_PATH := "res://characters/blade/blade_draftable_cards.tres"
-
-
-func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["cost", "intrinsic_line", "pick_upgrade"])
-
-
-func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	match track_id:
-		"cost":
-			return PackedInt32Array([1, 0])
-		"intrinsic_line":
-			return PackedInt32Array([0, 0])
-		"pick_upgrade":
-			return PackedInt32Array([0, 0])
-		_:
-			return PackedInt32Array()
-
-
-func _intrinsic_line_bb_pick() -> String:
-	if is_upgrade_track_maxed("intrinsic_line"):
-		return "[color=#ffffff]固有。[/color]"
-	return "[url=ugp:intrinsic_line][color=%s]固有。[/color][/url]" % BB_UPGRADE_INACTIVE_KEYWORD
-
-
 const _PICK_UPGRADE_TEXT := "将其升级"
 const _EXHAUST_LINE := "消耗。"
 
 
+func get_upgrade_track_ids() -> PackedStringArray:
+	return PackedStringArray(["pick_upgrade"])
+
+
+func get_upgrade_chain(track_id: String) -> PackedInt32Array:
+	if track_id == "pick_upgrade":
+		return PackedInt32Array([0, 0])
+	return PackedInt32Array()
+
+
+func _pick_upgrade_active() -> bool:
+	return is_upgrade_track_maxed("pick_upgrade")
+
+
+func _effect_body_bbcode() -> String:
+	if _pick_upgrade_active():
+		return "从本角色全卡池中选择一张牌，%s并加入你的抽牌堆底部。" % _PICK_UPGRADE_TEXT
+	return "从本角色全卡池中选择一张牌，并加入你的抽牌堆底部。"
+
+
 func _exhaust_line_bbcode() -> String:
+	if not exhausts:
+		return ""
 	return _EXHAUST_LINE
 
 
 func _append_exhaust_line_bbcode(body: String) -> String:
-	if not exhausts:
+	var line := _exhaust_line_bbcode()
+	if line.is_empty():
 		return body
-	return "%s%s" % [body, _exhaust_line_bbcode()]
+	return "%s%s" % [body, line]
 
 
-## 营火/列表：未激活时灰色可点轨；已激活为普通字。
-func _pick_upgrade_clause_listing_bbcode() -> String:
-	if is_upgrade_track_maxed("pick_upgrade"):
-		return _PICK_UPGRADE_TEXT
-	return CardKeywordTokens.bb_inactive_keyword(_PICK_UPGRADE_TEXT, "pick_upgrade")
-
-
-## 战斗：未激活时不显示该段；已激活为白字「将其升级」。
-func _pick_upgrade_clause_combat_bbcode() -> String:
-	if not is_upgrade_track_maxed("pick_upgrade"):
-		return ""
-	if is_visual_number_bbcode_combat():
-		return "[color=%s]%s[/color]" % [COMBAT_BODY_TEXT, _PICK_UPGRADE_TEXT]
-	return _PICK_UPGRADE_TEXT
-
-
-func _effect_line_bbcode_for_listing() -> String:
-	return "从本角色全卡池中选择一张牌，%s并加入你的抽牌堆底部。" % _pick_upgrade_clause_listing_bbcode()
-
-
-func _effect_line_bbcode_for_combat() -> String:
-	var clause := _pick_upgrade_clause_combat_bbcode()
-	if clause.is_empty():
-		return "从本角色全卡池中选择一张牌，并加入你的抽牌堆底部。"
-	return "从本角色全卡池中选择一张牌，%s并加入你的抽牌堆底部。" % clause
+func _description_bbcode() -> String:
+	return "[center]%s[/center]" % _append_exhaust_line_bbcode(_effect_body_bbcode())
 
 
 func get_upgrade_pick_description_bbcode() -> String:
-	var body := _append_exhaust_line_bbcode(_effect_line_bbcode_for_listing())
-	return "[center]%s[br]%s[/center]" % [_intrinsic_line_bb_pick(), body]
+	return _description_bbcode()
 
 
 func get_default_tooltip() -> String:
-	var effect: String
-	if is_upgrade_track_maxed("pick_upgrade"):
-		effect = "从本角色全卡池中选择一张牌，将其升级并加入你的抽牌堆底部。"
-	else:
-		var gray := CardKeywordTokens.bb_inactive_keyword(_PICK_UPGRADE_TEXT, "pick_upgrade")
-		effect = "从本角色全卡池中选择一张牌，%s并加入你的抽牌堆底部。" % gray
-	return "[center]%s[/center]" % _append_exhaust_line_bbcode(effect)
+	return _description_bbcode()
 
 
 func get_updated_tooltip(
@@ -94,40 +63,9 @@ func get_visual_description_bbcode() -> String:
 func get_updated_visual_description_bbcode(
 	_player_modifiers: ModifierHandler,
 	_enemy_modifiers: ModifierHandler,
-	combat_player: Node = null
+	_combat_player: Node = null
 ) -> String:
-	## 列表/图鉴（LISTING_UPGRADE）：灰字可升轨「将其升级」；战斗（COMBAT）：未激活不显示该段。
-	var body := (
-		_effect_line_bbcode_for_combat()
-		if is_visual_number_bbcode_combat()
-		else _effect_line_bbcode_for_listing()
-	)
-	body = _append_exhaust_line_bbcode(body)
-	return "[center]%s[/center]" % body
-
-
-func _intrinsic_cost() -> int:
-	return get_upgrade_value_at("cost")
-
-
-func should_visualize_cost_as_upgradeable() -> bool:
-	var ch := get_upgrade_chain("cost")
-	if ch.is_empty():
-		return false
-	return not is_upgrade_track_maxed("cost")
-
-
-func increment_upgrade_track(track_id: String) -> void:
-	super.increment_upgrade_track(track_id)
-	if track_id == "cost":
-		cost = _intrinsic_cost()
-
-
-func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
-	var ch := get_upgrade_chain("intrinsic_line")
-	if ch.is_empty():
-		return
-	intrinsic = is_upgrade_track_maxed("intrinsic_line")
+	return _description_bbcode()
 
 
 func defers_played_card_animation_to_effects() -> bool:
@@ -167,7 +105,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if temp_pile.cards.is_empty():
 		return
 
-	var want_pick_upgrade := is_upgrade_track_maxed("pick_upgrade")
+	var want_pick_upgrade := _pick_upgrade_active()
 
 	var overlay := DeckPickerOverlay.open_on_tree(tree)
 	overlay.setup(
@@ -193,7 +131,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 
 	var chosen_ref: Card = temp_pile.cards[idx]
 
-	if want_pick_upgrade and chosen_ref.has_any_upgradeable_track():
+	if want_pick_upgrade and chosen_ref.can_be_upgraded():
 		var flow := CardUpgradeFlow.open_on_tree(tree)
 		flow.begin(temp_pile, idx)
 		var result: int = await flow.finished

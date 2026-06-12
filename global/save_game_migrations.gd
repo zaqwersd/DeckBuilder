@@ -126,6 +126,15 @@ static func migrate(data: SaveGame) -> void:
 		return
 	_migrate_renamed_battle_scenes(data)
 	_migrate_relic_ids(data)
+	_migrate_card_upgrades(data)
+
+
+static func _migrate_card_upgrades(data: SaveGame) -> void:
+	if data.current_deck == null:
+		return
+	for c: Card in data.current_deck.cards:
+		if c != null:
+			c.migrate_from_upgrade_tracks()
 
 
 static func _migrate_relic_ids(data: SaveGame) -> void:

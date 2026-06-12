@@ -30,7 +30,7 @@ func _on_enemy_dealt_unblocked_damage(dealer: Enemy, amount: int) -> void:
 	var handler := _get_enemy_handler()
 	if handler == null:
 		return
-	handler.try_spawn_little_skelton_from_osteogenesis()
+	handler.try_spawn_little_skelton_from_osteogenesis(_host_enemy)
 
 
 func _get_enemy_handler() -> EnemyHandler:

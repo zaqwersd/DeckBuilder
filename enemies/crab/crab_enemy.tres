@@ -14,5 +14,5 @@ art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2"), ExtRe
 health_bar_width = 125
 status_bar_offset = Vector2(40, 30)
 intent_ui_offset = Vector2(0, 20)
-max_health = 48
+max_health = 40
 art = ExtResource("3_art1")

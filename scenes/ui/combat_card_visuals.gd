@@ -48,43 +48,15 @@ func _sync_from_card() -> void:
 	icon.texture = card.icon
 	name_label.text = card.get_display_name()
 	type_label.text = TYPE_DISPLAY.get(card.type, "")
-	# 战斗中：已升级卡牌显示绿色高亮，未升级显示白色
-	if card.get_total_upgrade_count() > 0:
-		name_label.add_theme_color_override("font_color", UPGRADED_CARD_ACCENT)
-		name_label.add_theme_color_override("font_shadow_color", UPGRADED_FONT_OUTLINE)
-		name_label.add_theme_constant_override("shadow_offset_x", -1)
-		name_label.add_theme_constant_override("shadow_offset_y", 1)
-		name_label.add_theme_constant_override("shadow_outline_size", 1)
+	if card.is_upgraded:
+		_apply_upgraded_name_style()
 	else:
 		name_label.add_theme_color_override("font_color", Color.WHITE)
-		name_label.remove_theme_color_override("font_shadow_color")
-		name_label.remove_theme_constant_override("shadow_offset_x")
-		name_label.remove_theme_constant_override("shadow_offset_y")
-		name_label.remove_theme_constant_override("shadow_outline_size")
+		_clear_upgraded_name_style()
 	type_label.add_theme_color_override("font_color", Color.WHITE)
 	_sync_upgrade_badge()
 	_apply_description_default_color_for_style()
 	_refresh_description_text()
-
-
-func _sync_upgrade_badge() -> void:
-	if not is_instance_valid(upgrade_level_panel) or not is_instance_valid(upgrade_level_label) or card == null:
-		return
-	var n := card.get_total_upgrade_count()
-	upgrade_level_panel.visible = n > 0
-	if n > 0:
-		upgrade_level_label.text = "%d↑" % n
-		upgrade_level_label.add_theme_color_override("font_color", UPGRADED_CARD_ACCENT)
-		upgrade_level_label.add_theme_color_override("font_shadow_color", UPGRADED_FONT_OUTLINE)
-		upgrade_level_label.add_theme_constant_override("shadow_offset_x", -1)
-		upgrade_level_label.add_theme_constant_override("shadow_offset_y", 1)
-		upgrade_level_label.add_theme_constant_override("shadow_outline_size", 1)
-	else:
-		upgrade_level_label.remove_theme_color_override("font_color")
-		upgrade_level_label.remove_theme_color_override("font_shadow_color")
-		upgrade_level_label.remove_theme_constant_override("shadow_offset_x")
-		upgrade_level_label.remove_theme_constant_override("shadow_offset_y")
-		upgrade_level_label.remove_theme_constant_override("shadow_outline_size")
 
 
 func _apply_description_default_color_for_style() -> void:
@@ -108,7 +80,7 @@ func _prepend_intrinsic_line_bbcode(raw: String) -> String:
 		return raw
 	if not card.should_show_intrinsic_keyword_in_combat_description():
 		return raw
-	var kw_line := "[color=#ffffff][url=kw:intrinsic]固有。[/url][/color]"
+	var kw_line := CardKeywordTokens.bb_mechanic_link("固有。", "intrinsic")
 	return kw_line + "[br]" + raw
 
 

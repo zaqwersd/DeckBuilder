@@ -9,6 +9,7 @@ script = ExtResource("2_script")
 id = "blade_ashes"
 rarity = 3
 target = 2
+cost = 2
 card_name = "灰烬"
 icon = ExtResource("1_icon")
 tooltip_text = "[center]你的消耗堆每有一张牌，对所有敌人造成%s点伤害1次。[/center]"

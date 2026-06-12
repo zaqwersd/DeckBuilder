@@ -54,5 +54,5 @@ func _on_enemy_action_completed(completed_enemy: Enemy) -> void:
 	if not enemy.current_action:
 		return
 	_last_action_name = enemy.current_action.name
-	if StringName(_last_action_name) == LittleSkeltonIntentCoordinator.ACTION_BUFF2:
+	if StringName(_last_action_name) == LittleSkeltonIntentCoordinator.ACTION_STRIKE2_BUFF1:
 		must_attack_next_turn = true

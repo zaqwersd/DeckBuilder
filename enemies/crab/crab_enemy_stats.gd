@@ -1,7 +1,8 @@
 class_name CrabEnemyStats
 extends EnemyStats
 
-const MAX_HEALTH := 48
+const MIN_HEALTH := 38
+const MAX_HEALTH := 42
 const ART_SEQUENCE_DURATION := 0.5
 
 
@@ -29,6 +30,7 @@ func frame_interval_for_sequence(seq: PackedInt32Array) -> float:
 
 func create_instance() -> Resource:
 	var instance := super.create_instance() as EnemyStats
-	instance.max_health = MAX_HEALTH
-	instance.health = MAX_HEALTH
+	var rolled := RNG.instance.randi_range(MIN_HEALTH, MAX_HEALTH)
+	instance.max_health = rolled
+	instance.health = rolled
 	return instance

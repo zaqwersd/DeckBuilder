@@ -351,7 +351,7 @@ func _deck_has_upgradeable_card() -> bool:
 	if character_stats == null or character_stats.deck == null:
 		return false
 	for c: Card in character_stats.deck.cards:
-		if c != null and c.has_any_upgradeable_track():
+		if c != null and c.can_be_upgraded():
 			return true
 	return false
 
@@ -464,10 +464,9 @@ func _show_card_upgrade_flow() -> void:
 		flow.begin(character_stats.deck, idx)
 		var result: int = await flow.finished
 		if result == CardUpgradeFlow.Result.BACK_TO_PICK:
-			## 升级层点「取消」：回到战斗奖励栏（不留在选牌层）
-			_upgrade_flow_active = false
-			_dismiss_upgrade_subflow(run, overlay)
-			return
+			if is_instance_valid(overlay):
+				overlay.clear_selection()
+			continue
 		_dismiss_upgrade_subflow(run, overlay)
 		if result == CardUpgradeFlow.Result.CANCELLED:
 			_upgrade_flow_active = false
@@ -480,7 +479,7 @@ func _show_card_upgrade_flow() -> void:
 
 
 func _deck_has_upgradeable_card_for_pick(c: Card) -> bool:
-	return c != null and c.has_any_upgradeable_track()
+	return c != null and c.can_be_upgraded()
 
 
 func _resolve_upgrade_reward_skipped() -> void:
@@ -673,7 +672,7 @@ func _roll_or_restore_card_rewards() -> Array[Card]:
 	
 	## 为每张卡牌应用随机升级概率
 	for card: Card in card_reward_array:
-		if not card.has_any_upgradeable_track():
+		if not card.can_be_upgraded():
 			continue
 		var roll := RNG.instance.randf()
 		if roll < upgrade_twice_chance:
@@ -893,22 +892,7 @@ func _on_back_button_pressed() -> void:
 	Events.battle_reward_exited.emit()
 
 
-## 为卡牌应用随机升级（随机选择可升级轨道）
-func _apply_random_upgrades(card: Card, count: int) -> void:
-	if not card or not card.has_any_upgradeable_track():
-		return
-	
-	for i in range(count):
-		# 获取当前仍可升级的轨道
-		var upgradeable_tracks: Array[String] = []
-		for track_id in card.get_upgrade_track_ids():
-			if not card.is_upgrade_track_maxed(track_id):
-				upgradeable_tracks.append(track_id)
-		
-		# 没有可升级轨道时停止
-		if upgradeable_tracks.is_empty():
-			break
-		
-		# 随机选择一个轨道进行升级
-		var chosen_track := upgradeable_tracks[RNG.instance.randi() % upgradeable_tracks.size()]
-		card.increment_upgrade_track(chosen_track)
+## 为卡牌应用升级（每张卡最多一次；count>1 时仅第一次有效）。
+func _apply_random_upgrades(card: Card, _count: int) -> void:
+	if card != null and card.can_be_upgraded():
+		card.apply_upgrade()

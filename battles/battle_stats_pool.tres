@@ -1,19 +1,20 @@
-[gd_resource type="Resource" script_class="BattleStatsPool" load_steps=11 format=3 uid="uid://djnnofl4cgow1"]
+[gd_resource type="Resource" script_class="BattleStatsPool" format=3 uid="uid://djnnofl4cgow1"]
 
 [ext_resource type="Script" uid="uid://ekxf7q3x2vru" path="res://custom_resources/battle_stats_pool.gd" id="1_pool"]
 [ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="2_bs"]
 [ext_resource type="Resource" uid="uid://c3i5napiovju" path="res://battles/bats_2.tres" id="3_bats2"]
 [ext_resource type="Resource" uid="uid://bgwxy48wkpckv" path="res://battles/crab.tres" id="4_crab"]
 [ext_resource type="Resource" uid="uid://kbesyf2oax5d" path="res://battles/rat.tres" id="5_rat"]
-[ext_resource type="Resource" path="res://battles/bats_3.tres" id="6_bats3"]
-[ext_resource type="Resource" path="res://battles/igneous_burster.tres" id="7_igneous"]
-[ext_resource type="Resource" path="res://battles/little_skelton_4.tres" id="8_skel4"]
-[ext_resource type="Resource" path="res://battles/mimic.tres" id="9_mimic"]
-[ext_resource type="Resource" path="res://battles/evil_spirit.tres" id="10_boss"]
+[ext_resource type="Resource" uid="uid://gse4bbbawhr3" path="res://battles/bats_3.tres" id="6_bats3"]
+[ext_resource type="Resource" uid="uid://g7y0r016qhow" path="res://battles/igneous_burster.tres" id="7_igneous"]
+[ext_resource type="Resource" uid="uid://bwu24wdn2gc7g" path="res://battles/little_skelton_4.tres" id="8_skel4"]
+[ext_resource type="Resource" uid="uid://dpdv17iba0cor" path="res://battles/mimic.tres" id="9_mimic"]
+[ext_resource type="Resource" uid="uid://bq4ddwf7bjokl" path="res://battles/evil_spirit.tres" id="10_boss"]
+[ext_resource type="Resource" uid="uid://krypcsvuive7" path="res://battles/spider.tres" id="11_spider"]
 
 [resource]
 script = ExtResource("1_pool")
-tier_0_pool = Array[ExtResource("2_bs")]([ExtResource("3_bats2"), ExtResource("4_crab"), ExtResource("5_rat")])
+tier_0_pool = Array[ExtResource("2_bs")]([ExtResource("3_bats2"), ExtResource("4_crab"), ExtResource("5_rat"), ExtResource("11_spider")])
 tier_1_pool = Array[ExtResource("2_bs")]([ExtResource("6_bats3"), ExtResource("7_igneous"), ExtResource("8_skel4")])
 tier_2_pool = Array[ExtResource("2_bs")]([ExtResource("9_mimic")])
 tier_3_pool = Array[ExtResource("2_bs")]([ExtResource("10_boss")])

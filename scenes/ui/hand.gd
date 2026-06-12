@@ -102,7 +102,11 @@ func _on_player_hand_cost_context_changed() -> void:
 		if not cui or not cui.char_stats or not cui.card:
 			continue
 		cui.refresh_mana_cost_display()
-		cui.playable = cui.char_stats.can_play_card(cui.card, cui.get_effective_mana_cost())
+		cui.playable = cui.char_stats.can_play_card(
+			cui.card,
+			cui.get_effective_mana_cost(),
+			cui.combat_player
+		)
 
 
 func _on_player_combat_stat_context_changed() -> void:
@@ -163,7 +167,12 @@ func _is_card_eligible_for_hand_pick(c: CardUI, slot: Node) -> bool:
 	var sm := c.card_state_machine
 	if sm == null or sm.current_state == null:
 		return false
-	return sm.current_state.state == CardState.State.BASE
+	var st := sm.current_state.state
+	return (
+		st == CardState.State.BASE
+		or st == CardState.State.CLICKED
+		or st == CardState.State.DRAGGING
+	)
 
 
 func _is_mouse_in_hand_row_band(mouse_pos: Vector2) -> bool:
@@ -171,6 +180,18 @@ func _is_mouse_in_hand_row_band(mouse_pos: Vector2) -> bool:
 	var pick_top := row.position.y - HAND_ROW_PICK_PADDING_PX
 	var pick_bottom := row.end.y + HAND_ROW_PICK_PADDING_PX
 	return mouse_pos.y >= pick_top and mouse_pos.y <= pick_bottom
+
+
+## 单体牌拖动手牌区：鼠标在此范围内时卡牌跟随，离开则锁定出牌位。
+func is_mouse_in_play_drag_hand_zone(mouse_global: Vector2) -> bool:
+	var row := get_global_rect()
+	var pick_top := row.position.y - HAND_ROW_PICK_PADDING_PX
+	var pick_bottom := row.end.y + HAND_ROW_PICK_PADDING_PX
+	if mouse_global.y < pick_top or mouse_global.y > pick_bottom:
+		return false
+	var pick_left := row.position.x - HAND_ROW_PICK_PADDING_PX
+	var pick_right := row.end.x + HAND_ROW_PICK_PADDING_PX
+	return mouse_global.x >= pick_left and mouse_global.x <= pick_right
 
 
 func _collect_eligible_hand_cards() -> Array[CardUI]:
@@ -588,7 +609,8 @@ func add_card(card: Card, insert_index: int = -1) -> void:
 	if new_card_ui.char_stats and new_card_ui.card:
 		new_card_ui.playable = new_card_ui.char_stats.can_play_card(
 			new_card_ui.card,
-			new_card_ui.get_effective_mana_cost()
+			new_card_ui.get_effective_mana_cost(),
+			new_card_ui.combat_player
 		)
 	new_card_ui.refresh_combat_description()
 	new_card_ui.reset_hand_hover_lift_instant()

@@ -19,7 +19,8 @@
 [ext_resource type="Resource" uid="uid://b2g7ulwfbtipc" path="res://characters/blade/cards/blade_imperturbable.tres" id="17_imperturbable"]
 [ext_resource type="Resource" uid="uid://i1fmy3vh6s2" path="res://characters/blade/cards/blade_desperate_strike.tres" id="18_desperate_strike"]
 [ext_resource type="Resource" uid="uid://bkg5ogpvyfvxh" path="res://characters/blade/cards/blade_ashes.tres" id="19_ashes"]
+[ext_resource type="Resource" uid="uid://c4aj4cuwu801f" path="res://characters/blade/cards/blade_insight.tres" id="20_insight"]
 
 [resource]
 script = ExtResource("1_x06dg")
-cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("8_anger"), ExtResource("9_destiny"), ExtResource("10_flow"), ExtResource("11_opening"), ExtResource("12_flash"), ExtResource("13_bloom"), ExtResource("14_all_out"), ExtResource("15_unyielding"), ExtResource("16_samsara"), ExtResource("17_imperturbable"), ExtResource("18_desperate_strike"), ExtResource("19_ashes")])
+cards = Array[ExtResource("1_byq7g")]([ExtResource("2_ur0lo"), ExtResource("4_7uxu8"), ExtResource("4_jteol"), ExtResource("5_sfk5u"), ExtResource("6_mdr4n"), ExtResource("8_anger"), ExtResource("9_destiny"), ExtResource("10_flow"), ExtResource("11_opening"), ExtResource("12_flash"), ExtResource("13_bloom"), ExtResource("14_all_out"), ExtResource("15_unyielding"), ExtResource("16_samsara"), ExtResource("17_imperturbable"), ExtResource("18_desperate_strike"), ExtResource("19_ashes"), ExtResource("20_insight")])

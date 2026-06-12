@@ -2,36 +2,24 @@ extends Card
 
 const DRAFTABLE_POOL_PATH := "res://characters/blade/blade_draftable_cards.tres"
 
-const _RANDOM_UPGRADE_CLAUSE := "随机升级以后"
+const _EFFECT_BODY := "变化你消耗堆的所有牌，将它们升级并放入你的抽牌堆。"
 const _EXHAUST_LINE := "消耗。"
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["cost", "exhaust_line", "random_upgrade_line"])
+	return PackedStringArray(["exhaust_line"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	match track_id:
-		"cost":
-			return PackedInt32Array([1, 0])
-		"exhaust_line":
-			return PackedInt32Array([0, 0])
-		"random_upgrade_line":
-			return PackedInt32Array([0, 0])
-		_:
-			return PackedInt32Array()
-
-
-func _intrinsic_cost() -> int:
-	return get_upgrade_value_at("cost")
+	if track_id == "exhaust_line":
+		return PackedInt32Array([0, 0])
+	return PackedInt32Array()
 
 
 func _exhaust_line_bbcode() -> String:
 	if not exhausts:
 		return ""
-	if is_upgrade_track_maxed("exhaust_line"):
-		return ""
-	return CardKeywordTokens.bb_negative_removable(_EXHAUST_LINE, "exhaust_line")
+	return _EXHAUST_LINE
 
 
 func _append_exhaust_line_bbcode(body: String) -> String:
@@ -41,43 +29,16 @@ func _append_exhaust_line_bbcode(body: String) -> String:
 	return "%s%s" % [body, line]
 
 
-func _random_upgrade_clause_listing_bbcode() -> String:
-	if is_upgrade_track_maxed("random_upgrade_line"):
-		return _RANDOM_UPGRADE_CLAUSE
-	return CardKeywordTokens.bb_inactive_keyword(_RANDOM_UPGRADE_CLAUSE, "random_upgrade_line")
-
-
-func _random_upgrade_clause_combat_bbcode() -> String:
-	if not is_upgrade_track_maxed("random_upgrade_line"):
-		return ""
-	if is_visual_number_bbcode_combat():
-		return "[color=%s]%s[/color]" % [COMBAT_BODY_TEXT, _RANDOM_UPGRADE_CLAUSE]
-	return _RANDOM_UPGRADE_CLAUSE
-
-
-func _effect_body_bbcode_for_listing() -> String:
-	return "变化你消耗堆的所有牌，然后将它们%s放入你的抽牌堆。" % _random_upgrade_clause_listing_bbcode()
-
-
-func _effect_body_bbcode_for_combat() -> String:
-	var clause := _random_upgrade_clause_combat_bbcode()
-	if clause.is_empty():
-		return "变化你消耗堆的所有牌，然后将它们放入你的抽牌堆。"
-	return "变化你消耗堆的所有牌，然后将它们%s放入你的抽牌堆。" % clause
+func _effect_body_bbcode() -> String:
+	return _EFFECT_BODY
 
 
 func get_upgrade_pick_description_bbcode() -> String:
-	return "[center]%s[/center]" % _append_exhaust_line_bbcode(_effect_body_bbcode_for_listing())
+	return "[center]%s[/center]" % _append_exhaust_line_bbcode(_effect_body_bbcode())
 
 
 func get_default_tooltip() -> String:
-	var body: String
-	if is_upgrade_track_maxed("random_upgrade_line"):
-		body = "变化你消耗堆的所有牌，然后将它们随机升级以后放入你的抽牌堆。"
-	else:
-		var gray := CardKeywordTokens.bb_inactive_keyword(_RANDOM_UPGRADE_CLAUSE, "random_upgrade_line")
-		body = "变化你消耗堆的所有牌，然后将它们%s放入你的抽牌堆。" % gray
-	return "[center]%s[/center]" % _append_exhaust_line_bbcode(body)
+	return "[center]%s[/center]" % _append_exhaust_line_bbcode(_effect_body_bbcode())
 
 
 func get_updated_tooltip(
@@ -95,25 +56,11 @@ func get_updated_visual_description_bbcode(
 	_enemy_modifiers: ModifierHandler,
 	_combat_player: Node = null
 ) -> String:
-	var body := (
-		_effect_body_bbcode_for_combat()
-		if is_visual_number_bbcode_combat()
-		else _effect_body_bbcode_for_listing()
-	)
-	return "[center]%s[/center]" % _append_exhaust_line_bbcode(body)
+	return "[center]%s[/center]" % _append_exhaust_line_bbcode(_effect_body_bbcode())
 
 
-func should_visualize_cost_as_upgradeable() -> bool:
-	var ch := get_upgrade_chain("cost")
-	if ch.is_empty():
-		return false
-	return not is_upgrade_track_maxed("cost")
-
-
-func increment_upgrade_track(track_id: String) -> void:
-	super.increment_upgrade_track(track_id)
-	if track_id == "cost":
-		cost = _intrinsic_cost()
+func _apply_upgraded_state() -> void:
+	super._apply_upgraded_state()
 	_sync_exhaust_from_upgrade()
 
 
@@ -150,15 +97,9 @@ func _roll_draftable_card() -> Card:
 	return template.duplicate(true) as Card
 
 
-func _maybe_random_upgrade_transformed_card(card: Card) -> void:
-	if not is_upgrade_track_maxed("random_upgrade_line"):
-		return
-	if card == null or not card.has_any_upgradeable_track():
-		return
-	var track_id := card.pick_random_upgrade_track()
-	if track_id.is_empty():
-		return
-	card.increment_upgrade_track(track_id)
+func _maybe_upgrade_transformed_card(card: Card) -> void:
+	if card != null and card.can_be_upgraded():
+		card.apply_upgrade()
 
 
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
@@ -181,7 +122,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 		var new_card := _roll_draftable_card()
 		if new_card == null:
 			continue
-		_maybe_random_upgrade_transformed_card(new_card)
+		_maybe_upgrade_transformed_card(new_card)
 		pairs.append({"old": old_card, "new": new_card})
 
 	var bcf := ph.battle_card_fx

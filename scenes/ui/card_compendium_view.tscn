@@ -1,11 +1,13 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://km7kwsqe2sab"]
 
-[ext_resource type="Script" path="res://scenes/ui/card_compendium_view.gd" id="1_comp"]
+[ext_resource type="Script" uid="uid://dwgdq60wsxsx4" path="res://scenes/ui/card_compendium_view.gd" id="1_comp"]
+[ext_resource type="Texture2D" uid="uid://rcns1rktu00i" path="res://art/unchecked.png" id="2_unchecked"]
+[ext_resource type="Texture2D" uid="uid://bkn7buwpnipjv" path="res://art/checked.png" id="3_checked"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_tpixj"]
 font_size = 54
 
-[node name="CardCompendiumView" type="Control"]
+[node name="CardCompendiumView" type="Control" unique_id=936903756]
 process_mode = 3
 layout_mode = 3
 anchors_preset = 15
@@ -16,7 +18,7 @@ grow_vertical = 2
 mouse_force_pass_scroll_events = false
 script = ExtResource("1_comp")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=578651155]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -25,7 +27,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.65098)
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=157130910]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -33,44 +35,81 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 45
-theme_override_constants/margin_top = 45
+theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 45
-theme_override_constants/margin_bottom = 45
+theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=330230570]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
+[node name="TitleRow" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1499985872]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleCenter" type="CenterContainer" parent="MarginContainer/VBoxContainer/TitleRow" unique_id=1214493759]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="MarginContainer/VBoxContainer/TitleRow/TitleCenter" unique_id=1805574347]
 unique_name_in_owner = true
 layout_mode = 2
 text = "卡牌图鉴"
 label_settings = SubResource("LabelSettings_tpixj")
 horizontal_alignment = 1
 
-[node name="CategoryTabs" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
+[node name="ShowUpgradedIcon" type="TextureButton" parent="MarginContainer/VBoxContainer/TitleRow" unique_id=1400510455]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 5.0
+offset_top = 24.0
+offset_right = 37.0
+offset_bottom = 56.0
+focus_mode = 0
+toggle_mode = true
+texture_normal = ExtResource("2_unchecked")
+texture_pressed = ExtResource("3_checked")
+stretch_mode = 5
+
+[node name="ShowUpgradedLabel" type="Label" parent="MarginContainer/VBoxContainer/TitleRow" unique_id=1400510456]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 46.0
+offset_top = 24.0
+offset_right = 174.0
+offset_bottom = 56.0
+mouse_filter = 0
+text = "显示升级"
+vertical_alignment = 1
+
+[node name="CategoryTabs" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=584315673]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
+[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=94687081]
 layout_mode = 2
 size_flags_vertical = 3
 mouse_force_pass_scroll_events = false
 horizontal_scroll_mode = 3
 vertical_scroll_mode = 2
 
-[node name="Cards" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
+[node name="Cards" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer" unique_id=1145661947]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
 theme_override_constants/h_separation = 0
 theme_override_constants/v_separation = 36
 columns = 5
 
-[node name="BackButton" type="Button" parent="."]
+[node name="BackButton" type="Button" parent="." unique_id=265305966]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 1

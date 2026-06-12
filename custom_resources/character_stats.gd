@@ -47,8 +47,12 @@ func add_card_to_exhaust(card: Card) -> void:
 	Events.card_exhausted.emit(card)
 
 
-func can_play_card(card: Card, effective_mana_cost: int = -1) -> bool:
-	return PlayCostResolver.can_play(card, self, effective_mana_cost)
+func can_play_card(
+	card: Card,
+	effective_mana_cost: int = -1,
+	combat_player: Node = null
+) -> bool:
+	return PlayCostResolver.can_play(card, self, effective_mana_cost, combat_player)
 
 
 func create_instance() -> Resource:

@@ -34,6 +34,16 @@ func set_health(value : int) -> void:
 	stats_changed.emit()
 
 
+## 开战/召唤等初始化血量：不触发受伤飘字。
+func initialize_health(max_hp: int, current_hp: int = -1) -> void:
+	if current_hp < 0:
+		current_hp = max_hp
+	_suppress_unblocked_damage_signal = true
+	max_health = max_hp
+	health = current_hp
+	_suppress_unblocked_damage_signal = false
+
+
 func set_max_health(value : int) -> void:
 	var diff := value - max_health
 	max_health = value

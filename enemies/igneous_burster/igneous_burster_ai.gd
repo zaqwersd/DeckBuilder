@@ -80,10 +80,10 @@ func stop_explode_pulse() -> void:
 func get_action() -> EnemyAction:
 	match _phase:
 		0, 1:
-			return $Strike5 as EnemyAction
+			return $Strike7 as EnemyAction
 		2:
-			return $Explode as EnemyAction
-	return $Strike5 as EnemyAction
+			return $Explode30 as EnemyAction
+	return $Strike7 as EnemyAction
 
 
 func get_first_conditional_action() -> EnemyAction:

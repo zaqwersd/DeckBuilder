@@ -2,7 +2,11 @@ extends CardState
 
 
 func enter() -> void:
-	if not card_ui.char_stats.can_play_card(card_ui.card, card_ui.get_effective_mana_cost()):
+	if not card_ui.char_stats.can_play_card(
+		card_ui.card,
+		card_ui.get_effective_mana_cost(),
+		card_ui.combat_player
+	):
 		return
 
 	var single_targeted := card_ui.card.is_single_targeted()

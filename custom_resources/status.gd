@@ -15,8 +15,10 @@ enum Polarity {POSITIVE, NEGATIVE}
 @export var stack_type: StackType
 @export var polarity: Polarity = Polarity.POSITIVE
 @export var can_expire: bool
-@export var duration: int : set = set_duration
-@export var stacks: int : set = set_stacks
+var _duration_value: int
+var _stacks_value: int
+@export var duration: int : get = get_duration, set = set_duration
+@export var stacks: int : get = get_stacks, set = set_stacks
 
 @export_group("Status Visuals")
 @export var icon: Texture
@@ -80,11 +82,19 @@ static func format_tooltip_integer(n: int, pol: Polarity = Polarity.POSITIVE) ->
 	return str(n)
 
 
+func get_duration() -> int:
+	return _duration_value
+
+
+func get_stacks() -> int:
+	return _stacks_value
+
+
 func set_duration(new_duration: int) -> void:
-	duration = new_duration
+	_duration_value = new_duration
 	status_changed.emit()
 
 
 func set_stacks(new_stacks: int) -> void:
-	stacks = new_stacks
+	_stacks_value = new_stacks
 	status_changed.emit()

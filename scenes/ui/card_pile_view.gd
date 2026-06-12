@@ -3,12 +3,15 @@ extends CardGridListing
 
 const CARD_UPGRADE_FLOW := preload("res://scenes/ui/card_upgrade_flow.tscn")
 const COMBAT_CARD_MENU_UI_SCENE := preload("res://scenes/ui/combat_card_menu_ui.tscn")
+## 内容区相对屏幕的上下边距（运行时写入 MarginContainer，避免仅改 .tscn 与预期不符）
+const CONTENT_MARGIN_TOP := 10
+const CONTENT_MARGIN_BOTTOM := 10
 
 @export var card_pile: CardPile
 ## 战斗中略小于 1；跑图牌库界面可保持 1。与 CardMenuUI 设计尺寸配套的中心缩放。
 @export_range(0.65, 1.0, 0.01) var display_scale: float = 1.0
 ## 战斗三牌堆为 COMBAT（白字 + 数值红绿）；跑图牌库等保持默认 LISTING（黄/灰/红词条色）。
-@export var number_bbcode_style: Card.NumberBbcodeStyle = Card.NumberBbcodeStyle.LISTING_UPGRADE
+@export var number_bbcode_style: Card.NumberBbcodeStyle = Card.NumberBbcodeStyle.LISTING_PLAIN
 
 @onready var title: Label = %Title
 @onready var cards: GridContainer = %Cards
@@ -22,7 +25,16 @@ func get_card_listing_grid() -> GridContainer:
 	return cards
 
 
+func _apply_content_margins() -> void:
+	var margin := get_node_or_null("MarginContainer") as MarginContainer
+	if margin == null:
+		return
+	margin.add_theme_constant_override("margin_top", CONTENT_MARGIN_TOP)
+	margin.add_theme_constant_override("margin_bottom", CONTENT_MARGIN_BOTTOM)
+
+
 func _ready() -> void:
+	_apply_content_margins()
 	super._ready()
 	back_button.pressed.connect(hide)
 	visibility_changed.connect(_on_visibility_changed_pointer_exclusive)

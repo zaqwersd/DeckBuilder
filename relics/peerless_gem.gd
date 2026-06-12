@@ -1,18 +1,20 @@
 extends Relic
 
+## 无上宝石 — 已从游戏中移除（见 `GameContent.DISABLED_RELIC_IDS`），本文件仅作备查。
+
 ## 记录被升级的卡牌名，用于动态 tooltip
 var upgraded_card_name: String = ""
 
 
 ## 筛选可升级的卡牌
 func _filter_upgradeable(card: Card) -> bool:
-	return card.has_any_upgradeable_track()
+	return card.can_be_upgraded()
 
 
 ## 动态 tooltip：如果已升级过卡牌，显示升级记录
 func get_tooltip() -> String:
 	if not upgraded_card_name.is_empty():
-		return "利用无上宝石的力量，你将[color=%s]%s[/color]升至了满级。" % [Card.COMBAT_MODIFIED_GREEN, upgraded_card_name]
+		return "利用无上宝石的力量，你将[color=%s]%s[/color]升级了。" % [Card.COMBAT_MODIFIED_GREEN, upgraded_card_name]
 	return tooltip
 
 
@@ -31,7 +33,7 @@ func apply_persistent_pickup_on_acquire_async(_run: Node) -> void:
 	## 检查牌组中是否有可升级的卡牌
 	var has_upgradeable := false
 	for card in run.character.deck.cards:
-		if card.has_any_upgradeable_track():
+		if card.can_be_upgraded():
 			has_upgradeable = true
 			break
 
@@ -45,7 +47,7 @@ func apply_persistent_pickup_on_acquire_async(_run: Node) -> void:
 		run.character.deck,
 		1,  ## 只选1张
 		Callable(),  ## 无需额外验证
-		"选择一张卡牌将其所有词条升至满级",
+		"选择一张卡牌进行升级",
 		PackedStringArray(),  ## 不限制特定卡牌ID
 		Callable(),  ## 使用默认确认条件（选满1张）
 		Callable(self, "_filter_upgradeable"),  ## 只显示可升级的卡牌
@@ -63,9 +65,8 @@ func apply_persistent_pickup_on_acquire_async(_run: Node) -> void:
 
 		var idx: int = indices[0]
 
-		## 打开升级流程，直接显示满级预览
 		var flow := CardUpgradeFlow.open_on_tree(run.get_tree())
-		flow.begin_max_out(run.character.deck, idx)
+		flow.begin(run.character.deck, idx)
 
 		var result: int = await flow.finished
 

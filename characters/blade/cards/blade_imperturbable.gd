@@ -4,38 +4,19 @@ const NEXT_TURN_MANA_STATUS := preload("res://statuses/next_turn_mana.tres")
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["cost", "block"])
+	return PackedStringArray(["block"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
-		"cost":
-			return PackedInt32Array([2, 1])
 		"block":
-			return PackedInt32Array([10, 14])
+			return PackedInt32Array([10, 15])
 		_:
 			return PackedInt32Array()
 
 
-func _intrinsic_cost() -> int:
-	return get_upgrade_value_at("cost")
-
-
 func _intrinsic_block() -> int:
 	return get_upgrade_value_at("block")
-
-
-func should_visualize_cost_as_upgradeable() -> bool:
-	var ch := get_upgrade_chain("cost")
-	if ch.is_empty():
-		return false
-	return not is_upgrade_track_maxed("cost")
-
-
-func increment_upgrade_track(track_id: String) -> void:
-	super.increment_upgrade_track(track_id)
-	if track_id == "cost":
-		cost = _intrinsic_cost()
 
 
 func get_upgrade_pick_description_bbcode() -> String:

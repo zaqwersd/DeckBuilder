@@ -1,11 +1,9 @@
-[gd_resource type="Resource" script_class="BattleStats" format=3]
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://g7y0r016qhow"]
 
-[ext_resource type="PackedScene" path="res://battles/igneous_burster.tscn" id="1_scn"]
+[ext_resource type="PackedScene" uid="uid://8vweqnmpehhu" path="res://battles/igneous_burster.tscn" id="1_scn"]
 [ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="2_bs"]
 
 [resource]
 script = ExtResource("2_bs")
 weight = 2.5
-gold_reward_min = 52
-gold_reward_max = 74
 enemies = ExtResource("1_scn")

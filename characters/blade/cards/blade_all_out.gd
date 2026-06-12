@@ -7,7 +7,7 @@ func get_upgrade_track_ids() -> PackedStringArray:
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	if track_id == "formula":
-		return PackedInt32Array([0, 1, 2])
+		return PackedInt32Array([0, 1])
 	return PackedInt32Array()
 
 
@@ -20,9 +20,7 @@ func _damage_mult() -> int:
 		0:
 			return 9
 		1:
-			return 12
-		2:
-			return 16
+			return 13
 		_:
 			return 9
 
@@ -32,9 +30,7 @@ func _formula_display_plain() -> String:
 		0:
 			return "9X"
 		1:
-			return "12X"
-		2:
-			return "16X"
+			return "13X"
 		_:
 			return "9X"
 

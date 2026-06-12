@@ -7,13 +7,8 @@ func _snapback_y_threshold() -> float:
 
 
 func enter() -> void:
-	card_ui.targets.clear()
-	# 瞄准抬起时仍可能与手牌重叠，提高层级以免点到下层牌
-	card_ui.z_index = 40
-	card_ui.z_as_relative = true
-	var offset := Vector2(card_ui.parent.size.x / 2, -card_ui.size.y / 2)
-	offset.x -= card_ui.size.x / 2
-	card_ui.animate_to_position(card_ui.parent.global_position + offset, 0.2)
+	card_ui.apply_picked_card_layer_order()
+	card_ui.animate_to_position(card_ui.get_play_area_global_position(), 0.2)
 	card_ui.drop_point_detector.monitoring = false
 	Events.card_aim_started.emit(card_ui)
 
@@ -29,6 +24,8 @@ func on_input(event: InputEvent) -> void:
 	if (mouse_motion and mouse_at_bottom) or event.is_action_pressed("right_mouse"):
 		card_ui.targets.clear()
 		transition_requested.emit(self, CardState.State.BASE)
-	elif event.is_action_released("left_mouse") or event.is_action_pressed("left_mouse"):
+	elif event.is_action_released("left_mouse"):
+		if card_ui.card.is_single_targeted() and card_ui.targets.is_empty():
+			return
 		get_viewport().set_input_as_handled()
 		transition_requested.emit(self, CardState.State.RELEASED)

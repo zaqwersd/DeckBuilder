@@ -103,7 +103,7 @@ func _upgrade_modal_layer() -> CanvasLayer:
 
 
 func _upgrade_picker_ok(c: Card) -> bool:
-	return c.has_any_upgradeable_track()
+	return c.can_be_upgraded()
 
 
 func _enter_campfire_await_leave_phase() -> void:
@@ -165,27 +165,29 @@ func _on_upgrade_button_pressed() -> void:
 	if char_stats == null or char_stats.deck == null:
 		return
 	var layer := _upgrade_modal_layer()
+	var overlay: DeckPickerOverlay = null
 	
-	# 循环处理选牌和升级的切换
 	while true:
-		var overlay := DECK_PICKER_OVERLAY.instantiate() as DeckPickerOverlay
-		layer.add_child(overlay)
-		overlay.setup(
-			char_stats.deck,
-			1,
-			Callable(),
-			"选择要升级的牌。",
-			PackedStringArray(),
-			Callable(),
-			Callable(self, "_upgrade_picker_ok"),
-			true,
-			true
-		)
+		if overlay == null or not is_instance_valid(overlay):
+			overlay = DECK_PICKER_OVERLAY.instantiate() as DeckPickerOverlay
+			layer.add_child(overlay)
+			overlay.setup(
+				char_stats.deck,
+				1,
+				Callable(),
+				"选择要升级的牌。",
+				PackedStringArray(),
+				Callable(),
+				Callable(self, "_upgrade_picker_ok"),
+				true,
+				true
+			)
+		
 		var indices: Array = await overlay.pick_confirmed
 		if indices.is_empty():
 			if is_instance_valid(overlay):
 				overlay.queue_free()
-			return  # 用户彻底取消
+			return
 		
 		var idx := int(indices[0])
 		_upgrade_save_index = idx
@@ -194,24 +196,23 @@ func _on_upgrade_button_pressed() -> void:
 		var flow := CARD_UPGRADE_FLOW.instantiate() as CardUpgradeFlow
 		layer.add_child(flow)
 		flow.begin(char_stats.deck, idx)
-		
-		# 等待升级流程结束
 		var result: int = await flow.finished
-		
-		if is_instance_valid(overlay):
-			overlay.queue_free()
 		
 		if result == CardUpgradeFlow.Result.BACK_TO_PICK:
 			_upgrade_save_index = -1
 			_upgrade_save_card_backup = null
-			continue  # 返回到选牌界面
+			if is_instance_valid(overlay):
+				overlay.clear_selection()
+			continue
+		
+		if is_instance_valid(overlay):
+			overlay.queue_free()
 		
 		if result == CardUpgradeFlow.Result.CANCELLED:
 			_upgrade_save_index = -1
 			_upgrade_save_card_backup = null
-			return  # 用户彻底取消
+			return
 		
-		# 升级完成，跳出循环
 		_campfire_leave_after_rest = false
 		break
 	

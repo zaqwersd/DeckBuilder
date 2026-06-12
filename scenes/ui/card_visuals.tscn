@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://ob012okcmmku" path="res://scenes/ui/card_visuals_base.gd" id="2_uk7ay"]
 [ext_resource type="Resource" uid="uid://byi0cfoedmlm0" path="res://characters/blade/cards/blade_slash.tres" id="3_t04tx"]
 [ext_resource type="Texture2D" uid="uid://dqhofl8e3dul3" path="res://art/all_out.png" id="4_x0ouv"]
+[ext_resource type="Texture2D" path="res://art/upgraded.png" id="5_upgrade_icon"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_x0ouv"]
 size = Vector2(194, 285)
@@ -145,12 +146,24 @@ offset_right = 215.0
 offset_bottom = 47.0
 
 [node name="UpgradeLevel" type="Label" parent="UpgradeLevelPanel" unique_id=104683401]
+visible = false
 layout_mode = 0
 offset_right = 46.0
 offset_bottom = 36.0
 text = "1↑"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="UpgradeIcon" type="TextureRect" parent="UpgradeLevelPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("5_upgrade_icon")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Area2D" type="Area2D" parent="." unique_id=657566441]
 visible = false

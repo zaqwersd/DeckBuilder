@@ -37,6 +37,12 @@ func _wants_elevated_keyword_tooltip() -> bool:
 	return Events.effective_canvas_layer_of(self) >= ELEVATED_KEYWORD_TOOLTIP_MIN_CANVAS_LAYER
 
 
+func ensure_elevated_keyword_tooltip() -> GameTooltip:
+	if _elevated_keyword_tooltip == null:
+		_bind_elevated_keyword_tooltip()
+	return _elevated_keyword_tooltip
+
+
 func _bind_elevated_keyword_tooltip() -> void:
 	if _elevated_keyword_tooltip != null:
 		return
@@ -63,8 +69,18 @@ func _unbind_elevated_keyword_tooltip() -> void:
 	_elevated_keyword_tooltip = null
 
 
+func _should_handle_elevated_keyword_tooltip_for(near_to: Control) -> bool:
+	if near_to == null or not is_instance_valid(near_to):
+		return false
+	if near_to == self:
+		return true
+	return is_ancestor_of(near_to)
+
+
 func _on_elevated_keyword_tooltip_show(ids: PackedStringArray, near_to: Control) -> void:
 	if not is_inside_tree() or not is_visible_in_tree() or _elevated_keyword_tooltip == null:
+		return
+	if not _should_handle_elevated_keyword_tooltip_for(near_to):
 		return
 	if CardKeywordBbcode.is_combat_tooltip_anchor(near_to):
 		ids = CardKeywordBbcode.without_color_tooltip_ids(ids)
@@ -84,10 +100,22 @@ func reset_listing_keyword_tooltip_state() -> void:
 	Events.card_keyword_tooltip_hide.emit()
 
 
+func _clear_listing_keyword_tooltip_tracking() -> void:
+	_kw_tip_menu = null
+	_kw_tip_ids = PackedStringArray()
+
+
+## 被更高层模态挡住时：只清本地悬停状态并隐藏本层 tooltip，不广播 hide（避免关掉上层固定 tooltip）。
+func _clear_obscured_listing_keyword_tooltip() -> void:
+	_clear_listing_keyword_tooltip_tracking()
+	if _elevated_keyword_tooltip != null:
+		_elevated_keyword_tooltip.hide_tooltip()
+
+
 func _process(_delta: float) -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		if _kw_tip_menu != null or not _kw_tip_ids.is_empty():
-			reset_listing_keyword_tooltip_state()
+			_clear_obscured_listing_keyword_tooltip()
 		return
 	if not is_visible_in_tree():
 		if _kw_tip_menu != null or not _kw_tip_ids.is_empty():

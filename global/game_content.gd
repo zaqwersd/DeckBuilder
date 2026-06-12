@@ -7,7 +7,7 @@ const RELICS_DIR := "res://relics"
 const POTIONS_DIR := "res://potions"
 
 ## 已从奖励/图鉴等玩法池移除，资源文件仍保留在 `res://relics/` 供读档与日后启用。
-const DISABLED_RELIC_IDS: Array[String] = ["confusing_staff", "blinding_potion"]
+const DISABLED_RELIC_IDS: Array[String] = ["confusing_staff", "blinding_potion", "peerless_gem"]
 
 static var _relic_template_cache: Dictionary = {}
 static var _potion_template_cache: Dictionary = {}

@@ -29,7 +29,8 @@ func _ready() -> void:
 
 func update_intents(intents: Array[Intent]) -> void:
 	for c in get_children():
-		c.queue_free()
+		remove_child(c)
+		c.free()
 	if intents.is_empty():
 		hide()
 		return

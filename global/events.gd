@@ -2,16 +2,32 @@ extends Node
 
 ## 本场战斗已形成终局（玩家死亡或场上已无存活敌人）。抽牌/弃牌/飞牌等协程应短路，避免对已释放节点做动画。
 var combat_ended: bool = false
+## 玩家回合开始管线进行中：抑制状态 tick 中途刷新敌人意图。
+var _player_turn_start_resolving: bool = false
+
+
+func begin_player_turn_start_resolving() -> void:
+	_player_turn_start_resolving = true
+
+
+func end_player_turn_start_resolving() -> void:
+	_player_turn_start_resolving = false
+
+
+func is_player_turn_start_resolving() -> bool:
+	return _player_turn_start_resolving
 
 
 func reset_combat_flow() -> void:
 	combat_ended = false
 	_attack_card_effect_depth = 0
+	_player_turn_start_resolving = false
 	## 全局信号若残留旧 Battle 的 Callable，会导致弃牌/回合切换串线（如二层敌人不行动）。
 	_clear_signal_handlers(player_hand_discarded)
 	_clear_signal_handlers(enemy_turn_ended)
 	_clear_signal_handlers(player_turn_ended)
 	_clear_signal_handlers(player_died)
+	combat_flow_reset.emit()
 
 
 func _clear_signal_handlers(sig: Signal) -> void:
@@ -118,6 +134,8 @@ func is_pointer_ui_obscured_for(control: Node) -> bool:
 	return true
 
 
+signal combat_flow_reset
+
 # Card-related events
 signal card_drag_started(card_ui: CardUI)
 signal card_drag_ended(card_ui: CardUI)
@@ -132,6 +150,9 @@ signal card_exhausted(card: Card)
 signal player_hand_cost_context_changed
 ## 玩家战斗属性上下文变化（虚弱、脆弱等）：手牌需刷新攻击/格挡数字。
 signal player_combat_stat_context_changed
+## 玩家回合开始阶段 3 完成：状态激活 + START_OF_TURN tick 已结束，可显示敌人意图并抽牌。
+## 由 PlayerHandler 统一管线发出，顺序见 `player_handler.gd` 顶部注释。
+signal player_turn_intent_context_ready
 
 # Player-related events
 signal player_hand_drawn

@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://mmmampv34myw"]
 
 [ext_resource type="Script" uid="uid://cisww0nydqw55" path="res://enemies/little_skelton/little_skelton_ai.gd" id="1_ai"]
-[ext_resource type="Script" uid="uid://dasvosn58jno" path="res://enemies/little_skelton/little_skelton_strike5_action.gd" id="2_s5"]
+[ext_resource type="Script" uid="uid://dskel4strikeact" path="res://enemies/little_skelton/little_skelton_strike4_action.gd" id="2_s4"]
 [ext_resource type="Script" uid="uid://cie7g07rrgle0" path="res://enemies/little_skelton/little_skelton_strike3_frail_action.gd" id="3_s3f"]
-[ext_resource type="Script" uid="uid://c1a76nyokargb" path="res://enemies/little_skelton/little_skelton_buff3_action.gd" id="4_buff"]
-[ext_resource type="Script" path="res://enemies/little_skelton/little_skelton_shield_lowest_action.gd" id="5_shield"]
+[ext_resource type="Script" uid="uid://dskel2buff1act" path="res://enemies/little_skelton/little_skelton_strike2_buff1_action.gd" id="4_strike2_buff1"]
+[ext_resource type="Script" uid="uid://dskelshld12act" path="res://enemies/little_skelton/little_skelton_shield12_action.gd" id="5_shield12"]
 [ext_resource type="Script" uid="uid://dxgwh7ui04omh" path="res://custom_resources/intent.gd" id="5_intent"]
 [ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="6_atk"]
 [ext_resource type="AudioStream" uid="uid://k8m4o3hlwm7l" path="res://art/enemy_block.ogg" id="7_blk"]
@@ -30,7 +30,7 @@ kind = 1
 script = ExtResource("1_ai")
 
 [node name="LittleSkeltonStrike4" type="Node" parent="." unique_id=1937504089]
-script = ExtResource("2_s5")
+script = ExtResource("2_s4")
 intent = SubResource("Intent_atk")
 sound = ExtResource("6_atk")
 type = 1
@@ -44,15 +44,16 @@ sound = ExtResource("6_atk")
 type = 1
 chance_weight = 1.0
 
-[node name="LittleSkeltonBuff2" type="Node" parent="." unique_id=163304354]
-script = ExtResource("4_buff")
-intent = SubResource("Intent_buff")
-sound = ExtResource("7_blk")
+[node name="LittleSkeltonStrike2Buff1" type="Node" parent="." unique_id=163304354]
+script = ExtResource("4_strike2_buff1")
+buff_intent = SubResource("Intent_buff")
+intent = SubResource("Intent_atk")
+sound = ExtResource("6_atk")
 type = 1
 chance_weight = 1.0
 
-[node name="LittleSkeltonShieldLowest" type="Node" parent="." unique_id=2847193051]
-script = ExtResource("5_shield")
+[node name="LittleSkeltonShield12" type="Node" parent="." unique_id=2847193051]
+script = ExtResource("5_shield12")
 intent = SubResource("Intent_block")
 sound = ExtResource("7_blk")
 type = 1

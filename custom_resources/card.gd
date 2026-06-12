@@ -5,8 +5,8 @@ enum Type {ATTACK, SKILL, POWER, STATUS}
 enum Rarity {STARTER, COMMON, UNCOMMON, RARE, SPECIAL}
 enum Target {SELF, SINGLE_ENEMY, ALL_ENEMIES, EVERYONE}
 
-## 卡面数值 BBCode：战斗手牌/战斗牌堆为白底 + 仅按实际与基准比红/绿；局外列表/升级/奖励等为黄/灰/红词条色。
-enum NumberBbcodeStyle {COMBAT_PILES_AND_HAND, LISTING_UPGRADE}
+## 卡面数值 BBCode：战斗为白底+红/绿对比；局外列表为默认字色（无黄/灰/红升级提示色）。
+enum NumberBbcodeStyle {COMBAT_PILES_AND_HAND, LISTING_UPGRADE, LISTING_PLAIN}
 
 ## 战斗中与基准相比偏低/偏高（与局外「可弱化负面」红同色，便于统一调色板）
 const COMBAT_MODIFIED_RED := "#f36c60"
@@ -34,6 +34,10 @@ static func get_current_visual_number_bbcode_style() -> NumberBbcodeStyle:
 static func is_visual_number_bbcode_combat() -> bool:
 	return get_current_visual_number_bbcode_style() == NumberBbcodeStyle.COMBAT_PILES_AND_HAND
 
+
+static func is_visual_number_bbcode_listing_plain() -> bool:
+	return get_current_visual_number_bbcode_style() == NumberBbcodeStyle.LISTING_PLAIN
+
 const RARITY_COLORS := {
 	Card.Rarity.STARTER: Color.GRAY,
 	Card.Rarity.COMMON: Color(0.9, 0.9, 0.9),
@@ -56,6 +60,8 @@ func bbcode_for_modified_number(modified: int, base: int) -> String:
 		if modified > base:
 			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
 		return "[color=%s]%d[/color]" % [COMBAT_BODY_TEXT, modified]
+	if is_visual_number_bbcode_listing_plain():
+		return str(modified)
 	if modified < base:
 		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, modified]
 	if modified > base:
@@ -78,6 +84,8 @@ func bbcode_for_modified_number_with_upgrade_hint(modified: int, base: int, upgr
 		if modified > base:
 			return "[color=%s]%d[/color]" % [COMBAT_MODIFIED_GREEN, modified]
 		return "[color=%s]%d[/color]" % [COMBAT_BODY_TEXT, modified]
+	if is_visual_number_bbcode_listing_plain():
+		return str(modified)
 	if modified < base:
 		return "[color=%s]%d[/color]" % [CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE, modified]
 	if modified > base:
@@ -111,7 +119,9 @@ func should_show_intrinsic_keyword_in_combat_description() -> bool:
 ## 固有：每场战斗开始时优先入手；弃牌堆洗回牌库后与普通牌相同（见词条说明）。
 @export var intrinsic: bool = false
 
-## 各升级轨已升级次数（0=链首数值）；持久化在卡组单卡实例上。
+## 是否已升级（每张卡实例最多一次）；持久化在卡组单卡实例上。
+@export var is_upgraded: bool = false
+## 旧档升级轨步数；读档迁移后清空，新档不再写入。
 @export var upgrade_track_steps: Dictionary = {}
 
 @export_group("Card Visuals")
@@ -150,7 +160,54 @@ func defers_exhaust_to_end_of_play() -> bool:
 	return false
 
 
+## 子类：该卡是否定义了可升级内容（默认：存在升级轨即视为可升）。
+func defines_upgrade() -> bool:
+	return not get_upgrade_track_ids().is_empty()
+
+
+func can_be_upgraded() -> bool:
+	return not is_upgraded and defines_upgrade()
+
+
+## 应用固定的一次性升级（营火、奖励、战斗效果等统一入口）。
+func apply_upgrade() -> void:
+	if not can_be_upgraded():
+		return
+	is_upgraded = true
+	upgrade_track_steps.clear()
+	_apply_upgraded_state()
+
+
+## 子类：升级后同步 cost / intrinsic / exhausts 等；默认同步固有类升级轨。
+func _apply_upgraded_state() -> void:
+	sync_upgraded_flags()
+
+
+## 战斗开局分堆前、恢复快照后调用，与旧 sync_unlocked_intrinsic_flags_from_upgrade_tracks 等价。
+func sync_upgraded_flags() -> void:
+	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+
+
+## 子类：由「解锁固有」类升级轨推导 `intrinsic` 等。
+func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
+	pass
+
+
+## 旧档：任意轨曾升过级 → 视为已升级并套用固定升级后数值。
+func migrate_from_upgrade_tracks() -> void:
+	if upgrade_track_steps.is_empty():
+		return
+	is_upgraded = true
+	upgrade_track_steps.clear()
+	_apply_upgraded_state()
+
+
 func get_upgrade_steps_applied(track_id: String) -> int:
+	if is_upgraded:
+		var ch_up := get_upgrade_chain(track_id)
+		if ch_up.is_empty():
+			return 0
+		return mini(1, ch_up.size() - 1)
 	return int(upgrade_track_steps.get(track_id, 0))
 
 
@@ -159,7 +216,7 @@ func get_upgrade_track_ids() -> PackedStringArray:
 	return PackedStringArray()
 
 
-## 某轨数值链：下标 = 已应用该轨升级次数；链长 1 表示不可升。
+## 某轨数值链：下标 0=未升级，1=升级后（固定一档）；链长 1 表示该轨不参与升级。
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	return PackedInt32Array()
 
@@ -174,6 +231,8 @@ func get_upgrade_value_at(track_id: String, steps_override: int = -1) -> int:
 
 
 func is_upgrade_track_maxed(track_id: String) -> bool:
+	if is_upgraded:
+		return true
 	var ch := get_upgrade_chain(track_id)
 	if ch.is_empty():
 		return true
@@ -181,76 +240,40 @@ func is_upgrade_track_maxed(track_id: String) -> bool:
 
 
 func has_any_upgradeable_track() -> bool:
-	for tid: String in get_upgrade_track_ids():
-		if not is_upgrade_track_maxed(tid):
-			return true
-	return false
+	return can_be_upgraded()
 
 
-## 营火升级：为 true 时跳过玩家点选、随机升一条仍可升的轨（默认 false）。
-func uses_random_upgrade_track_pick() -> bool:
-	return false
+func get_total_upgrade_count() -> int:
+	return 1 if is_upgraded else 0
 
 
-## 战斗等效果：在目标卡牌上随机选一条仍可升的轨（如生死流转变化后的牌）。
-func pick_random_upgrade_track() -> String:
-	var upgradeable: Array[String] = []
-	for tid: String in get_upgrade_track_ids():
-		if not is_upgrade_track_maxed(tid):
-			upgradeable.append(tid)
-	if upgradeable.is_empty():
-		return ""
-	return upgradeable[RNG.instance.randi() % upgradeable.size()]
-
-
-## 营火/牌库：可点击的黄字数值（ugp meta）；该轨已升满则为白字。
-func bbcode_upgrade_pick_digit(track_id: String, value: int) -> String:
-	if is_upgrade_track_maxed(track_id):
+## 局外列表数值；LISTING_PLAIN 与已升级均为默认字色。
+func bbcode_upgrade_pick_digit(_track_id: String, value: int) -> String:
+	if is_upgraded or is_visual_number_bbcode_listing_plain():
 		return str(value)
-	return "[url=ugp:%s][color=%s]%d[/color][/url]" % [track_id, BB_UPGRADE_VALUE, value]
+	return "[color=%s]%d[/color]" % [BB_UPGRADE_VALUE, value]
 
 
-## 营火/牌库：可点击的「可弱化负面」红字数值。
-func bbcode_upgrade_pick_negative_digit(track_id: String, value: int) -> String:
-	if is_upgrade_track_maxed(track_id):
+## 局外列表负面数值；LISTING_PLAIN 与已升级均为默认字色。
+func bbcode_upgrade_pick_negative_digit(_track_id: String, value: int) -> String:
+	if is_upgraded or is_visual_number_bbcode_listing_plain():
 		return str(value)
-	return "[url=ugp:%s][color=%s]%d[/color][/url]" % [track_id, BB_UPGRADE_NEGATIVE_REMOVABLE, value]
+	return "[color=%s]%d[/color]" % [BB_UPGRADE_NEGATIVE_REMOVABLE, value]
 
 
-## 营火「点击词条升级」卡面描述；无可升级内容时返回空字符串。
+## 营火升级界面已废弃；子类可保留供 get_default_tooltip 使用。
 func get_upgrade_pick_description_bbcode() -> String:
 	return ""
 
 
-func increment_upgrade_track(track_id: String) -> void:
-	if is_upgrade_track_maxed(track_id):
-		return
-	var s := get_upgrade_steps_applied(track_id)
-	upgrade_track_steps[track_id] = s + 1
-	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+## 兼容旧调用：等价于 apply_upgrade()。
+func increment_upgrade_track(_track_id: String) -> void:
+	apply_upgrade()
 
 
-## 子类：由「解锁固有」类升级轨推导 `intrinsic`；战斗开局分堆前、恢复快照后也会调用。
-func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
-	pass
-
-
-func get_total_upgrade_count() -> int:
-	var n := 0
-	for tid: String in get_upgrade_track_ids():
-		n += get_upgrade_steps_applied(tid)
-	return n
-
-
-## 将所有可升级轨道一次性升至满级（无上宝石遗物使用）
+## 兼容旧调用：等价于 apply_upgrade()。
 func max_out_all_upgrade_tracks() -> void:
-	for track_id in get_upgrade_track_ids():
-		var ch := get_upgrade_chain(track_id)
-		if not ch.is_empty():
-			## 循环升级直到满级，确保触发子类的同步逻辑（如压剑的cost更新）
-			while not is_upgrade_track_maxed(track_id):
-				increment_upgrade_track(track_id)
-	sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+	apply_upgrade()
 
 
 func is_unplayable() -> bool:

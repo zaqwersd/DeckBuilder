@@ -7,7 +7,7 @@ const INITIAL_WAKE_TURNS := 3
 const SLEEP_ACTION_NAME := "MimicSleep"
 const WAKE_STRIKE_NAME := "MimicWakeStrike20"
 const STRIKE8_NAME := "MimicStrike8Exposed"
-const STRIKE16_NAME := "MimicStrike16"
+const STRIKE14_NAME := "MimicStrike14"
 
 var _is_awake := false
 var _pending_wake_strike := false
@@ -73,7 +73,7 @@ func wake_from_sleep() -> void:
 
 func _pick_awake_action() -> EnemyAction:
 	var pool: Array[EnemyAction] = []
-	for action_name in [STRIKE8_NAME, STRIKE16_NAME]:
+	for action_name in [STRIKE8_NAME, STRIKE14_NAME]:
 		var action := get_node_or_null(action_name) as EnemyAction
 		if action == null:
 			continue
@@ -82,7 +82,7 @@ func _pick_awake_action() -> EnemyAction:
 		pool.append(action)
 	
 	if pool.is_empty():
-		for action_name in [STRIKE8_NAME, STRIKE16_NAME]:
+		for action_name in [STRIKE8_NAME, STRIKE14_NAME]:
 			var action := get_node_or_null(action_name) as EnemyAction
 			if action:
 				pool.append(action)

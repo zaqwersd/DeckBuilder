@@ -66,7 +66,7 @@ func apply_to(
 		for card in deck_cards:
 			character.deck.cards.append(card.duplicate(true) as Card)
 		for c: Card in character.deck.cards:
-			c.sync_unlocked_intrinsic_flags_from_upgrade_tracks()
+			c.sync_upgraded_flags()
 	if relic_handler != null:
 		var ids_to_restore := relic_ids
 		if ids_to_restore.is_empty():

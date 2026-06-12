@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="BattleStats" format=3]
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://bq4ddwf7bjokl"]
 
 [ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_bs"]
 [ext_resource type="PackedScene" path="res://battles/evil_spirit.tscn" id="2_scene"]
@@ -6,6 +6,4 @@
 [resource]
 script = ExtResource("1_bs")
 weight = 1.0
-gold_reward_min = 20
-gold_reward_max = 40
 enemies = ExtResource("2_scene")

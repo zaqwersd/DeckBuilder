@@ -13,5 +13,5 @@ cost = 2
 ethereal = true
 card_name = "昙花一现"
 icon = ExtResource("1_f7p2u")
-tooltip_text = "虚无。本回合获得9点力量。"
+tooltip_text = "虚无。本回合获得10点力量。"
 sound = ExtResource("3_822ib")

@@ -9,7 +9,7 @@ func get_upgrade_track_ids() -> PackedStringArray:
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	if track_id == "damage":
-		return PackedInt32Array([12, 15, 20])
+		return PackedInt32Array([16, 22])
 	return PackedInt32Array()
 
 

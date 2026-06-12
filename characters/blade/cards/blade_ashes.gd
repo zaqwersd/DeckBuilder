@@ -1,27 +1,30 @@
 extends Card
 
 const _HIT_DELAY_SEC := 0.12
+const _PER_HIT_DAMAGE := 6
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["damage"])
+	return PackedStringArray(["cost"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	if track_id == "damage":
-		return PackedInt32Array([3, 4, 6])
+	if track_id == "cost":
+		return PackedInt32Array([2, 1])
 	return PackedInt32Array()
 
 
+func _apply_upgraded_state() -> void:
+	super._apply_upgraded_state()
+	cost = get_upgrade_value_at("cost")
+
+
 func get_upgrade_pick_description_bbcode() -> String:
-	var d := get_upgrade_value_at("damage")
-	return "[center]你的消耗堆每有一张牌，对所有敌人造成%s点伤害1次。[/center]" % (
-		bbcode_upgrade_pick_digit("damage", d)
-	)
+	return "[center]你的消耗堆每有一张牌，对所有敌人造成%d点伤害1次。[/center]" % _PER_HIT_DAMAGE
 
 
 func _per_hit_damage() -> int:
-	return get_upgrade_value_at("damage")
+	return _PER_HIT_DAMAGE
 
 
 func get_default_tooltip() -> String:
@@ -35,7 +38,7 @@ func get_updated_tooltip(
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
 		compute_attack_damage_dealt(d_base, player_modifiers, enemy_modifiers, combat_player),
 		d_base,
-		is_upgrade_track_maxed("damage")
+		true
 	)
 	return tooltip_text % dmg_bb
 

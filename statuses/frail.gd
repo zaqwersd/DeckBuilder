@@ -20,19 +20,27 @@ func initialize_status(target: Node) -> void:
 		block_gained_modifier.add_new_value(frail_modifier_value)
 	if not status_changed.is_connected(_on_status_changed):
 		status_changed.connect(_on_status_changed.bind(block_gained_modifier))
-	Events.player_combat_stat_context_changed.emit()
+	_emit_player_combat_stat_if_ready()
 
 
 func _on_status_changed(block_gained_modifier: Modifier) -> void:
 	if duration <= 0 and block_gained_modifier:
-		block_gained_modifier.remove_value("frail")
-	Events.player_combat_stat_context_changed.emit()
+		if block_gained_modifier.get_value("frail") != null:
+			block_gained_modifier.remove_value("frail")
+			_emit_player_combat_stat_if_ready()
 
 
 func deactivate_status(target: Node) -> void:
 	if not target is Player:
 		return
 	var block_gained_modifier: Modifier = target.modifier_handler.get_modifier(Modifier.Type.BLOCK_GAINED)
-	if block_gained_modifier:
-		block_gained_modifier.remove_value("frail")
+	if block_gained_modifier == null or block_gained_modifier.get_value("frail") == null:
+		return
+	block_gained_modifier.remove_value("frail")
+	_emit_player_combat_stat_if_ready()
+
+
+static func _emit_player_combat_stat_if_ready() -> void:
+	if Events.is_player_turn_start_resolving():
+		return
 	Events.player_combat_stat_context_changed.emit()

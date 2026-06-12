@@ -20,6 +20,7 @@ static var _opaque_texel_aabb_cache: Dictionary = {}
 @onready var sprite_2d: Sprite2D = $Sprite2D
 @onready var collision_shape_2d: CollisionShape2D = $CollisionShape2D
 @onready var arrow: Sprite2D = $Arrow
+@onready var target_highlight: EnemyTargetHighlight = $TargetHighlight
 @onready var stats_ui: StatusBar = $StatusBar
 @onready var intent_ui: IntentUI = $IntentUI
 @onready var status_handler: StatusHandler = $StatusBar/StatusHandler
@@ -38,6 +39,12 @@ var _skelton_art_seq_step: int = 0
 var _skelton_last_was_long_seq: bool = false
 var _art_anim_timer: Timer
 var _awaiting_interrupt_action: bool = false
+var _skip_intent_on_action_assign := false
+## 本回合已行动：禁止 `update_intent` 再次显示（多敌人刷新、力量同步等）。
+var _intent_suppressed := false
+## 多帧动画敌人：用全部帧不透明区域并集，避免逐帧收缩导致瞄准盒跳动。
+var _fixed_sprite_hitbox_local: Rect2 = Rect2()
+var _hitbox_locked := false
 ## take_damage 调用时若在攻击牌窗口内计数；实际扣血后发出 player_dealt_attack_damage_to_enemy（tween 晚于 end_attack_card_effects）
 var _pending_player_attack_card_hits: int = 0
 
@@ -187,8 +194,19 @@ func _on_stats_healing_applied(amount: int) -> void:
 
 
 func set_current_action(value: EnemyAction) -> void:
+	if current_action == value:
+		return
 	current_action = value
-	update_intent()
+	if not _skip_intent_on_action_assign:
+		update_intent()
+
+
+func _set_current_action_silent(value: EnemyAction) -> void:
+	if current_action == value:
+		return
+	_skip_intent_on_action_assign = true
+	current_action = value
+	_skip_intent_on_action_assign = false
 
 
 func set_enemy_stats(value: EnemyStats) -> void:
@@ -196,7 +214,11 @@ func set_enemy_stats(value: EnemyStats) -> void:
 		_disconnect_stats_combat_signals(stats)
 	if not is_instance_valid(value):
 		stats = null
+		_fixed_sprite_hitbox_local = Rect2()
+		_hitbox_locked = false
 		return
+	_fixed_sprite_hitbox_local = Rect2()
+	_hitbox_locked = false
 	stats = value.create_instance() as EnemyStats
 	_connect_stats_combat_signals(stats)
 	
@@ -222,19 +244,24 @@ func update_stats() -> void:
 	_layout_status_bar()
 
 
-func update_action() -> void:
+func update_action(show_intent: bool = true) -> void:
 	if not enemy_action_picker:
 		return
 	
 	if not current_action:
-		current_action = enemy_action_picker.get_action()
-		update_intent()
+		var action := enemy_action_picker.get_action()
+		if show_intent:
+			current_action = action
+		else:
+			_set_current_action_silent(action)
 		return
 	
 	var new_conditional_action := enemy_action_picker.get_first_conditional_action()
 	if new_conditional_action and current_action != new_conditional_action:
-		current_action = new_conditional_action
-		update_intent()
+		if show_intent:
+			current_action = new_conditional_action
+		else:
+			_set_current_action_silent(new_conditional_action)
 
 
 func update_enemy() -> void:
@@ -250,6 +277,8 @@ func update_enemy() -> void:
 	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
 	_sync_hitbox_to_sprite()
 	setup_ai()
+	if stats is EnemyStats:
+		stats.setup_battle_visual(self)
 	update_stats()
 	_apply_intent_ui_offset()
 	call_deferred("_apply_intent_ui_offset")
@@ -257,6 +286,12 @@ func update_enemy() -> void:
 
 ## 单体牌瞄准依赖与敌人 `Area2D` 的重叠；按贴图 **alpha>阈值** 的实体像素做 AABB，避免整块画布透明边也被当成目标。
 func _sync_hitbox_to_sprite() -> void:
+	if _hitbox_locked:
+		return
+	_apply_hitbox_shape_from_sprite_bounds()
+
+
+func _apply_hitbox_shape_from_sprite_bounds() -> void:
 	if not is_instance_valid(collision_shape_2d) or not is_instance_valid(sprite_2d) or sprite_2d.texture == null:
 		return
 	var r_sprite := _sprite_local_bounds_for_hitbox()
@@ -275,21 +310,125 @@ func _sync_hitbox_to_sprite() -> void:
 	var prev := collision_shape_2d.shape as RectangleShape2D
 	if prev == null:
 		return
-	var rect_shape := prev.duplicate() as RectangleShape2D
 	min_v -= Vector2(HITBOX_PAD_PX, HITBOX_PAD_PX)
 	max_v += Vector2(HITBOX_PAD_PX, HITBOX_PAD_PX)
-	rect_shape.size = max_v - min_v
+	var new_size := max_v - min_v
+	var new_pos := (min_v + max_v) * 0.5
+	if prev.size.is_equal_approx(new_size) and collision_shape_2d.position.is_equal_approx(new_pos):
+		return
+	var rect_shape := prev.duplicate() as RectangleShape2D
+	rect_shape.size = new_size
 	collision_shape_2d.shape = rect_shape
-	collision_shape_2d.position = (min_v + max_v) * 0.5
+	collision_shape_2d.position = new_pos
 	collision_shape_2d.scale = Vector2.ONE
 
 
 ## `Sprite2D` 局部坐标下用于碰撞的轴对齐矩形（优先不透明像素，否则整张贴图 `get_rect()`）。
 func _sprite_local_bounds_for_hitbox() -> Rect2:
+	if _fixed_sprite_hitbox_local.has_area():
+		return _fixed_sprite_hitbox_local
 	var opaque := _opaque_bounds_rect_sprite_local(sprite_2d)
 	if opaque.has_area():
 		return opaque
 	return sprite_2d.get_rect()
+
+
+## 多帧立绘：取全部 `art_frames` 不透明区域并集作为固定瞄准盒（sprite 局部坐标）。
+func apply_fixed_hitbox_from_art_frames(frames: Array[Texture]) -> void:
+	if not is_instance_valid(sprite_2d) or frames.is_empty():
+		return
+	var union := _union_opaque_bounds_for_art_frames(sprite_2d, frames)
+	if not union.has_area():
+		return
+	_fixed_sprite_hitbox_local = union
+	_apply_hitbox_shape_from_sprite_bounds()
+	_hitbox_locked = true
+	_update_arrow_from_hitbox()
+
+
+func get_aim_point_global() -> Vector2:
+	if not is_instance_valid(sprite_2d) or sprite_2d.texture == null:
+		return global_position
+	var r := _sprite_local_bounds_for_hitbox()
+	return to_global(sprite_2d.transform * r.get_center())
+
+
+func get_card_targeting_rect_local() -> Rect2:
+	if not is_instance_valid(stats) or stats.health <= 0:
+		return Rect2()
+	if not is_instance_valid(stats_ui) or not is_instance_valid(intent_ui):
+		return Rect2()
+	var health_ctrl := stats_ui.health as Control
+	if not is_instance_valid(health_ctrl):
+		return Rect2()
+	var health_gr := health_ctrl.get_global_rect()
+	var health_top_global := health_gr.position
+	var intent_gr := intent_ui.get_global_rect()
+	var intent_bottom_global := intent_gr.position + Vector2(0.0, intent_gr.size.y)
+	var health_top_local := to_local(health_top_global)
+	var intent_bottom_local := to_local(intent_bottom_global)
+	var w := float(clampi(stats.health_bar_width, 40, 400))
+	var y_top := intent_bottom_local.y
+	var y_bottom := health_top_local.y
+	var h := y_bottom - y_top
+	if h <= 0.0:
+		return Rect2()
+	var cx := to_local(health_gr.position + Vector2(health_gr.size.x * 0.5, 0.0)).x
+	return Rect2(cx - w * 0.5, y_top, w, h)
+
+
+func get_card_targeting_rect_global() -> Rect2:
+	var local := get_card_targeting_rect_local()
+	if not local.has_area():
+		return Rect2()
+	var p0 := to_global(local.position)
+	var p1 := to_global(local.position + Vector2(local.size.x, 0.0))
+	var p2 := to_global(local.position + Vector2(0.0, local.size.y))
+	var p3 := to_global(local.position + local.size)
+	var min_v := p0.min(p1).min(p2).min(p3)
+	var max_v := p0.max(p1).max(p2).max(p3)
+	return Rect2(min_v, max_v - min_v)
+
+
+func set_card_targeting_feedback(active: bool, is_valid_target: bool, _mouse_global: Vector2) -> void:
+	if not active or not is_valid_target:
+		if is_instance_valid(target_highlight):
+			target_highlight.hide()
+		if is_instance_valid(arrow):
+			arrow.hide()
+		return
+	var rect := get_card_targeting_rect_local()
+	if is_instance_valid(target_highlight):
+		target_highlight.setup_from_local_rect(rect)
+	if is_instance_valid(arrow):
+		arrow.hide()
+
+
+func _update_arrow_from_hitbox() -> void:
+	if not is_instance_valid(sprite_2d) or not is_instance_valid(arrow):
+		return
+	var r := _sprite_local_bounds_for_hitbox()
+	if not r.has_area():
+		return
+	var right_local := sprite_2d.transform * Vector2(r.position.x + r.size.x, r.get_center().y)
+	arrow.position = Vector2.RIGHT * (right_local.x + ARROW_OFFSET)
+
+
+static func _union_opaque_bounds_for_art_frames(sprite: Sprite2D, frames: Array[Texture]) -> Rect2:
+	if sprite == null or frames.is_empty():
+		return Rect2()
+	var saved_tex := sprite.texture
+	var union := Rect2()
+	for tex: Texture in frames:
+		if tex == null:
+			continue
+		sprite.texture = tex
+		var bounds := _opaque_bounds_rect_sprite_local(sprite)
+		if not bounds.has_area():
+			continue
+		union = bounds if not union.has_area() else union.merge(bounds)
+	sprite.texture = saved_tex
+	return union
 
 
 ## 在 Sprite2D 局部空间中，不透明像素相对当前 `get_rect()` 绘制域的包围盒；失败返回空 Rect2（`has_area()` 为 false）。
@@ -375,8 +514,13 @@ static func _map_texel_aabb_to_sprite_local(sprite: Sprite2D, opaque: Rect2i, re
 
 
 func clear_intent_display() -> void:
-	current_action = null
+	_intent_suppressed = false
 	_apply_intent_ui_hidden()
+	_set_current_action_silent(null)
+
+
+func is_intent_suppressed() -> bool:
+	return _intent_suppressed
 
 
 func _apply_intent_ui_hidden() -> void:
@@ -386,7 +530,21 @@ func _apply_intent_ui_hidden() -> void:
 	_hide_intent_hover_tooltip_if_active()
 
 
+func is_intent_display_visible() -> bool:
+	return is_instance_valid(intent_ui) and intent_ui.visible
+
+
 func update_intent() -> void:
+	if not is_inside_tree():
+		return
+	var handler := get_parent() as EnemyHandler
+	if handler == null:
+		handler = get_tree().get_first_node_in_group("enemy_handler") as EnemyHandler
+	if handler != null and handler.is_intent_reveal_pending():
+		return
+	if _intent_suppressed:
+		_apply_intent_ui_hidden()
+		return
 	var planned: Array[Intent] = []
 	if current_action:
 		current_action.update_planned_intents()
@@ -414,7 +572,10 @@ func do_turn() -> void:
 	if not is_instance_valid(self) or not is_instance_valid(current_action):
 		return
 
+	_intent_suppressed = true
 	current_action.perform_action()
+	await _await_self_action_completed()
+	_apply_intent_ui_hidden()
 
 
 ## 玩家回合内迅捷等插队：播放意图动画并等待本次 `perform_action` 结束。
@@ -587,9 +748,9 @@ func _apply_sequence_art_frame() -> void:
 	if frame_idx < 0 or frame_idx >= stats.art_frames.size():
 		return
 	sprite_2d.texture = stats.art_frames[frame_idx]
-	_sync_hitbox_to_sprite()
-	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
-	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
+	if not _hitbox_locked:
+		_sync_hitbox_to_sprite()
+		_update_arrow_from_hitbox()
 
 
 func _start_sequence_art_animation() -> void:
@@ -646,20 +807,12 @@ func _on_art_anim_timer_timeout() -> void:
 		return
 	_art_frame_index = (_art_frame_index + 1) % stats.art_frames.size()
 	sprite_2d.texture = stats.art_frames[_art_frame_index]
-	_sync_hitbox_to_sprite()
-	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
-	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
+	if not _hitbox_locked:
+		_sync_hitbox_to_sprite()
+		_update_arrow_from_hitbox()
 
 
 func _exit_tree() -> void:
 	_stop_art_animation()
 	set_process(false)
 	_hide_intent_hover_tooltip_if_active()
-
-
-func _on_area_entered(_area: Area2D) -> void:
-	arrow.show()
-
-
-func _on_area_exited(_area: Area2D) -> void:
-	arrow.hide()

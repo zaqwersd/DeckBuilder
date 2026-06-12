@@ -8,7 +8,8 @@
 script = ExtResource("2_script")
 id = "blade_flow"
 type = 1
-rarity = 3
+rarity = 2
+cost = 1
 card_name = "心流"
 icon = ExtResource("1_icon")
 tooltip_text = "[center]抽%s张牌。[br]消耗1张手牌。[br]%s[/center]"

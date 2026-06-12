@@ -4,13 +4,11 @@ const _PER_HIT_DELAY_SEC := 0.2
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["damage", "hits"])
+	return PackedStringArray(["hits"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
-		"damage":
-			return PackedInt32Array([3, 4])
 		"hits":
 			return PackedInt32Array([3, 4])
 		_:
@@ -18,16 +16,12 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 
 
 func get_upgrade_pick_description_bbcode() -> String:
-	var d := get_upgrade_value_at("damage")
 	var h := get_upgrade_value_at("hits")
-	return "[center]随机对敌人造成%s点伤害%s次。[/center]" % [
-		bbcode_upgrade_pick_digit("damage", d),
-		bbcode_upgrade_pick_digit("hits", h),
-	]
+	return "[center]随机对敌人造成3点伤害%s次。[/center]" % bbcode_upgrade_pick_digit("hits", h)
 
 
 func _per_hit_damage() -> int:
-	return get_upgrade_value_at("damage")
+	return 3
 
 
 func _hit_count() -> int:
@@ -45,7 +39,7 @@ func get_updated_tooltip(
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
 		compute_attack_damage_dealt(d_base, player_modifiers, enemy_modifiers, combat_player),
 		d_base,
-		is_upgrade_track_maxed("damage")
+		true
 	)
 	var h_base := _hit_count()
 	var hits_bb := bbcode_for_modified_number_with_upgrade_hint(

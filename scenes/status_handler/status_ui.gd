@@ -181,7 +181,7 @@ func _set_superscript_value(value: int) -> void:
 func _should_remove_status_ui() -> bool:
 	if status.can_expire and status.duration <= 0:
 		return true
-	if status.stack_type == Status.StackType.INTENSITY and status.stacks <= 0:
+	if status.stack_type == Status.StackType.INTENSITY and status.stacks == 0:
 		return true
 	return false
 

@@ -3,13 +3,7 @@
 [ext_resource type="Script" uid="uid://dxshrpk7a4p53" path="res://scenes/ui/main_menu.gd" id="1_bck1p"]
 [ext_resource type="Resource" uid="uid://2t25oghngf1a" path="res://scenes/run/run_startup.tres" id="2_4poyw"]
 [ext_resource type="PackedScene" path="res://scenes/ui/game_tooltip.tscn" id="3_kwtip"]
-
-[sub_resource type="Gradient" id="Gradient_7af3e"]
-colors = PackedColorArray(0.2, 0.117647, 0.0509804, 1, 0.054902, 0, 0.0588235, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_1kxac"]
-gradient = SubResource("Gradient_7af3e")
-width = 225
+[ext_resource type="Texture2D" uid="uid://dxkg0vt6ka86m" path="res://art/title.png" id="3_m1kxf"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_rnxpd"]
 line_spacing = 45.0
@@ -34,7 +28,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = SubResource("GradientTexture1D_1kxac")
+texture = ExtResource("3_m1kxf")
 
 [node name="Title" type="Label" parent="." unique_id=656957760]
 layout_mode = 1

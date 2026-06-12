@@ -22,11 +22,11 @@ func get_action() -> EnemyAction:
 		0:
 			return $InsertThreeGhosts as EnemyAction
 		1:
-			return $Strike15Haunted as EnemyAction
+			return $Strike20Haunted as EnemyAction
 		2:
 			return $Strike6Insert2Ghosts as EnemyAction
 		3:
-			return $TripleHit as EnemyAction
+			return $Strike3x4 as EnemyAction
 		4:
 			return $BuffTwoHaunted1 as EnemyAction
 	return $InsertThreeGhosts as EnemyAction

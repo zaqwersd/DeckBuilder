@@ -1,11 +1,9 @@
-[gd_resource type="Resource" script_class="BattleStats" format=3]
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://dpdv17iba0cor"]
 
 [ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_bs"]
-[ext_resource type="PackedScene" path="res://battles/mimic.tscn" id="2_scene"]
+[ext_resource type="PackedScene" uid="uid://djjkug35g3a0n" path="res://battles/mimic.tscn" id="2_scene"]
 
 [resource]
 script = ExtResource("1_bs")
 weight = 1.0
-gold_reward_min = 80
-gold_reward_max = 105
 enemies = ExtResource("2_scene")

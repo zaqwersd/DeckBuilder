@@ -1,42 +1,50 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://enemies/crab/crab_enemy_ai.gd" id="1_ai"]
-[ext_resource type="Script" path="res://enemies/crab/crab_strike7_block4_action.gd" id="2_s7b4"]
-[ext_resource type="Script" path="res://enemies/crab/crab_strike3x_turn_action.gd" id="3_s3n"]
-[ext_resource type="Script" path="res://enemies/crab/crab_block15_action.gd" id="4_b15"]
-[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
-[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
-[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
+[ext_resource type="Script" path="res://enemies/crab/crab_block10_action.gd" id="2_b10"]
+[ext_resource type="Script" path="res://enemies/crab/crab_strike5_block5_action.gd" id="3_s5b5"]
+[ext_resource type="Script" path="res://enemies/crab/crab_strike11_action.gd" id="4_s11"]
+[ext_resource type="Script" path="res://enemies/crab/crab_buff5_action.gd" id="5_buff"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="6_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="7_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_blk"]
 
 [sub_resource type="Resource" id="Intent_strike"]
-script = ExtResource("5_intent")
+script = ExtResource("6_intent")
 
-[sub_resource type="Resource" id="Intent_block4"]
-script = ExtResource("5_intent")
+[sub_resource type="Resource" id="Intent_block"]
+script = ExtResource("6_intent")
 kind = 1
 
-[sub_resource type="Resource" id="Intent_multihit"]
-script = ExtResource("5_intent")
-
-[sub_resource type="Resource" id="Intent_block15"]
-script = ExtResource("5_intent")
+[sub_resource type="Resource" id="Intent_block5"]
+script = ExtResource("6_intent")
 kind = 1
+
+[sub_resource type="Resource" id="Intent_buff"]
+script = ExtResource("6_intent")
+kind = 2
+base_text = "+%d 力量"
 
 [node name="CrabEnemyAI" type="Node"]
 script = ExtResource("1_ai")
 
-[node name="CrabStrike7Block4" type="Node" parent="."]
-script = ExtResource("2_s7b4")
+[node name="CrabBlock10" type="Node" parent="."]
+script = ExtResource("2_b10")
+intent = SubResource("Intent_block")
+sound = ExtResource("8_blk")
+
+[node name="CrabStrike5Block5" type="Node" parent="."]
+script = ExtResource("3_s5b5")
 intent = SubResource("Intent_strike")
-block_intent = SubResource("Intent_block4")
-sound = ExtResource("6_atk")
+block_intent = SubResource("Intent_block5")
+sound = ExtResource("7_atk")
 
-[node name="CrabStrike4xTurn" type="Node" parent="."]
-script = ExtResource("3_s3n")
-intent = SubResource("Intent_multihit")
-sound = ExtResource("6_atk")
+[node name="CrabStrike11" type="Node" parent="."]
+script = ExtResource("4_s11")
+intent = SubResource("Intent_strike")
+sound = ExtResource("7_atk")
 
-[node name="CrabBlock15" type="Node" parent="."]
-script = ExtResource("4_b15")
-intent = SubResource("Intent_block15")
-sound = ExtResource("7_blk")
+[node name="CrabBuff5" type="Node" parent="."]
+script = ExtResource("5_buff")
+intent = SubResource("Intent_buff")
+sound = ExtResource("8_blk")

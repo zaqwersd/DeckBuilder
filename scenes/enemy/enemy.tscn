@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/intent_ui.tscn" id="5_xytk4"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier_handler.tscn" id="7_xbm7w"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier.tscn" id="8_akusk"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy_target_highlight.tscn" id="9_target_highlight"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_3gsft"]
 
@@ -42,5 +43,4 @@ offset_bottom = -45
 [node name="DamageTakenModifier" parent="ModifierHandler" instance=ExtResource("8_akusk")]
 type = 1
 
-[connection signal="area_entered" from="." to="." method="_on_area_entered"]
-[connection signal="area_exited" from="." to="." method="_on_area_exited"]
+[node name="TargetHighlight" parent="." instance=ExtResource("9_target_highlight")]

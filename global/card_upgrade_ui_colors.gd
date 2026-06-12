@@ -25,6 +25,33 @@ static func color_bb_inactive_keyword() -> Color:
 	return Color.html(BB_INACTIVE_KEYWORD)
 
 
+## 局外列表：去掉描述中的黄/红/灰 [color] 与 ugp 链接外壳，保留正文。
+static func strip_listing_highlight_bbcode(text: String) -> String:
+	var out := text
+	var colors: Array[String] = [BB_VALUE, BB_NEGATIVE_REMOVABLE, BB_INACTIVE_KEYWORD]
+	var changed := true
+	while changed:
+		changed = false
+		for c: String in colors:
+			var open := "[color=%s]" % c
+			var idx := out.find(open)
+			if idx == -1:
+				continue
+			var close := "[/color]"
+			var end := out.find(close, idx)
+			if end == -1:
+				continue
+			var inner := out.substr(idx + open.length(), end - idx - open.length())
+			out = out.substr(0, idx) + inner + out.substr(end + close.length())
+			changed = true
+			break
+	var ugp_open := RegEx.new()
+	ugp_open.compile("\\[url=ugp:[^\\]]+\\]")
+	out = ugp_open.sub(out, "", true)
+	out = out.replace("[/url]", "")
+	return out
+
+
 static func style_panel_flat() -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PANEL_FILL

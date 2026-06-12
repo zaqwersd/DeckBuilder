@@ -7,17 +7,16 @@
 [ext_resource type="Resource" uid="uid://bn5rwde1qkvaa" path="res://relics/turtle_shell.tres" id="4_r2"]
 [ext_resource type="Resource" uid="uid://cgsogoyh252sk" path="res://relics/wooden_sword.tres" id="7_r5"]
 [ext_resource type="Resource" uid="uid://37248vu5lkl0" path="res://relics/defect_machine.tres" id="8_r6"]
-[ext_resource type="Resource" uid="uid://dyjwuq2mh8gtr" path="res://relics/peerless_gem.tres" id="9_r7"]
 [ext_resource type="Resource" uid="uid://cod2sb7pcpgnn" path="res://relics/watermelon.tres" id="10_r8"]
 [ext_resource type="Resource" uid="uid://7vwghchanmp5" path="res://relics/crossbody_bag.tres" id="11_r9"]
 [ext_resource type="Resource" uid="uid://caglyx8wlt4xj" path="res://relics/mobius_strip.tres" id="12_r10"]
 [ext_resource type="Resource" uid="uid://df00on56uhtqj" path="res://relics/martial_scroll.tres" id="13_r11"]
-[ext_resource type="Resource" path="res://relics/emerald_axe.tres" id="14_emerald_axe"]
-[ext_resource type="Resource" path="res://relics/greatshield.tres" id="15_greatshield"]
-[ext_resource type="Resource" path="res://relics/cross.tres" id="16_cross"]
+[ext_resource type="Resource" uid="uid://g5fr1qga57ik" path="res://relics/emerald_axe.tres" id="14_emerald_axe"]
+[ext_resource type="Resource" uid="uid://cp0mad6uqyxv6" path="res://relics/greatshield.tres" id="15_greatshield"]
+[ext_resource type="Resource" uid="uid://bnbguff04tkfj" path="res://relics/cross.tres" id="16_cross"]
 [ext_resource type="Resource" uid="uid://xauh3bj7ne61" path="res://relics/fishbone.tres" id="17_fishbone"]
-[ext_resource type="Resource" path="res://relics/demons_bell.tres" id="18_demons_bell"]
+[ext_resource type="Resource" uid="uid://fy2jitede3my" path="res://relics/demons_bell.tres" id="18_demons_bell"]
 
 [resource]
 script = ExtResource("1_script")
-relics = Array[ExtResource("1_wvm5d")]([ExtResource("2_r0"), ExtResource("3_r1"), ExtResource("4_r2"), ExtResource("7_r5"), ExtResource("8_r6"), ExtResource("9_r7"), ExtResource("10_r8"), ExtResource("11_r9"), ExtResource("12_r10"), ExtResource("13_r11"), ExtResource("14_emerald_axe"), ExtResource("15_greatshield"), ExtResource("16_cross"), ExtResource("17_fishbone"), ExtResource("18_demons_bell")])
+relics = Array[ExtResource("1_wvm5d")]([ExtResource("2_r0"), ExtResource("3_r1"), ExtResource("4_r2"), ExtResource("7_r5"), ExtResource("8_r6"), ExtResource("10_r8"), ExtResource("11_r9"), ExtResource("12_r10"), ExtResource("13_r11"), ExtResource("14_emerald_axe"), ExtResource("15_greatshield"), ExtResource("16_cross"), ExtResource("17_fishbone"), ExtResource("18_demons_bell")])

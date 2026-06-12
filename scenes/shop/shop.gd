@@ -483,6 +483,8 @@ func _pick_shop_cards() -> Array[Card]:
 func _pick_shop_relics() -> Array[Relic]:
 	var available_relics := shop_relics.filter(
 		func(relic: Relic):
+			if not GameContent.is_relic_enabled_in_game(relic.id):
+				return false
 			var can_appear := relic.can_appear_in_shop(char_stats)
 			var already_had_it := relic_handler.has_relic(relic.id)
 			return can_appear and not already_had_it

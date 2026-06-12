@@ -9,9 +9,8 @@ script = ExtResource("2_script")
 id = "blade_samsara"
 type = 1
 rarity = 3
-cost = 1
 exhausts = true
 card_name = "生死流转"
 icon = ExtResource("1_icon")
-tooltip_text = "[center]变化你消耗堆的所有牌，然后将它们[color=#888888]随机升级以后[/color]放入你的抽牌堆。消耗。[/center]"
+tooltip_text = "[center]变化你消耗堆的所有牌，将它们升级并放入你的抽牌堆。消耗。[/center]"
 sound = ExtResource("3_snd")

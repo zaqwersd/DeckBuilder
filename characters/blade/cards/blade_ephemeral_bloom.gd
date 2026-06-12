@@ -1,42 +1,16 @@
 extends Card
 
-## 昙花一现 - 2费稀有技能（可升级至1费）
-## 虚无。本回合获得9（12/17）点力量。
+## 昙花一现 - 2费稀有技能，虚无；升级仅提升本回合临时力量。
 
 
-## 升级轨道：费用 2->1，力量 9->12->17
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["cost", "power_value"])
+	return PackedStringArray(["power_value"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	match track_id:
-		"cost":
-			return PackedInt32Array([2, 1])  ## 2费 -> 1费
-		"power_value":
-			return PackedInt32Array([9, 12, 17])
-		_:
-			return PackedInt32Array()
-
-
-## 获取当前费用值
-func _intrinsic_cost() -> int:
-	return get_upgrade_value_at("cost")
-
-
-## 告诉UI费用可升级（显示黄色）
-func should_visualize_cost_as_upgradeable() -> bool:
-	var ch := get_upgrade_chain("cost")
-	if ch.is_empty():
-		return false
-	return not is_upgrade_track_maxed("cost")
-
-
-## 升级时同步更新费用
-func increment_upgrade_track(track_id: String) -> void:
-	super.increment_upgrade_track(track_id)
-	if track_id == "cost":
-		cost = _intrinsic_cost()
+	if track_id == "power_value":
+		return PackedInt32Array([10, 17])
+	return PackedInt32Array()
 
 
 func _get_power_value() -> int:

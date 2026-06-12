@@ -7,6 +7,8 @@ const HAND_PICK_DELEGATE_META := &"hand_pick_delegate"
 ## 手牌内鼠标悬停时卡牌上移的像素
 const HAND_HOVER_LIFT_PX := 180.0
 const HAND_HOVER_Z := 10
+## 拾起/瞄准中的牌须高于手牌槽悬停层（Hand.HAND_SLOT_HOVER_Z = 500）
+const PICKED_CARD_Z_INDEX := 520
 
 signal reparent_requested(which_card_ui: CardUI)
 
@@ -40,8 +42,8 @@ var _hand_hover_target_visual_y := 0.0
 
 
 func _ready() -> void:
-	Events.card_aim_started.connect(_on_card_drag_or_aiming_started)
-	Events.card_drag_started.connect(_on_card_drag_or_aiming_started)
+	Events.card_aim_started.connect(_on_other_card_aim_started)
+	Events.card_drag_started.connect(_on_other_card_drag_started)
 	Events.card_drag_ended.connect(_on_card_drag_or_aim_ended)
 	Events.card_aim_ended.connect(_on_card_drag_or_aim_ended)
 	card_state_machine.init(self)
@@ -129,12 +131,72 @@ func forward_hand_gui_input(event: InputEvent) -> void:
 func _input(event: InputEvent) -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		return
+	if _is_in_dragging_state():
+		return
 	card_state_machine.on_input(event)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	if not _is_in_dragging_state():
+		return
+	card_state_machine.on_input(event)
+
+
+func _is_in_dragging_state() -> bool:
+	var sm := card_state_machine
+	if not sm or not sm.current_state:
+		return false
+	return sm.current_state.state == CardState.State.DRAGGING
+
+
+func apply_picked_card_layer_order() -> void:
+	z_index = PICKED_CARD_Z_INDEX
+	z_as_relative = false
+	var p := get_parent()
+	if is_instance_valid(p):
+		p.move_child(self, -1)
 
 
 func animate_to_position(new_position: Vector2, duration: float) -> void:
 	tween = create_tween().set_trans(Tween.TRANS_CIRC).set_ease(Tween.EASE_OUT)
 	tween.tween_property(self, "global_position", new_position, duration)
+
+
+func get_play_area_global_position() -> Vector2:
+	var card_size := size
+	if card_size.x <= 0.001 or card_size.y <= 0.001:
+		card_size = _get_scaled_hit_size()
+	var vp_size := get_viewport_rect().size
+	var x := vp_size.x * 0.5 - card_size.x * 0.5
+	var hand_ctrl := _resolve_combat_hand()
+	if hand_ctrl != null:
+		var hand_top := hand_ctrl.get_global_rect().position.y
+		return Vector2(x, hand_top - card_size.y - 28.0)
+	return Vector2(x, vp_size.y * 0.38 - card_size.y * 0.5)
+
+
+func _resolve_combat_hand() -> Hand:
+	if is_instance_valid(hand_slot):
+		var hp := hand_slot.get_parent()
+		if hp is Hand:
+			return hp
+	if not is_inside_tree():
+		return null
+	var ui_layer := get_tree().get_first_node_in_group("ui_layer")
+	if ui_layer is BattleUI and is_instance_valid((ui_layer as BattleUI).hand):
+		return (ui_layer as BattleUI).hand
+	return null
+
+
+func is_mouse_in_hand_zone() -> bool:
+	if not is_instance_valid(hand_slot):
+		return false
+	var hp := hand_slot.get_parent()
+	if hp is Hand:
+		return (hp as Hand).is_mouse_in_play_drag_hand_zone(get_global_mouse_position())
+	return false
 
 
 func _blocked_only_by_play_requirements() -> bool:
@@ -153,7 +215,7 @@ func allows_hand_drag_preview() -> bool:
 		return true
 	if _blocked_only_by_play_requirements():
 		return true
-	return card.type == Card.Type.STATUS and not char_stats.can_play_card(card)
+	return card.type == Card.Type.STATUS and not char_stats.can_play_card(card, -1, combat_player)
 
 
 func reset_hand_hover_lift_instant() -> void:
@@ -526,9 +588,7 @@ func _play_resolved() -> void:
 		if hp and hp.has_method("shrink_slot_before_card_reparent_for_play"):
 			hp.shrink_slot_before_card_reparent_for_play(played_from_hand_slot)
 		reparent(ui_layer)
-		move_to_front()
-		z_index = 128
-		z_as_relative = false
+		apply_picked_card_layer_order()
 		if hp and hp.has_method("remove_empty_slot_after_play"):
 			hp.remove_empty_slot_after_play(played_from_hand_slot)
 		hand_slot = null
@@ -664,7 +724,7 @@ func refresh_mana_cost_display() -> void:
 		return
 	var want := get_effective_mana_cost()
 	if char_stats:
-		var affordable := char_stats.can_play_card(card, want)
+		var affordable := char_stats.can_play_card(card, want, combat_player)
 		if _blocked_only_by_play_requirements():
 			affordable = PlayCostResolver.can_afford_mana(card, char_stats, want)
 		card_visuals.set_combat_effective_mana_affordable(affordable)
@@ -788,20 +848,29 @@ func _on_drop_point_detector_area_exited(area: Area2D) -> void:
 	refresh_combat_description()
 
 
-func _on_card_drag_or_aiming_started(used_card: CardUI) -> void:
+func _on_other_card_drag_started(used_card: CardUI) -> void:
 	if used_card == self:
 		return
-	
+	# 单体指向牌在手牌区内拖动时不锁其它牌；非单体牌拖出即锁。
+	if used_card.card.is_single_targeted():
+		return
+	disabled = true
+	z_index = 0
+
+
+func _on_other_card_aim_started(used_card: CardUI) -> void:
+	if used_card == self:
+		return
 	disabled = true
 	z_index = 0
 
 
 func _on_card_drag_or_aim_ended(_card: CardUI) -> void:
 	disabled = false
-	playable = char_stats.can_play_card(card, get_effective_mana_cost())
+	playable = char_stats.can_play_card(card, get_effective_mana_cost(), combat_player)
 
 
 func _on_char_stats_changed() -> void:
 	if card:
-		playable = char_stats.can_play_card(card, get_effective_mana_cost())
+		playable = char_stats.can_play_card(card, get_effective_mana_cost(), combat_player)
 		refresh_combat_description()

@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://enemies/mimic/mimic_sleep_action.gd" id="2_sleep"]
 [ext_resource type="Script" path="res://enemies/mimic/mimic_wake_strike20_action.gd" id="3_wake"]
 [ext_resource type="Script" path="res://enemies/mimic/mimic_strike8_exposed_action.gd" id="4_s8"]
-[ext_resource type="Script" path="res://enemies/mimic/mimic_strike16_action.gd" id="5_s16"]
+[ext_resource type="Script" path="res://enemies/mimic/mimic_strike14_action.gd" id="5_s14"]
 [ext_resource type="Script" path="res://custom_resources/intent.gd" id="6_intent"]
 [ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="7_atk"]
 
@@ -38,7 +38,7 @@ intent = SubResource("Intent_atk")
 debuff_intent = SubResource("Intent_debuff")
 sound = ExtResource("7_atk")
 
-[node name="MimicStrike16" type="Node" parent="."]
-script = ExtResource("5_s16")
+[node name="MimicStrike14" type="Node" parent="."]
+script = ExtResource("5_s14")
 intent = SubResource("Intent_atk")
 sound = ExtResource("7_atk")

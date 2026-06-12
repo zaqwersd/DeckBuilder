@@ -2,8 +2,8 @@ extends Node2D
 
 const ARC_POINTS := 8
 
-@onready var area_2d: Area2D = $Area2D
 @onready var card_arc: Line2D = $CanvasLayer/CardArc
+@onready var arc_head: Sprite2D = $CanvasLayer/CardArc/ArcHead
 
 var current_card: CardUI
 var targeting := false
@@ -12,47 +12,26 @@ var targeting := false
 func _ready() -> void:
 	Events.card_aim_started.connect(_on_card_aim_started)
 	Events.card_aim_ended.connect(_on_card_aim_ended)
+	Events.combat_flow_reset.connect(_on_combat_reset)
 
 
 func _process(_delta: float) -> void:
 	if not targeting:
 		return
-
-	area_2d.position = get_local_mouse_position()
-	var best := _pick_nearest_overlapping_enemy()
+	var mouse := get_global_mouse_position()
+	var best := EnemyTargeting.pick_enemy_under_mouse(mouse, get_tree())
 	_apply_single_target(best)
-	var arc_end_local := get_local_mouse_position()
-	if best != null:
-		arc_end_local = to_local(_enemy_aim_point_global(best))
-	card_arc.points = _get_points(arc_end_local)
+	_refresh_all_feedback(mouse, best)
+	var points := PackedVector2Array(_get_points(to_local(mouse)))
+	CardTargetingArc.apply_visual(card_arc, arc_head, points, best != null)
 
 
-## 与鼠标距离：用精灵视觉中心（比 Area2D 原点更贴近玩家指向）。
-func _enemy_aim_point_global(e: Enemy) -> Vector2:
-	if not is_instance_valid(e):
-		return Vector2.ZERO
-	var spr := e.sprite_2d
-	if is_instance_valid(spr) and spr.texture:
-		var r := spr.get_rect()
-		return e.to_global(spr.position + r.get_center())
-	return e.global_position
-
-
-func _pick_nearest_overlapping_enemy() -> Enemy:
-	var best: Enemy = null
-	var best_d2 := INF
-	var mp := get_global_mouse_position()
-	for a in area_2d.get_overlapping_areas():
-		if not a is Enemy:
+func _refresh_all_feedback(mouse: Vector2, best: Enemy) -> void:
+	for node in get_tree().get_nodes_in_group("enemies"):
+		if not node is Enemy:
 			continue
-		var e := a as Enemy
-		if not is_instance_valid(e) or not e.is_inside_tree():
-			continue
-		var d2 := _enemy_aim_point_global(e).distance_squared_to(mp)
-		if d2 < best_d2:
-			best_d2 = d2
-			best = e
-	return best
+		var e := node as Enemy
+		e.set_card_targeting_feedback(targeting, e == best, mouse)
 
 
 func _apply_single_target(best: Enemy) -> void:
@@ -93,20 +72,31 @@ func ease_out_cubic(number: float) -> float:
 	return 1.0 - pow(1.0 - number, 3.0)
 
 
-func _on_card_aim_started(card: CardUI) -> void:
+func _begin_targeting(card: CardUI) -> void:
 	if not card.card.is_single_targeted():
 		return
-
+	var was_targeting := targeting
 	targeting = true
-	area_2d.monitoring = true
-	area_2d.monitorable = true
 	current_card = card
+	if not was_targeting:
+		_apply_single_target(null)
+		_refresh_all_feedback(get_global_mouse_position(), null)
+
+
+func _on_card_aim_started(card: CardUI) -> void:
+	_begin_targeting(card)
+
+
+func _on_combat_reset() -> void:
+	_end_targeting()
 
 
 func _on_card_aim_ended(_card: CardUI) -> void:
+	_end_targeting()
+
+
+func _end_targeting() -> void:
 	targeting = false
-	card_arc.clear_points()
-	area_2d.position = Vector2.ZERO
-	area_2d.monitoring = false
-	area_2d.monitorable = false
+	CardTargetingArc.clear_visual(card_arc, arc_head)
+	EnemyTargeting.clear_all_card_targeting_feedback(get_tree())
 	current_card = null

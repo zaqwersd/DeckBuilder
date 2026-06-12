@@ -1,4 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://d3j4xcg8ufof6"]
+[gd_scene load_steps=3 format=3 uid="uid://d3j4xcg8ufof6"]
+
+[ext_resource type="Texture2D" path="res://art/arrow.png" id="1_arrow"]
 
 [sub_resource type="Curve" id="Curve_tt5d5"]
 min_value = 0.2
@@ -7,4 +9,10 @@ point_count = 3
 
 [node name="CardArc" type="Line2D"]
 width = 18
+default_color = Color(1, 1, 1, 1)
 width_curve = SubResource("Curve_tt5d5")
+
+[node name="ArcHead" type="Sprite2D" parent="."]
+visible = false
+scale = Vector2(4, 4)
+texture = ExtResource("1_arrow")
