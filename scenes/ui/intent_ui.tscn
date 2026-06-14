@@ -1,9 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bfyjrydb1nntk"]
 
-[ext_resource type="Script" path="res://scenes/ui/intent_ui.gd" id="1_aarbb"]
+[ext_resource type="Script" uid="uid://mxyuec5k5mms" path="res://scenes/ui/intent_ui.gd" id="1_aarbb"]
 
-[node name="IntentUI" type="HBoxContainer" groups=["intent"]]
-mouse_filter = 2
+[node name="IntentUI" type="HBoxContainer" unique_id=548949387 groups=["intent"]]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
@@ -11,6 +10,7 @@ offset_left = -120.0
 offset_right = 120.0
 offset_bottom = 48.0
 grow_horizontal = 2
+mouse_filter = 2
 theme_override_constants/separation = 6
 alignment = 1
 script = ExtResource("1_aarbb")

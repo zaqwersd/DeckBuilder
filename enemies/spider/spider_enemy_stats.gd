@@ -11,5 +11,5 @@ func create_instance() -> Resource:
 	return instance
 
 
-func setup_battle_visual(enemy: Enemy) -> void:
+func setup_battle_visual(enemy: Node) -> void:
 	SpiderEnemyVisual.attach_to(enemy)

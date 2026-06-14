@@ -104,6 +104,9 @@ func _on_status_apply_tween_finished(type: Status.Type) -> void:
 
 
 func add_status(status: Status) -> void:
+	if _try_block_with_artifact(status):
+		return
+
 	var stackable := status.stack_type != Status.StackType.NONE
 	
 	# Add it if it's new
@@ -128,6 +131,15 @@ func add_status(status: Status) -> void:
 		_emit_player_hand_cost_context_if_needed()
 		return
 
+	if status.id == "malice_state" and _has_status("malice_state"):
+		var existing_malice := _get_status("malice_state") as MaliceStatus
+		var incoming_malice := status as MaliceStatus
+		if existing_malice and incoming_malice:
+			existing_malice.m += incoming_malice.m
+			existing_malice.status_changed.emit()
+		_emit_player_hand_cost_context_if_needed()
+		return
+
 	# If it's unique and we already have it, we can return
 	if not status.can_expire and not stackable:
 		return
@@ -146,6 +158,20 @@ func add_status(status: Status) -> void:
 		if not existing_intensity.awaits_turn_start:
 			existing_intensity.initialize_status(status_owner)
 		_emit_player_hand_cost_context_if_needed()
+
+
+func _try_block_with_artifact(status: Status) -> bool:
+	if status == null or status.id == "artifact":
+		return false
+	if not _has_status("artifact"):
+		return false
+	if not is_harmful_status_for_purge(status):
+		return false
+	var artifact := _get_status("artifact") as ArtifactStatus
+	if artifact == null or artifact.stacks <= 0:
+		return false
+	artifact.consume_one()
+	return true
 
 
 func _emit_player_hand_cost_context_if_needed() -> void:

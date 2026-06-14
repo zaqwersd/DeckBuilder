@@ -1,4 +1,6 @@
 # 玩家回合开始（PlayerHandler._run_player_turn_start_pipeline 统一编排）：
+# 0. 恢复敌人硬壳（须先于所有回合开始效果）
+# 0b. 敌人多层护甲：按层数获得格挡（玩家回合开始）
 # 1. 重置格挡 / 能量
 # 2. 激活上回合挂上、本回合才生效的状态（易伤、缠身等）
 # 3. 战斗开始入手牌类遗物（仅首场一次）
@@ -89,6 +91,8 @@ func start_turn() -> void:
 		return
 	
 	Events.begin_player_turn_start_resolving()
+	HardShellStatus.restore_all_in_tree(get_tree())
+	LayeredArmorStatus.grant_block_all_in_tree(get_tree())
 	
 	# 1. 重置格挡 / 能量
 	character.block = 0

@@ -3,12 +3,17 @@ extends Node2D
 
 const ENEMY_SCENE := preload("res://scenes/enemy/enemy.tscn")
 const LITTLE_SKELTON_STATS := preload("res://enemies/little_skelton/little_skelton_enemy.tres")
+const MINION_STATUS := preload("res://statuses/minion.tres")
 
 const META_SKELETON_SLOT := &"skeleton_slot"
+const META_SPOOK_SLOT := &"spook_slot"
 
 var acting_enemies: Array[Enemy] = []
 ## 小骷髅等遭遇：槽位编号 1~5 → 布局局部坐标
 var slot_positions: Dictionary = {}
+## 幽灵召唤师：本场战斗幽灵登场/复活共用的位置（取自布局里初始幽灵）
+var _spook_spawn_position: Vector2
+var _has_spook_spawn_position := false
 ## 玩家回合开始：状态结算完成前隐藏意图，禁止刷新。
 var _intent_reveal_pending := false
 ## 回合开始刚显示意图后，跳过至抽牌完成前的多余刷新（避免 UI 重建闪变）。
@@ -36,6 +41,7 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 		return
 	
 	slot_positions.clear()
+	_has_spook_spawn_position = false
 	for enemy: Enemy in get_children():
 		enemy.free()
 	
@@ -68,6 +74,7 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 	all_new_enemies.free()
 	LittleSkeltonIntentCoordinator.reset_combat()
 	BoneShewerIntentCoordinator.reset_combat()
+	GhostSummonerCoordinator.reset_combat()
 
 
 func reset_enemy_actions() -> void:
@@ -76,6 +83,7 @@ func reset_enemy_actions() -> void:
 	_ensure_enemy_action_pickers_ready()
 	LittleSkeltonIntentCoordinator.assign_for_handler(self)
 	BoneShewerIntentCoordinator.assign_for_handler(self)
+	GhostSummonerCoordinator.assign_for_handler(self)
 	var enemies: Array[Enemy] = []
 	for child in get_children():
 		if not _is_live_enemy(child):
@@ -132,6 +140,8 @@ func start_turn() -> void:
 		push_error("EnemyHandler.start_turn: 场上没有敌人。")
 		return
 	
+	HardShellStatus.expire_all_in_tree(get_tree())
+	
 	var enemies: Array[Enemy] = []
 	for child in get_children():
 		if not _is_live_enemy(child):
@@ -152,6 +162,96 @@ func _enemy_turn_order_key(enemy: Enemy) -> int:
 	if enemy.has_meta(META_SKELETON_SLOT):
 		return int(enemy.get_meta(META_SKELETON_SLOT))
 	return int(enemy.position.x)
+
+
+func count_live_spooks() -> int:
+	var n := 0
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		if (child as Enemy).stats is SpookEnemyStats:
+			n += 1
+	return n
+
+
+func find_live_spook() -> Enemy:
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		var enemy := child as Enemy
+		if enemy.stats is SpookEnemyStats:
+			return enemy
+	return null
+
+
+func find_ghost_summoner() -> Enemy:
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		var enemy := child as Enemy
+		if enemy.stats is GhostSummonerEnemyStats:
+			return enemy
+	return null
+
+
+func remember_spook_spawn_position(pos: Vector2) -> void:
+	_spook_spawn_position = pos
+	_has_spook_spawn_position = true
+
+
+func get_spook_spawn_position(slot: int) -> Vector2:
+	if _has_spook_spawn_position:
+		return _spook_spawn_position
+	if slot_positions.has(slot):
+		return slot_positions[slot]
+	return Vector2.ZERO
+
+
+func spawn_spook(variant: String, max_hp: int, slot: int = SpookEnemyStats.SPOOK_SLOT) -> Enemy:
+	if count_live_spooks() >= 1:
+		return null
+	if not _has_spook_spawn_position and not slot_positions.has(slot):
+		return null
+	var spawn_pos := get_spook_spawn_position(slot)
+	var stats: EnemyStats = _spook_stats_for_variant(variant)
+	if stats == null:
+		return null
+	var new_enemy := ENEMY_SCENE.instantiate() as Enemy
+	add_child(new_enemy)
+	new_enemy.stats = stats
+	SpookEnemyStats.apply_spawn_health(new_enemy.stats, max_hp)
+	new_enemy.position = spawn_pos
+	if not _has_spook_spawn_position:
+		remember_spook_spawn_position(spawn_pos)
+	new_enemy.set_meta(META_SPOOK_SLOT, slot)
+	new_enemy.status_handler.statuses_applied.connect(_on_enemy_statuses_applied.bind(new_enemy))
+	new_enemy.setup_ai()
+	new_enemy.clear_intent_display()
+	if new_enemy.enemy_action_picker is SpookEnemyAI:
+		(new_enemy.enemy_action_picker as SpookEnemyAI).prepare_for_turn(true)
+	var summoner := find_ghost_summoner()
+	if summoner != null:
+		apply_spook_minion(new_enemy, summoner)
+		var scapeghost := ScapeghostStatus.get_on_enemy(summoner)
+		if scapeghost != null:
+			scapeghost._refresh_modifier()
+	return new_enemy
+
+
+func apply_spook_minion(spook: Enemy, summoner: Enemy) -> void:
+	if spook == null or summoner == null or spook.status_handler == null:
+		return
+	if spook.status_handler.get_status_by_id("minion") != null:
+		return
+	var minion := MINION_STATUS.duplicate() as MinionStatus
+	minion.bind_master(summoner)
+	var effect := StatusEffect.new()
+	effect.status = minion
+	effect.execute([spook])
+
+
+func _spook_stats_for_variant(variant: String) -> EnemyStats:
+	return SpookEnemyStats.stats_for_variant(variant)
 
 
 func count_little_skeltons() -> int:
@@ -216,6 +316,8 @@ func _start_next_enemy_turn() -> void:
 		push_error("EnemyHandler: 敌人 status_handler 无效。")
 		return
 	
+	if is_instance_valid(current_enemy.stats):
+		current_enemy.stats.block = 0
 	current_enemy.status_handler.apply_statuses_by_type(Status.Type.START_OF_TURN)
 
 
@@ -229,6 +331,8 @@ func _on_enemy_statuses_applied(type: Status.Type, enemy: Enemy) -> void:
 
 
 func _on_enemy_died(enemy: Enemy) -> void:
+	if enemy.stats is SpookEnemyStats:
+		GhostSummonerCoordinator.notify_spook_died(self)
 	var is_enemy_turn := acting_enemies.size() > 0
 	acting_enemies.erase(enemy)
 	

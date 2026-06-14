@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("1_es")
+display_name = "熔岩怪"
 ai = ExtResource("3_ai")
 health_bar_width = 200
 status_bar_offset = Vector2(0, 50)

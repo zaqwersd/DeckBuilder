@@ -397,6 +397,8 @@ func _execute_card_effects(targets: Array[Node], modifiers: ModifierHandler) -> 
 func replay_effects_without_payment(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	if not has_play_snapshot():
 		return
+	if plays_card_sound_on_play():
+		_play_card_sound()
 	if is_single_targeted():
 		await _execute_card_effects(targets, modifiers)
 	else:
@@ -437,6 +439,10 @@ func _bbcode_visible_line_breaks(text: String) -> String:
 	return text.replace("\n", "[br]")
 
 
+## 战斗预览：当前瞄准/悬停到的单体敌人（由 CardUI 写入，供 `compute_attack_damage_dealt` 按敌人分别结算）。
+static var preview_target_enemy: Node = null
+
+
 func get_updated_tooltip(_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null) -> String:
 	return tooltip_text
 
@@ -460,17 +466,54 @@ func resolve_attack_damage_dealt(
 	return WeakStatus.apply_to_attack_damage(v, combat_player)
 
 
-## 攻击牌：卡面/提示完整预览（含敌人易伤、巨剑等）。
+static func resolve_preview_combat_player(
+	combat_player: Node,
+	player_modifiers: ModifierHandler
+) -> Player:
+	if combat_player is Player:
+		return combat_player as Player
+	if player_modifiers != null and is_instance_valid(player_modifiers):
+		var owner := player_modifiers.get_parent()
+		if owner is Player:
+			return owner as Player
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		var players := tree.get_nodes_in_group("battle_player")
+		if not players.is_empty() and players[0] is Player:
+			return players[0] as Player
+	return null
+
+
+static func resolve_preview_target_enemy(
+	target_enemy: Node,
+	enemy_modifiers: ModifierHandler
+) -> Node:
+	if is_instance_valid(target_enemy):
+		return target_enemy
+	if is_instance_valid(preview_target_enemy):
+		return preview_target_enemy
+	return MaliceStatus.resolve_enemy_from_modifier_handler(enemy_modifiers)
+
+
+## 攻击牌：卡面/提示完整预览（含敌人易伤、杀气、巨剑等）。仅在有瞄准敌人时套用该敌人的易伤/杀气。
 func compute_attack_damage_dealt(
 	intrinsic: int,
 	player_modifiers: ModifierHandler,
 	enemy_modifiers: ModifierHandler,
-	combat_player: Node = null
+	combat_player: Node = null,
+	target_enemy: Node = null
 ) -> int:
 	var v := resolve_attack_damage_dealt(intrinsic, player_modifiers, combat_player)
-	if enemy_modifiers:
+	var preview_player := resolve_preview_combat_player(combat_player, player_modifiers)
+	var enemy := resolve_preview_target_enemy(target_enemy, enemy_modifiers)
+	if not is_instance_valid(enemy):
+		return OverwhelmingStatus.apply_to_attack_card_preview_damage(preview_player, v, type)
+	var combined := MaliceStatus.get_combined_vulnerable_percent(preview_player, enemy)
+	if combined >= 0.0:
+		v = maxi(0, ceili(float(v) * (1.0 + combined)))
+	elif enemy_modifiers:
 		v = enemy_modifiers.get_modified_value(v, Modifier.Type.DMG_TAKEN)
-	return OverwhelmingStatus.apply_to_attack_card_preview_damage(combat_player, v, type)
+	return OverwhelmingStatus.apply_to_attack_card_preview_damage(preview_player, v, type)
 
 
 func _get_combat_player_for_effects(targets: Array[Node]) -> Node:

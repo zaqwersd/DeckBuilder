@@ -8,10 +8,13 @@ const HEAL_FLOAT_COLOR := Color(0.35, 1.0, 0.5, 1.0)
 
 @onready var sprite_2d: Sprite2D = $Sprite2D
 @onready var stats_ui: StatusBar = $StatusBar
+@onready var hover_name_overlay: Label = $HoverNameOverlay
 @onready var status_handler: StatusHandler = $StatusBar/StatusHandler
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
 
 var _pending_damage_dealer: Enemy
+var _lethal_death_pending := false
+var _pointer_hover := false
 
 
 func set_pending_damage_dealer(dealer: Enemy) -> void:
@@ -25,9 +28,82 @@ func clear_pending_damage_dealer() -> void:
 func _ready() -> void:
 	status_handler.status_owner = self
 	stats_ui.resized.connect(_schedule_layout_status_bar)
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.hide_immediate()
 	if is_instance_valid(stats):
 		_connect_stats_combat_signals(stats)
 	call_deferred("_layout_status_bar")
+	set_process(false)
+
+
+func _exit_tree() -> void:
+	set_process(false)
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.hide_immediate()
+
+
+func _process(_delta: float) -> void:
+	if not is_inside_tree():
+		return
+	if Events.is_combat_ended():
+		_update_pointer_hover_state()
+		return
+	if stats == null or stats.health <= 0 or _lethal_death_pending:
+		_update_pointer_hover_state()
+		return
+	_update_pointer_hover_state()
+
+
+func _pointer_over_sprite() -> bool:
+	if not is_instance_valid(sprite_2d) or sprite_2d.texture == null:
+		return false
+	var local_point := sprite_2d.to_local(get_global_mouse_position())
+	return sprite_2d.get_rect().has_point(local_point)
+
+
+func _pointer_over_status_ui(screen_global: Vector2) -> bool:
+	return CombatPointer.control_has_screen_point(stats_ui, screen_global)
+
+
+func _update_pointer_hover_state() -> void:
+	var over := false
+	if is_instance_valid(stats) and stats.health > 0 and not _lethal_death_pending and not Events.is_combat_ended():
+		var viewport := get_viewport()
+		var screen_pos := CombatPointer.screen_mouse(viewport)
+		over = _pointer_over_sprite() or _pointer_over_status_ui(screen_pos)
+		if over and is_instance_valid(stats_ui) and Events.is_pointer_ui_obscured_for(stats_ui):
+			over = false
+	if over == _pointer_hover:
+		return
+	_pointer_hover = over
+	_refresh_hover_name_visual()
+
+
+func _player_has_display_name() -> bool:
+	return stats is CharacterStats and not (stats as CharacterStats).get_display_name().is_empty()
+
+
+func _sync_combatant_hover_name_text() -> void:
+	if not is_instance_valid(hover_name_overlay) or stats == null:
+		return
+	hover_name_overlay.set_display_name((stats as CharacterStats).get_display_name())
+
+
+func _refresh_hover_name_visual() -> void:
+	if not is_instance_valid(hover_name_overlay):
+		return
+	var show_name := _pointer_hover and _player_has_display_name()
+	hover_name_overlay.tween_visibility(1.0 if show_name else 0.0)
+
+
+func _sync_combat_process_enabled() -> void:
+	if not is_inside_tree() or stats == null or stats.health <= 0 or _lethal_death_pending:
+		set_process(false)
+		return
+	if Events.is_combat_ended():
+		set_process(false)
+		return
+	set_process(true)
 
 
 func _schedule_layout_status_bar() -> void:
@@ -41,6 +117,8 @@ func _layout_status_bar() -> void:
 	var off := stats.status_bar_offset
 	var w := maxf(stats_ui.size.x, stats_ui.get_combined_minimum_size().x)
 	stats_ui.position = Vector2(-w * 0.5 + off.x, foot_y + off.y)
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.sync_layout_from_status_bar(stats_ui)
 
 
 func _sprite_foot_local_y() -> float:
@@ -106,12 +184,15 @@ func update_player() -> void:
 		await ready
 
 	sprite_2d.texture = stats.art
+	_sync_combatant_hover_name_text()
 	update_stats()
+	_sync_combat_process_enabled()
 
 
 func update_stats() -> void:
 	stats_ui.update_stats(stats)
 	_layout_status_bar()
+	_sync_combat_process_enabled()
 
 
 func handle_lethal_if_needed() -> bool:
@@ -127,17 +208,39 @@ func handle_lethal_if_needed() -> bool:
 
 
 func _die_from_lethal() -> void:
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.hide_immediate()
+	set_process(false)
 	Events.player_died.emit()
 	queue_free()
 
 
+func _play_damage_shake() -> void:
+	if not is_instance_valid(self) or _lethal_death_pending:
+		return
+	Shaker.shake(self, 72, 0.15)
+
+
+func _on_take_damage_tween_finished() -> void:
+	if not is_instance_valid(self) or _lethal_death_pending:
+		return
+	sprite_2d.material = null
+	if stats.health <= 0:
+		if handle_lethal_if_needed():
+			return
+		_lethal_death_pending = true
+		_die_from_lethal()
+
+
 func _apply_damage_to_stats(amount: int) -> void:
+	if not is_instance_valid(self) or _lethal_death_pending or stats.health <= 0:
+		return
 	stats.take_damage(amount)
 	clear_pending_damage_dealer()
 
 
 func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bool = true) -> void:
-	if stats.health <= 0:
+	if stats.health <= 0 or _lethal_death_pending:
 		return
 	
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
@@ -150,30 +253,20 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 		if stats.health <= 0:
 			if handle_lethal_if_needed():
 				return
+			_lethal_death_pending = true
 			_die_from_lethal()
 		return
 	
 	var tween := create_tween()
-	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
+	tween.tween_callback(_play_damage_shake)
 	tween.tween_callback(_apply_damage_to_stats.bind(modified_damage))
 	tween.tween_interval(0.17)
-	
-	tween.finished.connect(
-		func():
-			if not is_instance_valid(self):
-				return
-			sprite_2d.material = null
-			
-			if stats.health <= 0:
-				if handle_lethal_if_needed():
-					return
-				_die_from_lethal()
-	)
+	tween.finished.connect(_on_take_damage_tween_finished, CONNECT_ONE_SHOT)
 
 
 ## 与意图数字一致：已按 `player.modifier_handler` + `enemy.modifier_handler` 链式算好的最终伤害，不再二次修饰。
 func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
-	if stats.health <= 0:
+	if stats.health <= 0 or _lethal_death_pending:
 		return
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
 	if not use_tween_delay:
@@ -183,19 +276,11 @@ func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
 		if stats.health <= 0:
 			if handle_lethal_if_needed():
 				return
+			_lethal_death_pending = true
 			_die_from_lethal()
 		return
 	var tween := create_tween()
-	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
+	tween.tween_callback(_play_damage_shake)
 	tween.tween_callback(_apply_damage_to_stats.bind(final_damage))
 	tween.tween_interval(0.17)
-	tween.finished.connect(
-		func():
-			if not is_instance_valid(self):
-				return
-			sprite_2d.material = null
-			if stats.health <= 0:
-				if handle_lethal_if_needed():
-					return
-				_die_from_lethal()
-	)
+	tween.finished.connect(_on_take_damage_tween_finished, CONNECT_ONE_SHOT)

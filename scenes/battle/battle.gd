@@ -140,8 +140,8 @@ func _setup_background_modulate() -> void:
 			## 第2层：正常亮度
 			bg_sprite.modulate = Color(1, 1, 1, 1)
 		3:
-			## 第3层：正常亮度
-			bg_sprite.modulate = Color(1, 1, 1, 1)
+			## 第3层：降低饱和度并略偏褐色
+			bg_sprite.modulate = Color(0.86, 0.80, 0.72, 1)
 		_:
 			bg_sprite.modulate = Color(1, 1, 1, 1)
 

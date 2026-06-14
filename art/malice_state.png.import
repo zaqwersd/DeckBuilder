@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bwfiy3ns68tbj"
-path="res://.godot/imported/milk_potion.png-b58f8d7692a1f51a12a0f6c851bd1522.ctex"
+uid="uid://cp0uhw5cxmw5d"
+path="res://.godot/imported/malice_state.png-a4dc4805b2128bd44cb879480b896325.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/milk_potion.png"
-dest_files=["res://.godot/imported/milk_potion.png-b58f8d7692a1f51a12a0f6c851bd1522.ctex"]
+source_file="res://art/malice_state.png"
+dest_files=["res://.godot/imported/malice_state.png-a4dc4805b2128bd44cb879480b896325.ctex"]
 
 [params]
 

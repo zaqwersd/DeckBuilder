@@ -3,6 +3,12 @@ extends Stats
 
 @export_group("Visuals")
 @export var character_name: String
+
+
+func get_display_name() -> String:
+	return character_name.strip_edges()
+
+
 @export_multiline var description: String
 @export var portrait: Texture
 ## 与 Relic.CharacterType 键名（小写）对应，用于 can_appear_as_reward；留空则回退为 character_name

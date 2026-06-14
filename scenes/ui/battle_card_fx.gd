@@ -585,8 +585,6 @@ func animate_defect_machine_echo(
 	var eff_targets: Array[Node] = card.get_effect_targets(played_targets)
 	Events.card_played.emit(card)
 	await card.replay_effects_without_payment(eff_targets, player_modifiers)
-	if card.sound:
-		SFXPlayer.play(card.sound)
 	if Events.is_combat_ended():
 		if is_instance_valid(ghost):
 			ghost.queue_free()

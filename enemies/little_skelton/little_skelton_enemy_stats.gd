@@ -46,8 +46,9 @@ func frame_interval_for_sequence(seq: PackedInt32Array) -> float:
 	return ART_SEQUENCE_DURATION / float(maxi(seq.size(), 1))
 
 
-func setup_battle_visual(enemy: Enemy) -> void:
-	enemy.apply_fixed_hitbox_from_art_frames(art_frames)
+func setup_battle_visual(enemy: Node) -> void:
+	if enemy is Enemy:
+		(enemy as Enemy).apply_fixed_hitbox_from_art_frames(art_frames)
 
 
 func create_instance() -> Resource:

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="HardShellStatus" format=3 uid="uid://uldinw3ejear"]
+
+[ext_resource type="Script" uid="uid://daoidup0rcp8j" path="res://statuses/hard_shell.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bcfjl4kmomhwi" path="res://art/hard_shell.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = "hard_shell"
+type = 2
+icon = ExtResource("2_icon")
+name = "硬壳"
+tooltip = "抵挡每回合受到的前1次生命值损伤。"

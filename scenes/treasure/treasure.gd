@@ -42,12 +42,16 @@ func _setup_background() -> void:
 	match run.current_act:
 		1:
 			bg_rect.texture = preload("res://art/act1_background.png")
+			bg_rect.modulate = Color(1, 1, 1, 1)
 		2:
 			bg_rect.texture = preload("res://art/act2_background.png")
+			bg_rect.modulate = Color(1, 1, 1, 1)
 		3:
 			bg_rect.texture = preload("res://art/act3_background.png")
+			bg_rect.modulate = Color(0.86, 0.80, 0.72, 1)
 		_:
 			bg_rect.texture = preload("res://art/background.png")
+			bg_rect.modulate = Color(1, 1, 1, 1)
 
 
 func generate_relic() -> void:

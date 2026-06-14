@@ -49,14 +49,25 @@ func set_status(new_status: Status) -> void:
 	var is_heavy_armor := status.id == "heavy_armor"
 	var is_swift := status.id == "swift"
 	var is_next_turn_mana := status.id == "next_turn_mana"
-	
-	if is_heavy_armor and superscript != null and subscript != null:
+	var is_malice := status.id == "malice_state"
+	var is_hard_shell := status.id == "hard_shell"
+
+	if is_malice and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		if superscript != null:
+			superscript.visible = false
+		var malice := status as MaliceStatus
+		_set_subscript_value(malice.m if malice else 0)
+	elif is_heavy_armor and superscript != null and subscript != null:
 		duration.visible = false
 		stacks.visible = false
 		var armor := status as HeavyArmorStatus
 		if armor:
 			_set_superscript_value(armor.threshold_n)
 			_set_subscript_value(armor.accumulated_m)
+	elif is_hard_shell and subscript != null:
+		_apply_hard_shell_labels(status as HardShellStatus)
 	elif is_alert and subscript != null:
 		duration.visible = false
 		stacks.visible = false
@@ -108,14 +119,25 @@ func _on_status_changed() -> void:
 	var is_heavy_armor := status.id == "heavy_armor"
 	var is_swift := status.id == "swift"
 	var is_next_turn_mana := status.id == "next_turn_mana"
-	
-	if is_heavy_armor and superscript != null and subscript != null:
+	var is_malice := status.id == "malice_state"
+	var is_hard_shell := status.id == "hard_shell"
+
+	if is_malice and subscript != null:
+		duration.visible = false
+		stacks.visible = false
+		if superscript != null:
+			superscript.visible = false
+		var malice := status as MaliceStatus
+		_set_subscript_value(malice.m if malice else 0)
+	elif is_heavy_armor and superscript != null and subscript != null:
 		duration.visible = false
 		stacks.visible = false
 		var armor := status as HeavyArmorStatus
 		if armor:
 			_set_superscript_value(armor.threshold_n)
 			_set_subscript_value(armor.accumulated_m)
+	elif is_hard_shell and subscript != null:
+		_apply_hard_shell_labels(status as HardShellStatus)
 	elif is_alert and subscript != null:
 		duration.visible = false
 		stacks.visible = false
@@ -154,6 +176,25 @@ func _apply_next_turn_mana_labels(next_mana: NextTurnManaStatus) -> void:
 	if superscript != null:
 		superscript.visible = false
 	_set_subscript_value(next_mana.mana_to_grant if next_mana else 0)
+
+
+func _apply_hard_shell_labels(hard_shell: HardShellStatus) -> void:
+	duration.visible = false
+	stacks.visible = false
+	if superscript != null:
+		superscript.visible = false
+	if hard_shell == null:
+		icon.modulate = Color.WHITE
+		if subscript != null:
+			subscript.visible = false
+		return
+	if hard_shell.shell_active:
+		icon.modulate = Color.WHITE
+		_set_subscript_value(hard_shell.block_index)
+	else:
+		icon.modulate = HardShellStatus.SPENT_ICON_MODULATE
+		if subscript != null:
+			subscript.visible = false
 
 
 func _sync_counter_label_font_sizes() -> void:

@@ -1,3 +1,4 @@
+@tool
 class_name Enemy
 extends Area2D
 
@@ -12,6 +13,7 @@ const HEAL_FLOAT_COLOR := Color(0.35, 1.0, 0.5, 1.0)
 ## 瞄准盒按「非透明像素」收缩；低于此 alpha 视为透明。
 const HITBOX_ALPHA_THRESHOLD := 0.08
 const HITBOX_PAD_PX := 4.0
+const INTERACTION_FADE_SEC := 0.2
 ## key -> `Rect2i`（贴图像素坐标下的不透明 AABB，size 至少为 1×1）
 static var _opaque_texel_aabb_cache: Dictionary = {}
 
@@ -22,6 +24,7 @@ static var _opaque_texel_aabb_cache: Dictionary = {}
 @onready var arrow: Sprite2D = $Arrow
 @onready var target_highlight: EnemyTargetHighlight = $TargetHighlight
 @onready var stats_ui: StatusBar = $StatusBar
+@onready var hover_name_overlay: Label = $HoverNameOverlay
 @onready var intent_ui: IntentUI = $IntentUI
 @onready var status_handler: StatusHandler = $StatusBar/StatusHandler
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
@@ -47,16 +50,50 @@ var _fixed_sprite_hitbox_local: Rect2 = Rect2()
 var _hitbox_locked := false
 ## take_damage 调用时若在攻击牌窗口内计数；实际扣血后发出 player_dealt_attack_damage_to_enemy（tween 晚于 end_attack_card_effects）
 var _pending_player_attack_card_hits: int = 0
+var _death_sequence_started := false
+var _pointer_hover := false
+var _card_targeting_active := false
+var _card_targeting_valid := false
+var _interaction_fade_tween: Tween
 
 
 func _ready() -> void:
 	status_handler.status_owner = self
 	stats_ui.resized.connect(_schedule_layout_status_bar)
+	if is_instance_valid(target_highlight):
+		target_highlight.modulate.a = 0.0
+		target_highlight.hide()
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.hide_immediate()
 	if is_instance_valid(stats):
-		_connect_stats_combat_signals(stats)
+		if Engine.is_editor_hint():
+			call_deferred("refresh_editor_battle_preview")
+		else:
+			_connect_stats_combat_signals(stats)
 	call_deferred("_layout_status_bar")
-	call_deferred("_deferred_connect_intent_tooltip_handlers")
+	if not Engine.is_editor_hint():
+		call_deferred("_deferred_connect_intent_tooltip_handlers")
 	set_process(false)
+
+
+func _enter_tree() -> void:
+	_editor_bind_stats_preview_listener()
+
+
+func _editor_bind_stats_preview_listener() -> void:
+	if not Engine.is_editor_hint() or not is_instance_valid(stats):
+		return
+	if not stats.changed.is_connected(_on_editor_stats_resource_changed):
+		stats.changed.connect(_on_editor_stats_resource_changed)
+
+
+func _editor_unbind_stats_preview_listener() -> void:
+	if is_instance_valid(stats) and stats.changed.is_connected(_on_editor_stats_resource_changed):
+		stats.changed.disconnect(_on_editor_stats_resource_changed)
+
+
+func _on_editor_stats_resource_changed() -> void:
+	call_deferred("refresh_editor_battle_preview")
 
 
 func _schedule_layout_status_bar() -> void:
@@ -74,10 +111,13 @@ func _process(_delta: float) -> void:
 		return
 	if Events.is_combat_ended():
 		_hide_intent_hover_tooltip_if_active()
+		_update_pointer_hover_state()
 		return
 	if not is_instance_valid(stats) or stats.health <= 0:
 		_hide_intent_hover_tooltip_if_active()
+		_update_pointer_hover_state()
 		return
+	_update_pointer_hover_state()
 	if not is_instance_valid(intent_ui):
 		return
 	if current_action == null:
@@ -118,6 +158,91 @@ func _pointer_over_enemy_body(_screen_global: Vector2 = Vector2.ZERO) -> bool:
 	)
 
 
+func _update_pointer_hover_state() -> void:
+	if Engine.is_editor_hint():
+		return
+	var over := false
+	if is_instance_valid(stats) and stats.health > 0 and not Events.is_combat_ended():
+		var viewport := get_viewport()
+		var screen_pos := CombatPointer.screen_mouse(viewport)
+		over = _pointer_over_enemy_body() or _pointer_over_intent_ui(screen_pos)
+		if over and is_instance_valid(stats_ui) and Events.is_pointer_ui_obscured_for(stats_ui):
+			over = false
+	if over == _pointer_hover:
+		return
+	_pointer_hover = over
+	_refresh_interaction_visuals()
+
+
+func _enemy_has_display_name() -> bool:
+	return stats is EnemyStats and not (stats as EnemyStats).get_display_name().is_empty()
+
+
+func _sync_combatant_hover_name_text() -> void:
+	if not is_instance_valid(hover_name_overlay):
+		return
+	var name_text := ""
+	if stats is EnemyStats:
+		name_text = (stats as EnemyStats).get_display_name()
+	hover_name_overlay.set_display_name(name_text)
+
+
+func _sync_combat_process_enabled() -> void:
+	if Engine.is_editor_hint():
+		set_process(false)
+		return
+	if not is_inside_tree() or not is_instance_valid(stats) or stats.health <= 0:
+		set_process(false)
+		return
+	if Events.is_combat_ended():
+		set_process(false)
+		return
+	set_process(true)
+
+
+func _refresh_interaction_visuals() -> void:
+	var show_frame := _pointer_hover or (_card_targeting_active and _card_targeting_valid)
+	var show_name := _pointer_hover and _enemy_has_display_name()
+	_tween_interaction_visuals(1.0 if show_frame else 0.0, 1.0 if show_name else 0.0)
+
+
+func _tween_interaction_visuals(frame_alpha: float, name_alpha: float) -> void:
+	if is_instance_valid(_interaction_fade_tween):
+		_interaction_fade_tween.kill()
+	if frame_alpha > 0.0 and is_instance_valid(target_highlight):
+		var rect := get_card_targeting_rect_local()
+		if rect.has_area():
+			target_highlight.setup_from_local_rect(rect)
+			target_highlight.show()
+	var tw := create_tween()
+	_interaction_fade_tween = tw
+	tw.set_parallel(true)
+	if is_instance_valid(target_highlight):
+		tw.tween_property(target_highlight, "modulate:a", frame_alpha, INTERACTION_FADE_SEC)
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.tween_visibility(name_alpha)
+	tw.finished.connect(
+		func() -> void:
+			if is_instance_valid(target_highlight) and target_highlight.modulate.a <= 0.001:
+				target_highlight.hide(),
+		CONNECT_ONE_SHOT
+	)
+
+
+func _clear_interaction_visuals_immediate() -> void:
+	if is_instance_valid(_interaction_fade_tween):
+		_interaction_fade_tween.kill()
+		_interaction_fade_tween = null
+	_pointer_hover = false
+	_card_targeting_active = false
+	_card_targeting_valid = false
+	if is_instance_valid(target_highlight):
+		target_highlight.modulate.a = 0.0
+		target_highlight.hide()
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.hide_immediate()
+
+
 func _hide_intent_hover_tooltip_if_active() -> void:
 	if not _intent_hover_tooltip_active:
 		return
@@ -135,6 +260,73 @@ func _apply_intent_ui_offset() -> void:
 	intent_ui.offset_bottom = _INTENT_UI_BASE_BOTTOM - o.y
 
 
+func refresh_editor_battle_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	call_deferred("_finish_editor_battle_preview")
+
+
+func _apply_editor_battle_preview() -> void:
+	refresh_editor_battle_preview()
+
+
+func _finish_editor_battle_preview() -> void:
+	if not Engine.is_editor_hint() or not is_instance_valid(stats):
+		return
+	if not is_instance_valid(sprite_2d) or not is_instance_valid(stats_ui):
+		return
+	_stop_art_animation()
+	_apply_editor_static_art()
+	if stats is EnemyStats:
+		sprite_2d.scale = stats.art_scale
+	if is_instance_valid(arrow):
+		arrow.hide()
+	_sync_hitbox_to_sprite()
+	var health_bar := stats_ui.health as HealthBar
+	if health_bar:
+		health_bar.ensure_theme_ready()
+	stats_ui.update_stats(_editor_preview_stats())
+	_apply_intent_ui_offset()
+	_layout_status_bar()
+	_apply_editor_preview_intents()
+	call_deferred("_layout_status_bar")
+	if is_instance_valid(stats_ui):
+		stats_ui.queue_sort()
+		stats_ui.queue_redraw()
+	if is_instance_valid(intent_ui):
+		intent_ui.queue_sort()
+		intent_ui.queue_redraw()
+	queue_redraw()
+
+
+func _apply_editor_preview_intents() -> void:
+	if not is_instance_valid(intent_ui) or stats == null:
+		return
+	if not stats is EnemyStats:
+		intent_ui.update_intents([])
+		return
+	var intents := (stats as EnemyStats).build_editor_preview_intents(self)
+	intent_ui.update_intents(intents)
+
+
+func _apply_editor_static_art() -> void:
+	if stats == null or not is_instance_valid(sprite_2d):
+		return
+	if _uses_sequence_art() and stats.art_frames.size() > 0:
+		sprite_2d.texture = stats.art_frames[0]
+	elif stats.art_frames.size() >= 1:
+		sprite_2d.texture = stats.art_frames[0]
+	elif stats.art:
+		sprite_2d.texture = stats.art
+
+
+func _editor_preview_stats() -> Stats:
+	var preview := stats.duplicate() as Stats
+	preview.health = preview.max_health
+	preview.block = 0
+	return preview
+
+
 func _layout_status_bar() -> void:
 	if not is_instance_valid(stats_ui) or not is_instance_valid(sprite_2d) or stats == null:
 		return
@@ -142,6 +334,8 @@ func _layout_status_bar() -> void:
 	var off := stats.status_bar_offset
 	var w := maxf(stats_ui.size.x, stats_ui.get_combined_minimum_size().x)
 	stats_ui.position = Vector2(-w * 0.5 + off.x, foot_y + off.y)
+	if is_instance_valid(hover_name_overlay):
+		hover_name_overlay.sync_layout_from_status_bar(stats_ui)
 
 
 func _sprite_foot_local_y() -> float:
@@ -167,6 +361,7 @@ func _connect_stats_combat_signals(s: Stats) -> void:
 		s.unblocked_damage_taken.connect(_on_stats_unblocked_damage_taken)
 	if not s.healing_applied.is_connected(_on_stats_healing_applied):
 		s.healing_applied.connect(_on_stats_healing_applied)
+	s.filter_unblocked_hp_loss = _filter_unblocked_hp_loss_for_hard_shell
 
 
 func _disconnect_stats_combat_signals(s: Stats) -> void:
@@ -176,6 +371,14 @@ func _disconnect_stats_combat_signals(s: Stats) -> void:
 		s.unblocked_damage_taken.disconnect(_on_stats_unblocked_damage_taken)
 	if s.healing_applied.is_connected(_on_stats_healing_applied):
 		s.healing_applied.disconnect(_on_stats_healing_applied)
+	s.filter_unblocked_hp_loss = Callable()
+
+
+func _filter_unblocked_hp_loss_for_hard_shell(hp_loss: int) -> int:
+	var hard_shell := HardShellStatus.get_on_enemy(self)
+	if hard_shell == null:
+		return hp_loss
+	return hard_shell.try_allow_hp_loss(hp_loss, self)
 
 
 func _on_stats_unblocked_damage_taken(amount: int) -> void:
@@ -183,6 +386,7 @@ func _on_stats_unblocked_damage_taken(amount: int) -> void:
 	var heavy_armor := HeavyArmorStatus.get_on_enemy(self)
 	if heavy_armor != null and amount > 0:
 		heavy_armor.register_damage_taken(amount, self)
+	LayeredArmorStatus.on_unblocked_attack_damage(self, amount)
 	if _pending_player_attack_card_hits > 0:
 		_pending_player_attack_card_hits -= 1
 		if amount > 0 and not Events.is_combat_ended():
@@ -210,7 +414,7 @@ func _set_current_action_silent(value: EnemyAction) -> void:
 
 
 func set_enemy_stats(value: EnemyStats) -> void:
-	if is_instance_valid(stats):
+	if is_instance_valid(stats) and not Engine.is_editor_hint():
 		_disconnect_stats_combat_signals(stats)
 	if not is_instance_valid(value):
 		stats = null
@@ -219,6 +423,12 @@ func set_enemy_stats(value: EnemyStats) -> void:
 		return
 	_fixed_sprite_hitbox_local = Rect2()
 	_hitbox_locked = false
+	if Engine.is_editor_hint():
+		_editor_unbind_stats_preview_listener()
+		stats = value
+		_editor_bind_stats_preview_listener()
+		refresh_editor_battle_preview()
+		return
 	stats = value.create_instance() as EnemyStats
 	_connect_stats_combat_signals(stats)
 	
@@ -282,6 +492,9 @@ func update_enemy() -> void:
 	update_stats()
 	_apply_intent_ui_offset()
 	call_deferred("_apply_intent_ui_offset")
+	_sync_combatant_hover_name_text()
+	if not Engine.is_editor_hint():
+		_sync_combat_process_enabled()
 
 
 ## 单体牌瞄准依赖与敌人 `Area2D` 的重叠；按贴图 **alpha>阈值** 的实体像素做 AABB，避免整块画布透明边也被当成目标。
@@ -391,17 +604,11 @@ func get_card_targeting_rect_global() -> Rect2:
 
 
 func set_card_targeting_feedback(active: bool, is_valid_target: bool, _mouse_global: Vector2) -> void:
-	if not active or not is_valid_target:
-		if is_instance_valid(target_highlight):
-			target_highlight.hide()
-		if is_instance_valid(arrow):
-			arrow.hide()
-		return
-	var rect := get_card_targeting_rect_local()
-	if is_instance_valid(target_highlight):
-		target_highlight.setup_from_local_rect(rect)
+	_card_targeting_active = active
+	_card_targeting_valid = is_valid_target
 	if is_instance_valid(arrow):
 		arrow.hide()
+	_refresh_interaction_visuals()
 
 
 func _update_arrow_from_hitbox() -> void:
@@ -526,8 +733,8 @@ func is_intent_suppressed() -> bool:
 func _apply_intent_ui_hidden() -> void:
 	if is_instance_valid(intent_ui):
 		intent_ui.update_intents([])
-	set_process(false)
 	_hide_intent_hover_tooltip_if_active()
+	_sync_combat_process_enabled()
 
 
 func is_intent_display_visible() -> bool:
@@ -551,16 +758,13 @@ func update_intent() -> void:
 		planned = current_action.get_planned_intents()
 	intent_ui.update_intents(planned)
 	if planned.is_empty():
-		set_process(false)
 		_hide_intent_hover_tooltip_if_active()
-	else:
-		set_process(true)
+	_sync_combat_process_enabled()
 
 
 func do_turn() -> void:
 	if not is_instance_valid(stats):
 		return
-	stats.block = 0
 	_hide_intent_hover_tooltip_if_active()
 
 	if not current_action:
@@ -619,9 +823,30 @@ func _await_self_action_completed() -> void:
 
 
 func _apply_damage_tween(damage: int) -> void:
+	if not is_instance_valid(self) or _death_sequence_started or stats.health <= 0:
+		if _pending_player_attack_card_hits > 0 and damage <= 0:
+			_pending_player_attack_card_hits -= 1
+		return
 	if _pending_player_attack_card_hits > 0 and damage <= 0:
 		_pending_player_attack_card_hits -= 1
 	_apply_damage_to_stats(damage)
+
+
+func _play_damage_shake() -> void:
+	if not is_instance_valid(self) or _death_sequence_started:
+		return
+	Shaker.shake(self, 72, 0.15)
+
+
+func _on_take_damage_tween_finished() -> void:
+	if not is_instance_valid(self) or _death_sequence_started:
+		return
+	sprite_2d.material = null
+	if stats.health <= 0:
+		_death_sequence_started = true
+		_clear_interaction_visuals_immediate()
+		Events.enemy_died.emit(self)
+		queue_free()
 
 
 func _apply_damage_to_stats(damage: int) -> void:
@@ -630,7 +855,7 @@ func _apply_damage_to_stats(damage: int) -> void:
 
 
 func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
-	if stats.health <= 0:
+	if stats.health <= 0 or _death_sequence_started:
 		return
 	
 	if (
@@ -640,14 +865,21 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 		_pending_player_attack_card_hits += 1
 	
 	sprite_2d.material = WHITE_SPRITE_MATERIAL
-	var modified_damage := modifier_handler.get_modified_value(damage, which_modifier)
+	var modified_damage: int
 	if (
 		which_modifier == Modifier.Type.DMG_TAKEN
 		and Events.is_inside_attack_card_effects()
 	):
 		var p := get_tree().get_first_node_in_group("battle_player") as Player
+		var combined := MaliceStatus.get_combined_vulnerable_percent(p, self) if p else -1.0
+		if combined >= 0.0:
+			modified_damage = maxi(0, ceili(float(damage) * (1.0 + combined)))
+		else:
+			modified_damage = modifier_handler.get_modified_value(damage, which_modifier)
 		if p:
 			modified_damage = OverwhelmingStatus.apply_multiplier_to_final_attack_damage(p, modified_damage)
+	else:
+		modified_damage = modifier_handler.get_modified_value(damage, which_modifier)
 	
 	var damage_to_apply := modified_damage
 	var heavy_armor := HeavyArmorStatus.get_on_enemy(self)
@@ -655,20 +887,10 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 		damage_to_apply = heavy_armor.clamp_incoming_damage(modified_damage, stats.block)
 	
 	var tween := create_tween()
-	tween.tween_callback(Shaker.shake.bind(self, 72, 0.15))
+	tween.tween_callback(_play_damage_shake)
 	tween.tween_callback(_apply_damage_tween.bind(damage_to_apply))
 	tween.tween_interval(0.17)
-
-	tween.finished.connect(
-		func():
-			if not is_instance_valid(self):
-				return
-			sprite_2d.material = null
-			
-			if stats.health <= 0:
-				Events.enemy_died.emit(self)
-				queue_free()
-	)
+	tween.finished.connect(_on_take_damage_tween_finished, CONNECT_ONE_SHOT)
 
 
 func set_display_texture(tex: Texture2D) -> void:
@@ -813,6 +1035,8 @@ func _on_art_anim_timer_timeout() -> void:
 
 
 func _exit_tree() -> void:
+	_editor_unbind_stats_preview_listener()
 	_stop_art_animation()
+	_clear_interaction_visuals_immediate()
 	set_process(false)
 	_hide_intent_hover_tooltip_if_active()

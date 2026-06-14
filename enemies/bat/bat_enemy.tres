@@ -7,6 +7,7 @@
 
 [resource]
 script = ExtResource("1_1akn0")
+display_name = "蝙蝠"
 ai = ExtResource("1_oeu8d")
 art_frames = Array[Texture]([ExtResource("2_bat1"), ExtResource("3_bat2")])
 health_bar_width = 108

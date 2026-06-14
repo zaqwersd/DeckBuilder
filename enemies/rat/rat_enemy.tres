@@ -10,6 +10,7 @@
 
 [resource]
 script = ExtResource("1_stats")
+display_name = "硕鼠"
 ai = ExtResource("2_ai")
 art_scale = Vector2(4, 4)
 art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2"), ExtResource("5_art3"), ExtResource("6_art4"), ExtResource("7_art5")])

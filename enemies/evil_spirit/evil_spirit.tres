@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("1_dyv27")
+display_name = "邪灵"
 ai = ExtResource("1_3lheq")
 health_bar_width = 320
 status_bar_offset = Vector2(0, 90)

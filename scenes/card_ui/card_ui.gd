@@ -132,6 +132,7 @@ func _input(event: InputEvent) -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		return
 	if _is_in_dragging_state():
+		card_state_machine.on_input(event)
 		return
 	card_state_machine.on_input(event)
 
@@ -656,11 +657,15 @@ func _resolve_enemy_from_target_node(node: Node) -> Enemy:
 	return null
 
 
-func get_active_enemy_modifiers() -> ModifierHandler:
+func get_active_target_enemy() -> Enemy:
 	_prune_invalid_targets()
 	if targets.is_empty() or targets.size() > 1:
 		return null
-	var enemy := _resolve_enemy_from_target_node(targets[0])
+	return _resolve_enemy_from_target_node(targets[0])
+
+
+func get_active_enemy_modifiers() -> ModifierHandler:
+	var enemy := get_active_target_enemy()
 	if enemy == null:
 		return null
 	var handler: ModifierHandler = enemy.modifier_handler
@@ -709,7 +714,8 @@ func refresh_combat_description() -> void:
 	var pm: ModifierHandler = player_modifiers if is_instance_valid(player_modifiers) else null
 	var em: ModifierHandler = get_active_enemy_modifiers()
 	var cp: Player = combat_player if is_instance_valid(combat_player) else null
-	card_visuals.apply_modifier_context(pm, em, cp)
+	var te: Enemy = get_active_target_enemy()
+	card_visuals.apply_modifier_context(pm, em, cp, te)
 	refresh_mana_cost_display()
 
 
@@ -850,9 +856,6 @@ func _on_drop_point_detector_area_exited(area: Area2D) -> void:
 
 func _on_other_card_drag_started(used_card: CardUI) -> void:
 	if used_card == self:
-		return
-	# 单体指向牌在手牌区内拖动时不锁其它牌；非单体牌拖出即锁。
-	if used_card.card.is_single_targeted():
 		return
 	disabled = true
 	z_index = 0

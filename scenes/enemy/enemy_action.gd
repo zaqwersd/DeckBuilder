@@ -46,17 +46,19 @@ func update_intent_text() -> void:
 	intent.display_number = Intent.NUMBER_HIDDEN
 
 
-## 与攻击意图一致：先玩家受伤修饰（易伤等），再敌人造成伤害修饰（力量等）。
+## 与攻击意图一致：先敌人造成伤害修饰（力量等），再玩家受伤修饰（易伤等）。
 func compute_damage_against_player(base_damage: int) -> int:
 	var player := target as Player
 	if not player or not enemy:
 		return base_damage
 	if player.status_handler:
 		player.status_handler.sync_combat_modifiers_with_statuses()
-	var after_player := player.modifier_handler.get_modified_value(
-		base_damage, Modifier.Type.DMG_TAKEN
+	var after_enemy := enemy.modifier_handler.get_modified_value(
+		base_damage, Modifier.Type.DMG_DEALT
 	)
-	return enemy.modifier_handler.get_modified_value(after_player, Modifier.Type.DMG_DEALT)
+	return player.modifier_handler.get_modified_value(
+		after_enemy, Modifier.Type.DMG_TAKEN
+	)
 
 
 ## 已含完整修饰链的最终伤害；避免 DamageEffect 再次套用 DMG_TAKEN。

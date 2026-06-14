@@ -1,23 +1,19 @@
 extends Card
 
-var exhaust_amount := 1
+## 取舍 - 1费技能：获得格挡，选择消耗1张手牌。
 
 ## 选牌 UI：`selection_finished` 回调写入，`finished` 为 true 后 `_show_card_selector` 继续
 var _selector_close_state: Dictionary = {}
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["block", "discard_mode"])
+	return PackedStringArray(["block"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	match track_id:
-		"block":
-			return PackedInt32Array([8, 10])
-		"discard_mode":
-			return PackedInt32Array([0, 0])
-		_:
-			return PackedInt32Array()
+	if track_id == "block":
+		return PackedInt32Array([8, 12])
+	return PackedInt32Array()
 
 
 func _block_chain_first() -> int:
@@ -61,18 +57,16 @@ func _block_line_upgrade_pick_bbcode() -> String:
 	return "获得%s点格挡" % bbcode_upgrade_pick_digit("block", get_upgrade_value_at("block"))
 
 
+func _exhaust_line_bbcode() -> String:
+	return "消耗1张手牌"
+
+
 func get_upgrade_pick_description_bbcode() -> String:
-	var rnd := ""
-	if not is_upgrade_track_maxed("discard_mode"):
-		rnd = CardKeywordTokens.bb_negative_removable("随机", "discard_mode")
-	return "[center]%s。[br]%s消耗1张手牌。[/center]" % [_block_line_upgrade_pick_bbcode(), rnd]
+	return "[center]%s。[br]%s。[/center]" % [_block_line_upgrade_pick_bbcode(), _exhaust_line_bbcode()]
 
 
 func get_default_tooltip() -> String:
-	if is_upgrade_track_maxed("discard_mode"):
-		return "[center]%s。[br]消耗1张手牌。[/center]" % _block_line_listing_bbcode()
-	var rnd := "[color=%s]随机[/color]" % CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE
-	return "[center]%s。[br]%s消耗1张手牌。[/center]" % [_block_line_listing_bbcode(), rnd]
+	return "[center]%s。[br]%s。[/center]" % [_block_line_listing_bbcode(), _exhaust_line_bbcode()]
 
 
 func get_updated_tooltip(
@@ -84,26 +78,16 @@ func get_updated_tooltip(
 		intrinsic_b,
 		is_upgrade_track_maxed("block")
 	)
-	if is_upgrade_track_maxed("discard_mode"):
-		return "[center]获得%s点格挡。[br]消耗1张手牌。[/center]" % block_bb
-	var rnd := "[color=%s]随机[/color]" % CardUpgradeUiColors.BB_NEGATIVE_REMOVABLE
-	return "[center]获得%s点格挡。[br]%s消耗1张手牌。[/center]" % [block_bb, rnd]
+	return "[center]获得%s点格挡。[br]%s。[/center]" % [block_bb, _exhaust_line_bbcode()]
 
 
 func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
-	var block_value := get_upgrade_value_at("block")
 	var block_effect := BlockEffect.new()
-	block_effect.amount = block_value
+	block_effect.amount = get_upgrade_value_at("block")
 	block_effect.from_card_play = true
 	block_effect.sound = sound
 	block_effect.execute(targets)
-
-	if is_upgrade_track_maxed("discard_mode"):
-		await _show_card_selector()
-	else:
-		var exhaust_random_effect := ExhaustRandomEffect.new()
-		exhaust_random_effect.amount = exhaust_amount
-		await exhaust_random_effect.execute(targets)
+	await _show_card_selector()
 
 
 func _show_card_selector() -> void:

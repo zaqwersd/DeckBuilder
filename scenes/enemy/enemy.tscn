@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Texture2D" path="res://art/tile_0110.png" id="1_exhc0"]
 [ext_resource type="Script" path="res://scenes/enemy/enemy.gd" id="1_ogp3w"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier_handler.tscn" id="7_xbm7w"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier.tscn" id="8_akusk"]
 [ext_resource type="PackedScene" path="res://scenes/enemy/enemy_target_highlight.tscn" id="9_target_highlight"]
+[ext_resource type="Script" path="res://scenes/ui/combatant_hover_name.gd" id="10_hover_name"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_3gsft"]
 
@@ -31,6 +32,11 @@ shape = SubResource("RectangleShape2D_3gsft")
 
 [node name="StatusBar" parent="." instance=ExtResource("3_status_bar")]
 status_tooltips_open_to_right = false
+
+[node name="HoverNameOverlay" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+script = ExtResource("10_hover_name")
 
 [node name="IntentUI" parent="." instance=ExtResource("5_xytk4")]
 offset_top = -108

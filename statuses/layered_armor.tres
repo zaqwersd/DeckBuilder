@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LayeredArmorStatus" format=3 uid="uid://cukndpwui8445"]
+
+[ext_resource type="Texture2D" uid="uid://bxrhj8li8sisc" path="res://art/layered_armor.png" id="1_macjl"]
+[ext_resource type="Script" uid="uid://bimtsa82j3rdt" path="res://statuses/layered_armor.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "layered_armor"
+type = 2
+stack_type = 1
+stacks = 1
+icon = ExtResource("1_macjl")
+name = "多层护甲"
+tooltip = "每个玩家回合开始时获得等于层数的格挡。每当受到未被格挡的攻击伤害，减少1层。"

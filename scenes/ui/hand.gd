@@ -262,9 +262,39 @@ func _exit_tree() -> void:
 		Events.card_keyword_tooltip_hide.emit()
 
 
+func _has_active_hand_pick() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var ui_layer := tree.get_first_node_in_group("ui_layer")
+	if ui_layer == null:
+		return false
+	for child in ui_layer.get_children():
+		if not child is CardUI:
+			continue
+		var sm := (child as CardUI).card_state_machine
+		if sm == null or sm.current_state == null:
+			continue
+		if sm.current_state.state == CardState.State.DRAGGING:
+			return true
+	return false
+
+
 func _process(_delta: float) -> void:
 	if Events.is_pointer_ui_obscured_for(self):
 		_clear_hover_and_keyword_tooltip_for_obscured_ui()
+		return
+
+	if _has_active_hand_pick():
+		var prev_foremost := _mouse_foremost_hand_card
+		_mouse_foremost_hand_card = null
+		if is_instance_valid(prev_foremost):
+			prev_foremost.force_hand_hover_visuals_off()
+		for slot in get_children():
+			var picked_off := get_card_ui_in_slot(slot)
+			if picked_off and picked_off.is_hand_hover_visual_active():
+				picked_off.force_hand_hover_visuals_off()
+		_sync_hand_keyword_tooltip(null, PackedStringArray())
 		return
 	
 	var prev_foremost := _mouse_foremost_hand_card

@@ -1,3 +1,4 @@
+@tool
 class_name HealthBar
 extends HealthUI
 
@@ -20,9 +21,18 @@ const BLOCK_BADGE_SIZE := Vector2(25, 25)
 var _fill_red: StyleBoxFlat
 var _fill_silver: StyleBoxFlat
 var _track: StyleBoxFlat
+var _theme_ready := false
 
 
-func _ready() -> void:
+func ensure_theme_ready() -> void:
+	if _theme_ready:
+		return
+	var hp_bar_node := get_node_or_null("%HPBar") as ProgressBar
+	var health_label_node := get_node_or_null("%HealthLabel") as Label
+	var block_badge_node := get_node_or_null("%BlockBadge") as Control
+	var block_label_node := get_node_or_null("%BlockValueLabel") as Label
+	if hp_bar_node == null or health_label_node == null or block_badge_node == null:
+		return
 	_track = StyleBoxFlat.new()
 	_track.bg_color = Color(0.07, 0.07, 0.08, 1.0)
 	_track.set_corner_radius_all(0)
@@ -35,20 +45,30 @@ func _ready() -> void:
 	_fill_silver.bg_color = Color(0.78, 0.8, 0.84, 1.0)
 	_fill_silver.set_corner_radius_all(0)
 
-	hp_bar.add_theme_stylebox_override("background", _track)
-	hp_bar.add_theme_stylebox_override("fill", _fill_red)
-	max_health_label.visible = false
-	_apply_label_outline(health_label)
-	_apply_label_outline(block_value_label)
+	hp_bar_node.add_theme_stylebox_override("background", _track)
+	hp_bar_node.add_theme_stylebox_override("fill", _fill_red)
+	if is_instance_valid(max_health_label):
+		max_health_label.visible = false
+	_apply_label_outline(health_label_node)
+	if block_label_node:
+		_apply_label_outline(block_label_node)
 
-	block_badge.custom_minimum_size = BLOCK_BADGE_SIZE
-	hp_bar.z_index = 0
-	health_label.z_index = 1
-	block_badge.z_index = 2
+	block_badge_node.custom_minimum_size = BLOCK_BADGE_SIZE
+	hp_bar_node.z_index = 0
+	health_label_node.z_index = 1
+	block_badge_node.z_index = 2
 	_reposition_block_badge()
+	_theme_ready = true
+
+
+func _ready() -> void:
+	ensure_theme_ready()
 
 
 func update_stats(stats: Stats) -> void:
+	ensure_theme_ready()
+	if not _theme_ready:
+		return
 	var bw := clampi(stats.health_bar_width, 40, 400)
 	bar_host.custom_minimum_size = Vector2(float(bw), BAR_HOST_HEIGHT)
 	_reposition_block_badge()
@@ -69,6 +89,8 @@ func update_stats(stats: Stats) -> void:
 
 
 func _reposition_block_badge() -> void:
+	if not is_instance_valid(block_badge):
+		return
 	# 必须用「纯坐标」布局；若处于锚点/容器模式，引擎会在排序后改写 transform，
 	# 容易出现 offset 正负表现异常或看起来不生效。
 	# 0 = 编辑器里的「位置」布局；4.6 脚本侧无 Control.LAYOUT_MODE_POSITION 枚举名。

@@ -2,7 +2,7 @@ class_name Intent
 extends Resource
 
 ## 与策划一致：攻击/格挡/强化/减益/侵蚀（塞牌等污染牌库）
-enum Kind { ATTACK, BLOCK, BUFF, DEBUFF, EROSION, SLEEP, STUNNED }
+enum Kind { ATTACK, BLOCK, BUFF, DEBUFF, EROSION, SLEEP, STUNNED, HEAL, SUMMON }
 
 ## 非攻击格挡时用此占位，不显示数字格
 const NUMBER_HIDDEN := -999999
@@ -63,6 +63,10 @@ static func _default_icon_for_kind(k: Kind) -> Texture2D:
 			return preload("res://art/sleep.png") as Texture2D
 		Kind.STUNNED:
 			return preload("res://art/stunned.png") as Texture2D
+		Kind.HEAL:
+			return preload("res://art/heal.png") as Texture2D
+		Kind.SUMMON:
+			return preload("res://art/summon.png") as Texture2D
 		_:
 			return preload("res://art/tile_0106.png") as Texture2D
 
@@ -133,6 +137,10 @@ static func _phrase_for_intent_hover(intent: Intent) -> String:
 			return ""
 		Kind.STUNNED:
 			return ""
+		Kind.HEAL:
+			return "回复生命值"
+		Kind.SUMMON:
+			return "召唤新的敌人"
 		_:
 			return ""
 

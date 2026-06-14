@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ArtifactStatus" format=3 uid="uid://bd1asu8t33rx7"]
+
+[ext_resource type="Script" uid="uid://ckf677yl4sf5y" path="res://statuses/artifact.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://bhns8kkangd68" path="res://art/artifact.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = "artifact"
+stack_type = 1
+stacks = 1
+icon = ExtResource("2_icon")
+name = "人工制品"
+tooltip = "免疫受到的下1次负面效果。"

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="MaliceStatus" format=3]
+
+[ext_resource type="Texture2D" path="res://art/malice_state.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/malice_state.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "malice_state"
+type = 2
+stack_type = 0
+polarity = 0
+icon = ExtResource("1_icon")
+name = "杀气"
+tooltip = "敌人每有一层易伤，额外受到%s%%伤害。"

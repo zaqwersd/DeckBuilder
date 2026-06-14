@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MinionStatus" format=3]
+
+[ext_resource type="Script" path="res://statuses/minion.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/minion.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_script")
+id = "minion"
+type = 2
+icon = ExtResource("2_icon")
+name = "爪牙"
+tooltip = "当主人死亡时，自己也会死亡。"

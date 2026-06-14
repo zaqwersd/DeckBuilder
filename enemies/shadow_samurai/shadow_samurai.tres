@@ -6,6 +6,7 @@
 
 [resource]
 script = ExtResource("1_stats")
+display_name = "影武士"
 ai = ExtResource("1_ai")
 art_scale = Vector2(4, 4)
 health_bar_width = 210

@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://enemies/shell_mech/shell_mech_enemy_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/shell_mech/shell_mech_strike_action.gd" id="2_strike"]
+[ext_resource type="Script" path="res://enemies/shell_mech/shell_mech_block_action.gd" id="3_block"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_attack_sfx"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="6_block_sfx"]
+
+[sub_resource type="Resource" id="Resource_strike_intent"]
+script = ExtResource("4_intent")
+base_text = "%s"
+
+[sub_resource type="Resource" id="Resource_block_intent"]
+script = ExtResource("4_intent")
+kind = 1
+
+[node name="ShellMechEnemyAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="Strike21" type="Node" parent="."]
+script = ExtResource("2_strike")
+intent = SubResource("Resource_strike_intent")
+sound = ExtResource("5_attack_sfx")
+
+[node name="Block16" type="Node" parent="."]
+script = ExtResource("3_block")
+intent = SubResource("Resource_block_intent")
+sound = ExtResource("6_block_sfx")

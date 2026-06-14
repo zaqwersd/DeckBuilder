@@ -2,25 +2,62 @@ extends Card
 
 const _HIT_DELAY_SEC := 0.12
 const _PER_HIT_DAMAGE := 6
+const _EFFECT_BODY := "你的消耗堆每有一张牌，对所有敌人造成%s点伤害1次。"
+const _EXHAUST_LINE := "消耗。"
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["cost"])
+	return PackedStringArray(["exhaust_line"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	if track_id == "cost":
-		return PackedInt32Array([2, 1])
+	if track_id == "exhaust_line":
+		return PackedInt32Array([0, 0])
 	return PackedInt32Array()
+
+
+func _exhaust_line_bbcode() -> String:
+	if not exhausts:
+		return ""
+	return _EXHAUST_LINE
+
+
+func _append_exhaust_line_bbcode(body: String) -> String:
+	var line := _exhaust_line_bbcode()
+	if line.is_empty():
+		return body
+	return "%s%s" % [body, line]
+
+
+func _wrap_center(body: String) -> String:
+	return "[center]%s[/center]" % body
+
+
+func _effect_body_bbcode(damage_bb: String) -> String:
+	return _EFFECT_BODY % damage_bb
+
+
+func get_upgrade_pick_description_bbcode() -> String:
+	return _wrap_center(
+		_append_exhaust_line_bbcode(_effect_body_bbcode(str(_PER_HIT_DAMAGE)))
+	)
 
 
 func _apply_upgraded_state() -> void:
 	super._apply_upgraded_state()
-	cost = get_upgrade_value_at("cost")
+	_sync_exhaust_from_upgrade()
 
 
-func get_upgrade_pick_description_bbcode() -> String:
-	return "[center]你的消耗堆每有一张牌，对所有敌人造成%d点伤害1次。[/center]" % _PER_HIT_DAMAGE
+func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
+	cost = 2
+	_sync_exhaust_from_upgrade()
+
+
+func _sync_exhaust_from_upgrade() -> void:
+	var ch := get_upgrade_chain("exhaust_line")
+	if ch.is_empty():
+		return
+	exhausts = not is_upgrade_track_maxed("exhaust_line")
 
 
 func _per_hit_damage() -> int:
@@ -28,7 +65,9 @@ func _per_hit_damage() -> int:
 
 
 func get_default_tooltip() -> String:
-	return tooltip_text % str(_per_hit_damage())
+	return _wrap_center(
+		_append_exhaust_line_bbcode(_effect_body_bbcode(str(_per_hit_damage())))
+	)
 
 
 func get_updated_tooltip(
@@ -40,7 +79,7 @@ func get_updated_tooltip(
 		d_base,
 		true
 	)
-	return tooltip_text % dmg_bb
+	return _wrap_center(_append_exhaust_line_bbcode(_effect_body_bbcode(dmg_bb)))
 
 
 func get_combat_effect_summary_bbcode(

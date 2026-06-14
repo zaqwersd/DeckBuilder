@@ -9,8 +9,11 @@ const BOB_SEGMENT_SEC := 0.85
 var _line: Line2D
 
 
-static func attach_to(enemy: Enemy) -> void:
-	if not is_instance_valid(enemy) or not is_instance_valid(enemy.sprite_2d):
+static func attach_to(enemy: Node) -> void:
+	if not is_instance_valid(enemy):
+		return
+	var sprite_2d := enemy.get_node_or_null("Sprite2D") as Sprite2D
+	if not is_instance_valid(sprite_2d):
 		return
 	var existing := enemy.get_node_or_null("SpiderVisualRig") as SpiderEnemyVisual
 	if existing != null:
@@ -21,7 +24,7 @@ static func attach_to(enemy: Enemy) -> void:
 	rig.name = "SpiderVisualRig"
 	enemy.add_child(rig)
 	enemy.move_child(rig, 0)
-	rig.call_deferred("_build", enemy.sprite_2d)
+	rig.call_deferred("_build", sprite_2d)
 
 
 func _build(sprite: Sprite2D) -> void:

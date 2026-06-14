@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Texture2D" path="res://art/tile_0087.png" id="1_0r2oj"]
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_il1gs"]
 [ext_resource type="PackedScene" path="res://scenes/ui/status_bar.tscn" id="2_status_bar"]
+[ext_resource type="Script" path="res://scenes/ui/combatant_hover_name.gd" id="3_hover_name"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier_handler.tscn" id="5_v2emp"]
 [ext_resource type="PackedScene" path="res://scenes/modifier_handler/modifier.tscn" id="6_jup6q"]
 
@@ -15,6 +16,11 @@ texture = ExtResource("1_0r2oj")
 
 [node name="StatusBar" parent="." instance=ExtResource("2_status_bar")]
 status_tooltips_open_to_right = true
+
+[node name="HoverNameOverlay" type="Label" parent="."]
+modulate = Color(1, 1, 1, 0)
+mouse_filter = 2
+script = ExtResource("3_hover_name")
 
 [node name="ModifierHandler" parent="." instance=ExtResource("5_v2emp")]
 

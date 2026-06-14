@@ -77,6 +77,7 @@ var _cost_upgrade_flow_cb: Callable = Callable()
 var _player_modifiers: ModifierHandler
 var _enemy_modifiers: ModifierHandler
 var _combat_player_for_desc: Node = null
+var _target_enemy_for_desc: Node = null
 
 ## 稀有度着色后的主面板样式
 var main_panel_style_base: StyleBoxFlat
@@ -461,10 +462,13 @@ func apply_modifier_context(
 	player_modifiers: ModifierHandler = null,
 	enemy_modifiers: ModifierHandler = null,
 	combat_player: Node = null,
+	target_enemy: Node = null,
 ) -> void:
 	_player_modifiers = player_modifiers if is_instance_valid(player_modifiers) else null
 	_enemy_modifiers = enemy_modifiers if is_instance_valid(enemy_modifiers) else null
 	_combat_player_for_desc = combat_player if is_instance_valid(combat_player) else null
+	_target_enemy_for_desc = target_enemy if is_instance_valid(target_enemy) else null
+	Card.preview_target_enemy = _target_enemy_for_desc
 	_refresh_description_text()
 	_sync_cost_label_style()
 
