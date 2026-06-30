@@ -1,10 +1,11 @@
 class_name MaliceStatus
 extends Status
 
-const EXPOSED_BASE_PERCENT := 0.5
+## 与 `EnemyIncomingAttackDamage.VULNERABLE_DAMAGE_MULT` 对应：易伤区基础 +50%（倍率 1.5）。
+const VULNERABLE_BASE_PERCENT := 0.5
 
 ## 累计百分比：每打出一张杀气累加卡面 m。
-var m: int = 10
+var m: int = 15
 
 
 func get_tooltip() -> String:
@@ -22,30 +23,37 @@ static func get_accumulated_m(player: Player) -> int:
 	return st.m if st else 0
 
 
-static func get_exposed_layers_on(enemy: Node) -> int:
+static func get_vulnerable_layers_on(enemy: Node) -> int:
 	if enemy == null or not enemy.get("status_handler"):
 		return 0
-	var st: Status = enemy.status_handler.get_status_by_id("exposed")
+	var st: Status = enemy.status_handler.get_status_by_id("vulnerable")
 	if st == null or st.duration <= 0 or st.awaits_turn_start:
 		return 0
 	return st.duration
 
 
-## 玩家有杀气且敌人有易伤时返回合并增伤（0.5 + m×层数/100）；否则 -1。
+## 返回加在 1.0 上的百分比部分；敌人无易伤时 -1。
 static func get_combined_vulnerable_percent(player: Player, enemy: Node) -> float:
-	if get_on_player(player) == null:
-		return -1.0
-	var layers := get_exposed_layers_on(enemy)
+	var layers := get_vulnerable_layers_on(enemy)
 	if layers <= 0:
 		return -1.0
-	return EXPOSED_BASE_PERCENT + float(get_accumulated_m(player) * layers) / 100.0
+	var percent := VULNERABLE_BASE_PERCENT
+	if get_on_player(player) != null:
+		percent += float(get_accumulated_m(player) * layers) / 100.0
+	return percent
+
+
+static func get_attack_damage_multiplier(player: Player, enemy: Node) -> float:
+	var vulnerable_percent := get_combined_vulnerable_percent(player, enemy)
+	if vulnerable_percent < 0.0:
+		return 1.0
+	return 1.0 + vulnerable_percent
 
 
 static func apply_to_attack_damage(player: Player, enemy: Node, damage_after_player_mods: int) -> int:
-	var combined := get_combined_vulnerable_percent(player, enemy)
-	if combined < 0.0:
-		return damage_after_player_mods
-	return maxi(0, ceili(float(damage_after_player_mods) * (1.0 + combined)))
+	if enemy is Enemy:
+		return EnemyIncomingAttackDamage.compute(damage_after_player_mods, enemy as Enemy, player)
+	return damage_after_player_mods
 
 
 static func resolve_enemy_from_modifier_handler(handler: ModifierHandler) -> Enemy:

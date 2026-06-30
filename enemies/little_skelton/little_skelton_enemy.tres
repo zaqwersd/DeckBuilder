@@ -10,11 +10,10 @@
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "小骷髅"
 ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/little_skelton/little_skelton_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "小骷髅"
 art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2"), ExtResource("5_art3"), ExtResource("6_art4"), ExtResource("7_art5")])
-health_bar_width = 96
-status_bar_offset = Vector2(50, 30)
-intent_ui_offset = Vector2(0, -20)
 max_health = 16
 art = ExtResource("3_art1")

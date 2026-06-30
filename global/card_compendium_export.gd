@@ -1,4 +1,4 @@
-﻿class_name CardCompendiumExport
+class_name CardCompendiumExport
 extends RefCounted
 
 ## 命令行 / 工具：收集图鉴卡牌并离屏渲染左右对比长图。
@@ -17,13 +17,7 @@ const BG_COLOR := Color(0.12, 0.12, 0.14, 1.0)
 const PANEL_MIN_WIDTH := 1340.0
 const LOG_CARD_MARGIN := 24
 
-const RARITY_DISPLAY_NAMES := {
-	Card.Rarity.STARTER: "起手",
-	Card.Rarity.COMMON: "普通",
-	Card.Rarity.UNCOMMON: "罕见",
-	Card.Rarity.RARE: "稀有",
-	Card.Rarity.SPECIAL: "特殊",
-}
+const RARITY_DISPLAY_NAMES := Card.RARITY_DISPLAY_NAMES
 
 
 static func category_from_cli_name(name: String) -> int:
@@ -71,7 +65,7 @@ static func cards_for_category(cat: Category) -> Array[Card]:
 	var out: Array[Card] = []
 	for k: Variant in by_id.keys():
 		out.append(by_id[k] as Card)
-	out.sort_custom(CardGridListing.sort_rarity_then_id)
+	out.sort_custom(CardGridListing.sort_compendium_listing)
 	return out
 
 
@@ -79,6 +73,7 @@ static func card_display_copy(template: Card, upgraded: bool) -> Card:
 	var display := template.duplicate(true) as Card
 	if upgraded:
 		display.apply_upgrade()
+	CardGridListing.apply_compendium_display_overrides(display)
 	return display
 
 

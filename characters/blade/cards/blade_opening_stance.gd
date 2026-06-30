@@ -28,12 +28,11 @@ func get_updated_tooltip(
 	_player_modifiers: ModifierHandler, _enemy_modifiers: ModifierHandler, _combat_player: Node = null
 ) -> String:
 	var v := _energy_gain()
-	if is_visual_number_bbcode_combat():
-		var mx := is_upgrade_track_maxed("energy_gain")
-		var col := COMBAT_BODY_TEXT if mx else BB_COLOR_UPGRADEABLE
-		return "[center]获得[color=%s]%d[/color]点能量。[/center]" % [col, v]
-	var mx2 := is_upgrade_track_maxed("energy_gain")
-	var num_bb := bbcode_for_modified_number_with_upgrade_hint(v, v, mx2)
+	var chain := get_upgrade_chain("energy_gain")
+	var base_val := chain[0] if not chain.is_empty() else v
+	var num_bb := bbcode_for_modified_number_with_upgrade_hint(
+		v, base_val, is_upgrade_track_maxed("energy_gain")
+	)
 	return "[center]获得%s点能量。[/center]" % num_bb
 
 
@@ -48,4 +47,4 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var ph := tree.get_first_node_in_group("player_handler") as PlayerHandler
 	if ph == null or ph.character == null:
 		return
-	ph.character.mana += _energy_gain()
+	ph.character.gain_mana(_energy_gain())

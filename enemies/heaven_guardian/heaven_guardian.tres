@@ -1,15 +1,14 @@
 [gd_resource type="Resource" script_class="EnemyStats" format=3 uid="uid://4icjo0phtafk"]
 
-[ext_resource type="PackedScene" path="res://enemies/heaven_guardian/heaven_guardian_ai.tscn" id="1_ai"]
+[ext_resource type="PackedScene" uid="uid://bvknvhhtcfg7o" path="res://enemies/heaven_guardian/heaven_guardian_ai.tscn" id="1_ai"]
 [ext_resource type="Script" uid="uid://cqw6nj5nsigxl" path="res://custom_resources/enemy_stats.gd" id="1_stats"]
 [ext_resource type="Texture2D" uid="uid://bfemy5jxyt2aw" path="res://art/heaven_guardian.png" id="2_art"]
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "天国守卫者"
 ai = ExtResource("1_ai")
-health_bar_width = 320
-status_bar_offset = Vector2(0, 90)
-intent_ui_offset = Vector2(0, 80)
+enemy_scene_path = "res://enemies/heaven_guardian/heaven_guardian_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "天国守卫者"
 max_health = 450
 art = ExtResource("2_art")

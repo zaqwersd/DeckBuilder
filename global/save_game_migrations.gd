@@ -14,6 +14,14 @@ const BATTLE_SCENE_PATH_RENAMES: Dictionary = {
 	"res://battles/little_skeltons_3.tscn": "res://battles/little_skelton_3.tscn",
 	"res://battles/crab_and_bat.tscn": "res://battles/bat_crab.tscn",
 	"res://battles/bat_rat.tscn": "res://battles/bat_rat_crab.tscn",
+	"res://battles/bone_shewer.tscn": "res://battles/bone_chewer.tscn",
+	"res://battles/bone_shewer.tres": "res://battles/bone_chewer.tres",
+	"res://battles/elements_2.tscn": "res://battles/elementals_2.tscn",
+	"res://battles/elements_3.tscn": "res://battles/elementals_3.tscn",
+	"res://battles/elements_2.tres": "res://battles/elementals_2.tres",
+	"res://battles/elements_3.tres": "res://battles/elementals_3.tres",
+	"res://battles/elements_2.gd": "res://battles/elementals_2.gd",
+	"res://battles/elements_3.gd": "res://battles/elementals_3.gd",
 }
 
 ## 旧遗物 id → 新 id（读档时统一替换）
@@ -28,6 +36,11 @@ const RELIC_ID_RENAMES: Dictionary = {
 	"jade_axe": "emerald_axe",
 }
 
+## 旧药水 id → 新 id（读档时统一替换）
+const POTION_ID_RENAMES: Dictionary = {
+	"flame_potion": "explode_potion",
+}
+
 const _DEPRECATED_RELIC_TRES := "res://relics/deprecated_relic.tres"
 const _DEPRECATED_RELIC_SCRIPT := "res://relics/deprecated_relic.gd"
 const _PATCHED_SAVE_TMP := "user://savegame_patched.tres"
@@ -40,6 +53,25 @@ static func resolve_relic_id(relic_id: String) -> String:
 			return current
 		current = String(RELIC_ID_RENAMES[current])
 	return current
+
+
+static func resolve_potion_id(potion_id: String) -> String:
+	var current := String(potion_id)
+	if POTION_ID_RENAMES.has(current):
+		return String(POTION_ID_RENAMES[current])
+	return current
+
+
+static func remap_resource_path(path: String) -> String:
+	if path.is_empty():
+		return path
+	if BATTLE_SCENE_PATH_RENAMES.has(path):
+		return String(BATTLE_SCENE_PATH_RENAMES[path])
+	var remapped := path
+	remapped = remapped.replace("res://enemies/bone_shewer/", "res://enemies/bone_chewer/")
+	remapped = remapped.replace("bone_shewer_", "bone_chewer_")
+	remapped = remapped.replace("BoneShewer", "BoneChewer")
+	return remapped
 
 
 static func load_save_game_resource(path: String) -> SaveGame:
@@ -76,6 +108,20 @@ static func patch_save_file_text(text: String) -> String:
 	for old_path: String in BATTLE_SCENE_PATH_RENAMES.keys():
 		var new_path: String = String(BATTLE_SCENE_PATH_RENAMES[old_path])
 		text = text.replace(old_path, new_path)
+	text = text.replace("res://enemies/bone_shewer/", "res://enemies/bone_chewer/")
+	text = text.replace("bone_shewer_", "bone_chewer_")
+	text = text.replace("BoneShewer", "BoneChewer")
+	text = text.replace("res://potions/flame_potion.tres", "res://potions/explode_potion.tres")
+	text = text.replace("res://potions/flame_potion.gd", "res://potions/explode_potion.gd")
+	text = text.replace("res://art/potions/flame_potion.png", "res://art/potions/explode_potion.png")
+	text = text.replace("res://statuses/exposed.tres", "res://statuses/vulnerable.tres")
+	text = text.replace("res://statuses/exposed.gd", "res://statuses/vulnerable.gd")
+	text = text.replace("exposed_duration", "vulnerable_duration")
+	text = text.replace('"id": "exposed"', '"id": "vulnerable"')
+	text = text.replace('id = "exposed"', 'id = "vulnerable"')
+	text = text.replace('"exposed"', '"vulnerable"')
+	for old_id: String in POTION_ID_RENAMES.keys():
+		text = text.replace('"%s"' % old_id, '"%s"' % String(POTION_ID_RENAMES[old_id]))
 	return text
 
 
@@ -126,7 +172,10 @@ static func migrate(data: SaveGame) -> void:
 		return
 	_migrate_renamed_battle_scenes(data)
 	_migrate_relic_ids(data)
+	_migrate_potion_ids(data)
 	_migrate_card_upgrades(data)
+	_migrate_act1_tense_unlocked(data)
+	_migrate_act3_tense_unlocked(data)
 
 
 static func _migrate_card_upgrades(data: SaveGame) -> void:
@@ -135,6 +184,32 @@ static func _migrate_card_upgrades(data: SaveGame) -> void:
 	for c: Card in data.current_deck.cards:
 		if c != null:
 			c.migrate_from_upgrade_tracks()
+
+
+static func _migrate_act1_tense_unlocked(data: SaveGame) -> void:
+	if data.act1_tense_unlocked:
+		return
+	if data.act_number != 1:
+		return
+	# 旧存档：已通过第 8 层（row 8 宝箱层）则视为已解锁 tense。
+	if data.floors_climbed > 8:
+		data.act1_tense_unlocked = true
+		return
+	if data.last_room != null and data.last_room.row > 8:
+		data.act1_tense_unlocked = true
+
+
+static func _migrate_act3_tense_unlocked(data: SaveGame) -> void:
+	if data.act3_tense_unlocked:
+		return
+	if data.act_number != 3:
+		return
+	# 旧存档：已通过第 8 层（row 8 宝箱层）则视为已解锁 tense。
+	if data.floors_climbed > 8:
+		data.act3_tense_unlocked = true
+		return
+	if data.last_room != null and data.last_room.row > 8:
+		data.act3_tense_unlocked = true
 
 
 static func _migrate_relic_ids(data: SaveGame) -> void:
@@ -169,6 +244,17 @@ static func _replace_relic_id_in_array(arr: PackedStringArray, old_id: String, n
 	for i in range(arr.size()):
 		if arr[i] == old_id:
 			arr[i] = new_id
+
+
+static func _migrate_potion_ids(data: SaveGame) -> void:
+	for old_id: String in POTION_ID_RENAMES.keys():
+		var new_id: String = String(POTION_ID_RENAMES[old_id])
+		_replace_relic_id_in_array(data.saved_potion_ids, old_id, new_id)
+		_replace_relic_id_in_array(data.pending_potion_ids, old_id, new_id)
+		_replace_relic_id_in_array(data.battle_reward_entry_pre_potion_ids, old_id, new_id)
+		_replace_relic_id_in_array(data.scene_entry_potion_ids, old_id, new_id)
+		if data.combat_snapshot:
+			_replace_relic_id_in_array(data.combat_snapshot.potion_ids, old_id, new_id)
 
 
 static func _migrate_renamed_battle_scenes(data: SaveGame) -> void:

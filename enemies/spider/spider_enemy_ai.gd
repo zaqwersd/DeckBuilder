@@ -3,17 +3,17 @@ extends EnemyActionPicker
 
 const ACTION_ENTANGLED := &"SpiderEntangled1"
 const ACTION_STRIKE6_EXPOSED := &"SpiderStrike6Exposed"
-const ACTION_STRIKE12 := &"SpiderStrike12"
+const ACTION_STRIKE10 := &"SpiderStrike10"
 const ACTION_NAMES: Array[StringName] = [
 	ACTION_ENTANGLED,
 	ACTION_STRIKE6_EXPOSED,
-	ACTION_STRIKE12,
+	ACTION_STRIKE10,
 ]
 const ACTION_WEIGHTS: Array[int] = [1, 2, 2]
 const FIXED_OPENING: Array[StringName] = [
 	ACTION_ENTANGLED,
 	ACTION_STRIKE6_EXPOSED,
-	ACTION_STRIKE12,
+	ACTION_STRIKE10,
 ]
 
 var _last_action_name: String = ""

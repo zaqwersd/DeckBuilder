@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="NextTurnManaStatus" format=3 uid="uid://b2pbejc4jyhi"]
 
-[ext_resource type="Texture2D" uid="uid://bn5t3ty8ylqnn" path="res://art/next_turn_mana.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://bn5t3ty8ylqnn" path="res://art/status_icons/next_turn_mana.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://c7ybg4a433smt" path="res://statuses/next_turn_mana.gd" id="2_script"]
 
 [resource]

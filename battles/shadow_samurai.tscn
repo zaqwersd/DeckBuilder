@@ -1,10 +1,8 @@
 [gd_scene format=3 uid="uid://drkfb3p3ohvsv"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
-[ext_resource type="Resource" uid="uid://dwy1mgaxtv2mj" path="res://enemies/shadow_samurai/shadow_samurai.tres" id="2_stats"]
+[ext_resource type="PackedScene" path="res://enemies/shadow_samurai/shadow_samurai_enemy.tscn" id="2_stats"]
 
 [node name="ShadowSamurai" type="Node2D" unique_id=2111344646]
 
-[node name="Enemy" parent="." unique_id=1610270491 instance=ExtResource("1_enemy")]
+[node name="Enemy" parent="." unique_id=1610270491 instance=ExtResource("2_stats")]
 position = Vector2(895, 347.5)
-stats = ExtResource("2_stats")

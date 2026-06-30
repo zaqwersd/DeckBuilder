@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="OverwhelmingStatus" format=3 uid="uid://ovdlk6fy1bqy"]
 
-[ext_resource type="Texture2D" uid="uid://d3mchgc35mh67" path="res://art/overwhelming_form.png" id="1_f1wdi"]
+[ext_resource type="Texture2D" uid="uid://d3mchgc35mh67" path="res://art/status_icons/overwhelming_form.png" id="1_f1wdi"]
 [ext_resource type="Script" uid="uid://o64dwk2dj6di" path="res://statuses/overwhelming_form.gd" id="2_sc"]
 
 [resource]

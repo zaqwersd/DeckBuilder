@@ -4,9 +4,12 @@
 [ext_resource type="Script" uid="uid://d2ncjbf5mwqrk" path="res://custom_resources/potion.gd" id="2_potion"]
 [ext_resource type="Resource" uid="uid://bapmifpeou2hk" path="res://potions/strength_potion.tres" id="3_p0"]
 [ext_resource type="Resource" uid="uid://cney1xr07e5vj" path="res://potions/agility_potion.tres" id="4_p1"]
-[ext_resource type="Resource" uid="uid://bgkbbpa61e6ix" path="res://potions/flame_potion.tres" id="5_p2"]
+[ext_resource type="Resource" uid="uid://rs6pd0buf12i" path="res://potions/explode_potion.tres" id="5_p2"]
 [ext_resource type="Resource" uid="uid://prn32xgwr15x" path="res://potions/milk_potion.tres" id="6_milk"]
+[ext_resource type="Resource" uid="uid://bq4hqcur8sgnr" path="res://potions/iron_potion.tres" id="7_iron"]
+[ext_resource type="Resource" uid="uid://nrk01aq640n2" path="res://potions/vulnerable_potion.tres" id="8_vuln"]
+[ext_resource type="Resource" uid="uid://b8o3gor61330p" path="res://potions/weak_potion.tres" id="9_weak"]
 
 [resource]
 script = ExtResource("1_script")
-potions = Array[ExtResource("2_potion")]([ExtResource("3_p0"), ExtResource("4_p1"), ExtResource("5_p2"), ExtResource("6_milk")])
+potions = Array[ExtResource("2_potion")]([ExtResource("3_p0"), ExtResource("4_p1"), ExtResource("5_p2"), ExtResource("6_milk"), ExtResource("7_iron"), ExtResource("8_vuln"), ExtResource("9_weak")])

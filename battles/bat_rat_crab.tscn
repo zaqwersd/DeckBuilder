@@ -1,20 +1,16 @@
 [gd_scene format=3]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
-[ext_resource type="Resource" path="res://enemies/bat/bat_enemy.tres" id="2_bat"]
-[ext_resource type="Resource" path="res://enemies/rat/rat_enemy.tres" id="3_rat"]
-[ext_resource type="Resource" path="res://enemies/crab/crab_enemy.tres" id="4_crab"]
+[ext_resource type="PackedScene" path="res://enemies/bat/bat_enemy.tscn" id="2_bat"]
+[ext_resource type="PackedScene" path="res://enemies/rat/rat_enemy.tscn" id="3_rat"]
+[ext_resource type="PackedScene" path="res://enemies/crab/crab_enemy.tscn" id="4_crab"]
 
 [node name="BatRatCrab" type="Node2D"]
 
-[node name="Enemy" parent="." instance=ExtResource("1_enemy")]
+[node name="Enemy" parent="." instance=ExtResource("2_bat")]
 position = Vector2(720, 285)
-stats = ExtResource("2_bat")
 
-[node name="Enemy2" parent="." instance=ExtResource("1_enemy")]
+[node name="Enemy2" parent="." instance=ExtResource("3_rat")]
 position = Vector2(900, 330)
-stats = ExtResource("3_rat")
 
-[node name="Enemy3" parent="." instance=ExtResource("1_enemy")]
+[node name="Enemy3" parent="." instance=ExtResource("4_crab")]
 position = Vector2(1080, 360)
-stats = ExtResource("4_crab")

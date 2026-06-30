@@ -18,10 +18,13 @@ const TOOLTIP_BODY_ETHEREAL_PLAIN := (
 
 const TOOLTIP_BODY_EXHAUST_WITH_LINKS := (
 	"[color=#ffdd33][b]消耗[/b][/color]\n"
-	+ "被消耗的牌会进入你的消耗牌堆。"
+	+ "被消耗的牌会进入你的[url=kw:exhaust_pile][color=#ffdd33]消耗堆[/color][/url]。"
 )
 
-const TOOLTIP_BODY_EXHAUST_PLAIN := TOOLTIP_BODY_EXHAUST_WITH_LINKS
+const TOOLTIP_BODY_EXHAUST_PLAIN := (
+	"[color=#ffdd33][b]消耗[/b][/color]\n"
+	+ "被消耗的牌会进入你的消耗堆。"
+)
 
 const TOOLTIP_BODY_TRANSFORM_WITH_LINKS := (
 	"[color=#ffdd33][b]变化[/b][/color]\n"
@@ -54,6 +57,29 @@ const TOOLTIP_BODY_INTRINSIC := (
 	"[color=#ffdd33][b]固有[/b][/color]\n每场战斗开始时会优先将固有牌加入你的手牌。"
 )
 
+const TOOLTIP_BODY_DRAW_PILE_WITH_LINKS := (
+	"[color=#ffdd33][b]抽牌堆[/b][/color]\n"
+	+ "你将从这里抽牌。如果没有足够的牌可抽，就将[url=kw:discard_pile][color=#ffdd33]弃牌堆[/color][/url]洗到抽牌堆再抽牌。"
+)
+const TOOLTIP_BODY_DRAW_PILE_PLAIN := (
+	"[color=#ffdd33][b]抽牌堆[/b][/color]\n"
+	+ "你将从这里抽牌。如果没有足够的牌可抽，就将弃牌堆洗到抽牌堆再抽牌。"
+)
+
+const TOOLTIP_BODY_DISCARD_PILE_WITH_LINKS := (
+	"[color=#ffdd33][b]弃牌堆[/b][/color]\n"
+	+ "正常情况下，手牌在被打出或者回合结束时，会到这里。"
+)
+const TOOLTIP_BODY_DISCARD_PILE_PLAIN := TOOLTIP_BODY_DISCARD_PILE_WITH_LINKS
+
+const TOOLTIP_BODY_EXHAUST_PILE_WITH_LINKS := (
+	"[color=#ffdd33][b]消耗堆[/b][/color]\n"
+	+ "被[url=kw:exhaust][color=#ffdd33]消耗[/color][/url]的牌会来到这里。不会再参与卡牌循环。"
+)
+const TOOLTIP_BODY_EXHAUST_PILE_PLAIN := (
+	"[color=#ffdd33][b]消耗堆[/b][/color]\n"
+	+ "被消耗的牌会来到这里。不会再参与卡牌循环。"
+)
 const TOOLTIP_BODY_RETAIN_WITH_LINKS := (
 	"[color=#ffdd33][b]保留[/b][/color]\n"
 	+ "保留的牌在回合结束时不会自动进入弃牌堆。"
@@ -64,6 +90,15 @@ const TOOLTIP_BODY_MANA_WITH_LINKS := (
 	"[color=#ffdd33][b]能量[/b][/color]\n你需要花费能量来打出卡牌。"
 )
 const TOOLTIP_BODY_MANA_PLAIN := TOOLTIP_BODY_MANA_WITH_LINKS
+
+const TOOLTIP_BODY_PROFANE_WITH_LINKS := (
+	"[color=#ffdd33][b]亵渎[/b][/color]\n"
+	+ "受到5点伤害。抽1张牌。[url=kw:exhaust][color=#ffdd33]消耗[/color][/url]。"
+)
+const TOOLTIP_BODY_PROFANE_PLAIN := (
+	"[color=#ffdd33][b]亵渎[/b][/color]\n"
+	+ "受到5点伤害。抽1张牌。消耗。"
+)
 
 ## 颜色说明 tooltip
 const TOOLTIP_BODY_COLOR_YELLOW := (
@@ -78,6 +113,9 @@ const TOOLTIP_BODY_COLOR_GRAY := (
 
 ## 自动为中文词包 `[url=kw:id]`；顺序靠前者先包，避免子串冲突。
 const _AUTO_WRAP: Array[Dictionary] = [
+	{"word": "消耗堆", "id": "exhaust_pile"},
+	{"word": "抽牌堆", "id": "draw_pile"},
+	{"word": "弃牌堆", "id": "discard_pile"},
 	{"word": "保留", "id": "retain"},
 	{"word": "虚无", "id": "ethereal"},
 	{"word": "变化", "id": "transform"},
@@ -90,6 +128,7 @@ const _AUTO_WRAP: Array[Dictionary] = [
 	{"word": "敏捷", "id": "dexterity"},
 	{"word": "格挡", "id": "block"},
 	{"word": "能量", "id": "mana"},
+	{"word": "亵渎", "id": "profane"},
 ]
 
 
@@ -163,35 +202,47 @@ static func collect_tooltip_ids_from_raw_description(raw: String) -> PackedStrin
 	if raw.is_empty():
 		return PackedStringArray()
 	var injected := inject_keywords(raw)
-	var from_urls := collect_kw_ids_in_order_from_bbcode(injected)
-	if not from_urls.is_empty():
-		return from_urls
-	var ids: PackedStringArray = PackedStringArray()
+	var ids := collect_kw_ids_in_order_from_bbcode(injected)
 	var has_exhaust := false
+	if raw.find("消耗堆") != -1:
+		ids = _append_unique_tooltip_id(ids, "exhaust_pile")
+	if raw.find("抽牌堆") != -1:
+		ids = _append_unique_tooltip_id(ids, "draw_pile")
+	if raw.find("弃牌堆") != -1:
+		ids = _append_unique_tooltip_id(ids, "discard_pile")
 	if raw.find("保留") != -1:
-		ids.append("retain")
+		ids = _append_unique_tooltip_id(ids, "retain")
 	if raw.find("虚无") != -1:
-		ids.append("ethereal")
-		ids.append("exhaust")
+		ids = _append_unique_tooltip_id(ids, "ethereal")
+		ids = _append_unique_tooltip_id(ids, "exhaust")
 		has_exhaust = true
 	if raw.find("消耗") != -1 and not has_exhaust:
-		ids.append("exhaust")
+		ids = _append_unique_tooltip_id(ids, "exhaust")
 	if raw.find("变化") != -1:
-		ids.append("transform")
+		ids = _append_unique_tooltip_id(ids, "transform")
 	if raw.find("易伤") != -1:
-		ids.append("vulnerable")
+		ids = _append_unique_tooltip_id(ids, "vulnerable")
 	if raw.find("力量") != -1:
-		ids.append("strength")
+		ids = _append_unique_tooltip_id(ids, "strength")
 	if raw.find("敏捷") != -1:
-		ids.append("dexterity")
+		ids = _append_unique_tooltip_id(ids, "dexterity")
 	if raw.find("格挡") != -1:
-		ids.append("block")
+		ids = _append_unique_tooltip_id(ids, "block")
 	if raw.find("缠身") != -1:
-		ids.append("entangled")
+		ids = _append_unique_tooltip_id(ids, "entangled")
 	if raw.find("能量") != -1:
-		ids.append("mana")
+		ids = _append_unique_tooltip_id(ids, "mana")
+	if raw.find("亵渎") != -1:
+		ids = _append_unique_tooltip_id(ids, "profane")
 	return ids
 
+
+static func _append_unique_tooltip_id(ids: PackedStringArray, id: String) -> PackedStringArray:
+	for existing in ids:
+		if String(existing) == id:
+			return ids
+	ids.append(id)
+	return ids
 
 const COLOR_TOOLTIP_IDS: Array[String] = ["color_yellow", "color_red", "color_gray"]
 
@@ -211,6 +262,7 @@ const SCRIPT_CARD_UI := "res://scenes/card_ui/card_ui.gd"
 const SCRIPT_MANA_UI := "res://scenes/ui/mana_ui.gd"
 const SCRIPT_CARD_MENU_UI := "res://scenes/ui/card_menu_ui.gd"
 const SCRIPT_COMBAT_CARD_VISUALS := "res://scenes/ui/combat_card_visuals.gd"
+const SCRIPT_CARD_PILE_OPENER := "res://scenes/ui/card_pile_opener.gd"
 
 
 static func _node_uses_script(n: Node, script_path: String) -> bool:
@@ -231,6 +283,8 @@ static func is_combat_tooltip_anchor(near_to: Control) -> bool:
 	if _node_uses_script(near_to, SCRIPT_CARD_UI) or _node_uses_script(near_to, SCRIPT_MANA_UI):
 		return true
 	if _is_combat_card_visuals_node(near_to):
+		return true
+	if _node_uses_script(near_to, SCRIPT_CARD_PILE_OPENER):
 		return true
 	var n: Node = near_to
 	while n != null:
@@ -270,8 +324,16 @@ static func get_keyword_tooltip_body_bbcode(id: String, embed_cross_links: bool 
 			return TOOLTIP_BODY_INTRINSIC
 		"retain":
 			return TOOLTIP_BODY_RETAIN_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_RETAIN_PLAIN
+		"draw_pile":
+			return TOOLTIP_BODY_DRAW_PILE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_DRAW_PILE_PLAIN
+		"discard_pile":
+			return TOOLTIP_BODY_DISCARD_PILE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_DISCARD_PILE_PLAIN
+		"exhaust_pile":
+			return TOOLTIP_BODY_EXHAUST_PILE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_EXHAUST_PILE_PLAIN
 		"mana":
 			return TOOLTIP_BODY_MANA_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_MANA_PLAIN
+		"profane":
+			return TOOLTIP_BODY_PROFANE_WITH_LINKS if embed_cross_links else TOOLTIP_BODY_PROFANE_PLAIN
 		"color_yellow":
 			return TOOLTIP_BODY_COLOR_YELLOW
 		"color_red":

@@ -19,6 +19,7 @@ var _duration_value: int
 var _stacks_value: int
 @export var duration: int : get = get_duration, set = set_duration
 @export var stacks: int : get = get_stacks, set = set_stacks
+@export var allow_multiple_instances: bool = false
 
 @export_group("Status Visuals")
 @export var icon: Texture
@@ -30,6 +31,8 @@ var _stacks_value: int
 var awaits_turn_start: bool = false
 ## 激活当回合跳过首次 START_OF_TURN 扣 duration，使 duration=1 覆盖完整玩家回合。
 var skip_next_start_of_turn_tick: bool = false
+## 挂在敌人身上时：于玩家回合开始扣 duration，覆盖整个敌人回合而非敌人回合 start/end。
+var ticks_on_player_turn_start_on_enemy: bool = false
 
 
 func get_display_name() -> String:

@@ -36,9 +36,9 @@ const BLADE_INNER_TYPE_BG := Color(26.0 / 255.0, 176.0 / 255.0, 162.0 / 255.0, 1
 
 ## 状态牌灰底
 const STATUS_PANEL_BG := Color(97.0 / 255.0, 97.0 / 255.0, 97.0 / 255.0, 1.0)
-## 公共牌（恶灵 / 铁斩波 / 遗香）统一底板 #78909c
+## 公共牌（恶灵 / 铁斩波 / 亵渎 / 气息 / 灼伤等）统一底板 #78909c
 const COMMON_PUBLIC_PANEL_BG := Color(120.0 / 255.0, 144.0 / 255.0, 156.0 / 255.0, 1.0)
-const COMMON_PUBLIC_CARD_IDS: Array[String] = ["ghost", "iron_wave", "scent"]
+const COMMON_PUBLIC_CARD_IDS: Array[String] = ["ghost", "iron_wave", "profane", "scent", "burn"]
 
 ## 卡面整体被 scale 缩小时，保证屏幕上文字至少该像素
 const MIN_SCREEN_CARD_TEXT_PX := 16
@@ -481,6 +481,12 @@ func _is_status_card() -> bool:
 	return card != null and card.type == Card.Type.STATUS
 
 
+func _card_rarity_for_border() -> Card.Rarity:
+	if _is_status_card():
+		return Card.Rarity.STATUSES
+	return card.rarity if card != null else Card.Rarity.COMMON
+
+
 func _uses_common_public_panels() -> bool:
 	return card != null and card.id in COMMON_PUBLIC_CARD_IDS
 
@@ -498,9 +504,10 @@ func _flat_panel_bg() -> Color:
 
 
 func _rebuild_main_panel_styles() -> void:
-	main_panel_style_base = _with_rarity_border(STYLE_BASE.duplicate() as StyleBoxFlat, card.rarity)
-	main_panel_style_hover = _with_rarity_border(STYLE_HOVER.duplicate() as StyleBoxFlat, card.rarity)
-	main_panel_style_drag = _with_rarity_border(STYLE_DRAG.duplicate() as StyleBoxFlat, card.rarity)
+	var rarity := _card_rarity_for_border()
+	main_panel_style_base = _with_rarity_border(STYLE_BASE.duplicate() as StyleBoxFlat, rarity)
+	main_panel_style_hover = _with_rarity_border(STYLE_HOVER.duplicate() as StyleBoxFlat, rarity)
+	main_panel_style_drag = _with_rarity_border(STYLE_DRAG.duplicate() as StyleBoxFlat, rarity)
 	if _uses_flat_panel_style():
 		var fill := _flat_panel_bg()
 		main_panel_style_base.bg_color = fill
@@ -513,12 +520,12 @@ func _rebuild_main_panel_styles() -> void:
 
 
 func _with_rarity_border(sb: StyleBoxFlat, rarity: Card.Rarity) -> StyleBoxFlat:
-	sb.border_color = Card.RARITY_COLORS[rarity]
+	sb.border_color = Card.RARITY_COLORS.get(rarity, Color.WHITE)
 	return sb
 
 
 func _apply_rarity_panel_borders() -> void:
-	var r := card.rarity
+	var r := _card_rarity_for_border()
 	panel.add_theme_stylebox_override("panel", main_panel_style_base)
 	var frame_fill := _flat_panel_bg() if _uses_flat_panel_style() else Color(0, 0, 0, 0)
 	frame_panel.add_theme_stylebox_override("panel", _inner_panel_style_opaque(r, frame_fill))
@@ -594,7 +601,7 @@ func _inner_type_fill() -> Color:
 func _inner_panel_style_opaque(rarity: Card.Rarity, fill: Color) -> StyleBoxFlat:
 	var sb := STYLE_BASE.duplicate() as StyleBoxFlat
 	sb.bg_color = fill
-	sb.border_color = Card.RARITY_COLORS[rarity]
+	sb.border_color = Card.RARITY_COLORS.get(rarity, Color.WHITE)
 	return sb
 
 

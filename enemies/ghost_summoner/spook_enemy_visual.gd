@@ -26,7 +26,7 @@ func _build(sprite: Sprite2D) -> void:
 		return
 	sprite.reparent(self)
 	sprite.position = Vector2.ZERO
-	position.y = RNG.instance.randf_range(-BOB_RANGE_PX, BOB_RANGE_PX)
+	position.y = randf_range(-BOB_RANGE_PX, BOB_RANGE_PX)
 	if is_inside_tree():
 		_queue_bob_leg()
 	else:
@@ -36,7 +36,7 @@ func _build(sprite: Sprite2D) -> void:
 func _queue_bob_leg() -> void:
 	if not is_inside_tree():
 		return
-	var target_y := RNG.instance.randf_range(-BOB_RANGE_PX, BOB_RANGE_PX)
+	var target_y := randf_range(-BOB_RANGE_PX, BOB_RANGE_PX)
 	if absf(target_y - position.y) < 2.0:
 		target_y = clampf(position.y + BOB_RANGE_PX * 0.5, -BOB_RANGE_PX, BOB_RANGE_PX)
 	var tween := create_tween()

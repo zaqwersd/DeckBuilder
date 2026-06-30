@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://b5esmqau3id5d"]
 
-[ext_resource type="Texture2D" uid="uid://cycrhvv5qih8c" path="res://art/lycoris.png" id="1_u3wrq"]
+[ext_resource type="Texture2D" uid="uid://cycrhvv5qih8c" path="res://art/relics/lycoris.png" id="1_u3wrq"]
 [ext_resource type="Script" uid="uid://bp8t1y008yi7o" path="res://relics/lycoris.gd" id="2_script"]
 
 [resource]

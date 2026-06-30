@@ -29,6 +29,21 @@ static func collect_sibling_controls(owner: Control, type_class: Variant) -> Arr
 	return out
 
 
+static func collect_controls_under_node(root: Node, type_class: Variant) -> Array[Control]:
+	var out: Array[Control] = []
+	if root == null:
+		return out
+	_gather_controls_under(root, type_class, out)
+	return out
+
+
+static func _gather_controls_under(node: Node, type_class: Variant, out: Array[Control]) -> void:
+	if node is Control and is_instance_of(node, type_class):
+		out.append(node as Control)
+	for child in node.get_children():
+		_gather_controls_under(child, type_class, out)
+
+
 static func pointer_over_control_or_peers(
 	screen_pos: Vector2,
 	self_control: Control,

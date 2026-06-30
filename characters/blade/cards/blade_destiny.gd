@@ -1,7 +1,6 @@
 extends Card
 
 const DRAFTABLE_POOL_PATH := "res://characters/blade/blade_draftable_cards.tres"
-const _PICK_UPGRADE_TEXT := "将其升级"
 const _EXHAUST_LINE := "消耗。"
 
 
@@ -19,27 +18,22 @@ func _pick_upgrade_active() -> bool:
 	return is_upgrade_track_maxed("pick_upgrade")
 
 
+func _draw_pile_word() -> String:
+	return CardKeywordTokens.bb_mechanic_link("抽牌堆", "draw_pile")
+
+
+func _exhaust_word() -> String:
+	return CardKeywordTokens.bb_mechanic_link(_EXHAUST_LINE.trim_suffix("。"), "exhaust") + "。"
+
+
 func _effect_body_bbcode() -> String:
 	if _pick_upgrade_active():
-		return "从本角色全卡池中选择一张牌，%s并加入你的抽牌堆底部。" % _PICK_UPGRADE_TEXT
-	return "从本角色全卡池中选择一张牌，并加入你的抽牌堆底部。"
-
-
-func _exhaust_line_bbcode() -> String:
-	if not exhausts:
-		return ""
-	return _EXHAUST_LINE
-
-
-func _append_exhaust_line_bbcode(body: String) -> String:
-	var line := _exhaust_line_bbcode()
-	if line.is_empty():
-		return body
-	return "%s%s" % [body, line]
+		return "从本角色所有卡牌中任选一张，将其升级后放到%s顶。" % _draw_pile_word()
+	return "从本角色所有卡牌中任选一张，放到%s顶。" % _draw_pile_word()
 
 
 func _description_bbcode() -> String:
-	return "[center]%s[/center]" % _append_exhaust_line_bbcode(_effect_body_bbcode())
+	return "[center]%s[br]%s[/center]" % [_effect_body_bbcode(), _exhaust_word()]
 
 
 func get_upgrade_pick_description_bbcode() -> String:
@@ -112,7 +106,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 		temp_pile,
 		1,
 		Callable(),
-		"选择一张卡牌加入抽牌堆底部。",
+		"选择一张卡牌放到抽牌堆顶。",
 		PackedStringArray(),
 		Callable(),
 		Callable(),
@@ -129,9 +123,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	if idx < 0 or idx >= temp_pile.cards.size():
 		return
 
-	var chosen_ref: Card = temp_pile.cards[idx]
-
-	if want_pick_upgrade and chosen_ref.can_be_upgraded():
+	if want_pick_upgrade and temp_pile.cards[idx].can_be_upgraded():
 		var flow := CardUpgradeFlow.open_on_tree(tree)
 		flow.begin(temp_pile, idx)
 		var result: int = await flow.finished
@@ -148,12 +140,12 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 		fallback_center = bcf.get_viewport().get_visible_rect().get_center()
 	var start_center := consume_play_visual_start_center(fallback_center)
 
-	var insert_at_bottom := ph.character.draw_pile.cards.size()
+	var insert_at_top := 0
 	if is_instance_valid(bcf) and bcf is BattleCardFx and not Events.is_combat_ended():
 		var fx := bcf as BattleCardFx
-		await fx.animate_insert_into_draw_pile(chosen, Vector2.ZERO, ph.character, insert_at_bottom)
+		await fx.animate_insert_into_draw_pile(chosen, Vector2.ZERO, ph.character, insert_at_top)
 		if Events.is_combat_ended():
 			return
 		await fx.animate_played_card(self, start_center, BattleCardFx.PlayedKind.EXHAUST)
 	else:
-		ph.character.draw_pile.insert_card_at(insert_at_bottom, chosen)
+		ph.character.draw_pile.insert_card_at(insert_at_top, chosen)

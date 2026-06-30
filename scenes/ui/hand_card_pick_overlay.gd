@@ -52,7 +52,7 @@ var _pointer_registered := false
 var _closed := false
 var _selection_band_nudge: Vector2 = Vector2.ZERO
 var _allow_cancel: bool = true  ## 是否允许ESC取消，默认为true
-var _direct_execute: bool = false  ## 是否直接执行（跳过选牌界面）
+var _pick_input_enabled := false  ## 打开层后须等当前按键松开，避免打出牌的同一次点击误选
 
 
 func _ready() -> void:
@@ -68,7 +68,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not visible or _closed or not is_instance_valid(_hand):
+	if not visible or _closed or not is_instance_valid(_hand) or not _pick_input_enabled:
 		return
 	if not (event is InputEventMouseButton):
 		return
@@ -133,7 +133,7 @@ func start_pick(
 	_required = maxi(1, required_count)
 	_filter = filter_condition
 	_allow_cancel = allow_cancel
-	_direct_execute = false
+	_pick_input_enabled = false
 	_closed = false
 	_selected.clear()
 	_slot_by_cui.clear()
@@ -166,10 +166,12 @@ func start_pick(
 		_finalize_teardown(false, [])
 		return
 
-	## 单张牌优化：如果有效卡牌数 <= 需要选择的数量，直接执行
+	## 可选牌数量不超过需求时，无需进入选牌界面（如取舍仅 1 张可消耗手牌）。
 	if valid_cards.size() <= _required:
-		_direct_execute = true
-		_execute_direct_exhaust(valid_cards)
+		var auto_picked: Array[Card] = []
+		for cui in valid_cards:
+			auto_picked.append(cui.card)
+		call_deferred("_confirm_auto_pick", auto_picked)
 		return
 
 	_hand_parent = _hand.get_parent()
@@ -194,6 +196,23 @@ func start_pick(
 		_selection_center.position = Vector2.ZERO
 	show()
 	_schedule_pick_column_layout(false)
+	call_deferred("_arm_pick_input_after_pointer_up")
+
+
+func _arm_pick_input_after_pointer_up() -> void:
+	if _closed or not is_inside_tree():
+		return
+	while Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not _closed:
+		await get_tree().process_frame
+	if _closed:
+		return
+	_pick_input_enabled = true
+
+
+func _confirm_auto_pick(cards: Array[Card]) -> void:
+	if _closed:
+		return
+	_finalize_teardown(true, cards)
 
 
 func _apply_filter_visibility() -> void:
@@ -238,7 +257,7 @@ func _make_pick_delegate(cui: CardUI) -> Callable:
 
 
 func _try_handle_pick_event(cui: CardUI, event: InputEvent) -> bool:
-	if _closed or not (event is InputEventMouseButton):
+	if not _pick_input_enabled or _closed or not (event is InputEventMouseButton):
 		return false
 	var mb := event as InputEventMouseButton
 	if not mb.pressed or mb.button_index != MOUSE_BUTTON_LEFT:
@@ -601,33 +620,6 @@ func _restore_slot_visibility() -> void:
 			cui.visible = bool(_saved_cui_visible[cui])
 	_saved_slot_visible.clear()
 	_saved_cui_visible.clear()
-
-
-## 直接执行消耗（无选牌界面，用于只有一张可选卡牌时）
-func _execute_direct_exhaust(card_uis: Array[CardUI]) -> void:
-	if card_uis.is_empty():
-		_finalize_teardown(false, [])
-		return
-
-	var cards: Array[Card] = []
-	for cui in card_uis:
-		if cui.card:
-			cards.append(cui.card)
-
-	## 播放手牌消耗动画（参考 ExhaustRandomEffect 的实现方式）
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree:
-		var ph := tree.get_first_node_in_group("player_handler") as PlayerHandler
-		if ph and ph.battle_card_fx:
-			for cui in card_uis:
-				if is_instance_valid(cui) and is_instance_valid(ph.hand):
-					## 添加到消耗堆
-					if ph.character:
-						ph.character.add_card_to_exhaust(cui.card)
-					## 播放消耗动画
-					await ph.battle_card_fx.animate_hand_card_exhaust(ph.hand, cui)
-
-	_finalize_teardown(true, cards)
 
 
 static func open_on_tree(

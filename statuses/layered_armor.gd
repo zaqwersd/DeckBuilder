@@ -34,11 +34,13 @@ static func grant_block_all_in_tree(tree: SceneTree) -> void:
 		var layered := get_on_enemy(enemy)
 		if layered == null or layered.stacks <= 0:
 			continue
-		enemy.stats.block += layered.stacks
+		var block_effect := BlockEffect.new()
+		block_effect.amount = layered.stacks
+		block_effect.execute([enemy])
 
 
 static func on_unblocked_attack_damage(enemy: Enemy, amount: int) -> void:
-	if amount <= 0 or not Events.is_inside_attack_card_effects():
+	if amount <= 0:
 		return
 	var layered := get_on_enemy(enemy)
 	if layered == null or layered.stacks <= 0:

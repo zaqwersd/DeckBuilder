@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PilgrimEnemyStats" format=3 uid="uid://dk66hyyg1nu87"]
+
+[ext_resource type="Script" uid="uid://bwk7wyfs666wh" path="res://enemies/pilgrim/pilgrim_enemy_stats.gd" id="1_stats"]
+[ext_resource type="PackedScene" path="res://enemies/pilgrim/pilgrim_ai.tscn" id="2_ai"]
+[ext_resource type="Texture2D" uid="uid://cgs31gjbdtxt7" path="res://art/pilgrim.png" id="3_art"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/pilgrim/pilgrim_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "朝圣者"
+art_scale = Vector2(4, 4)
+max_health = 198
+art = ExtResource("3_art")

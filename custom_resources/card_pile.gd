@@ -27,6 +27,14 @@ func insert_card_at(index: int, card: Card) -> void:
 	card_pile_size_changed.emit(cards.size())
 
 
+## 插入当前顺序中的随机位置（含堆顶 index 0、堆底 index size），不洗牌。
+func insert_card_at_random(card: Card) -> void:
+	if card == null:
+		return
+	var index := RNG.instance.randi_range(0, cards.size())
+	insert_card_at(index, card)
+
+
 func remove_card_at(index: int) -> Card:
 	var c := cards[index]
 	cards.remove_at(index)

@@ -29,7 +29,7 @@ func perform_action() -> void:
 		return
 	var final_dmg := compute_damage_against_player(damage)
 	var tw1 := create_tween().set_trans(Tween.TRANS_QUINT)
-	var start := enemy.global_position
+	var start := EnemyAction.attack_lunge_home(enemy)
 	var end := EnemyAction.attack_lunge_position(start)
 	tw1.tween_property(enemy, "global_position", end, 0.4)
 	await tw1.finished

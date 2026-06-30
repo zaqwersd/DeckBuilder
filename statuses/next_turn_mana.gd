@@ -19,5 +19,5 @@ func apply_status(_target: Node) -> void:
 		return
 	var ph := tree.get_first_node_in_group("player_handler") as PlayerHandler
 	if ph != null and is_instance_valid(ph.character):
-		ph.character.mana += mana_to_grant
+		ph.character.gain_mana(mana_to_grant)
 	status_applied.emit(self)

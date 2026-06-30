@@ -90,7 +90,7 @@ func _update_view(randomized: bool) -> void:
 
 	var all_cards := card_pile.cards.duplicate()
 	if randomized:
-		all_cards.shuffle()
+		_sort_cards_for_obscured_display(all_cards)
 
 	for card: Card in all_cards:
 		var new_card := create_listing_card_menu()
@@ -106,6 +106,14 @@ func _update_view(randomized: bool) -> void:
 		cards.add_theme_constant_override("v_separation", int(round(36.0 * display_scale)))
 
 	show()
+
+
+## 抽牌堆查看：按 run 种子稳定乱序展示，不消耗 `RNG.instance` 状态。
+func _sort_cards_for_obscured_display(cards: Array) -> void:
+	var order_seed := RNG.instance.seed
+	cards.sort_custom(func(a: Card, b: Card) -> bool:
+		return hash("%d/%s" % [order_seed, a.id]) < hash("%d/%s" % [order_seed, b.id])
+	)
 
 
 func _connect_listing_card_pick(menu: CardMenuUI) -> void:

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://b7xh51rkdccfy"]
 
-[ext_resource type="Texture2D" uid="uid://pgj8vfpj6tc5" path="res://art/tile_0130.png" id="1_kkvs0"]
+[ext_resource type="Texture2D" uid="uid://pgj8vfpj6tc5" path="res://art/relics/tile_0130.png" id="1_kkvs0"]
 [ext_resource type="Script" uid="uid://btysri2atc41l" path="res://relics/confusing_staff.gd" id="2_pgwg4"]
 
 [resource]

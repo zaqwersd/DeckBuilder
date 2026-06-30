@@ -4,9 +4,19 @@ extends Node2D
 const ENEMY_SCENE := preload("res://scenes/enemy/enemy.tscn")
 const LITTLE_SKELTON_STATS := preload("res://enemies/little_skelton/little_skelton_enemy.tres")
 const MINION_STATUS := preload("res://statuses/minion.tres")
+const PilgrimIntentCoordinator := preload("res://enemies/pilgrim/pilgrim_intent_coordinator.gd")
 
 const META_SKELETON_SLOT := &"skeleton_slot"
 const META_SPOOK_SLOT := &"spook_slot"
+
+## 按 stats.enemy_scene_path 实例化敌人；无配置时回退通用 enemy.tscn。
+static func instantiate_enemy(stats: EnemyStats) -> Enemy:
+	var scene := ENEMY_SCENE
+	if stats != null:
+		var custom := stats.get_enemy_scene()
+		if custom != null:
+			scene = custom
+	return scene.instantiate() as Enemy
 
 var acting_enemies: Array[Enemy] = []
 ## 小骷髅等遭遇：槽位编号 1~5 → 布局局部坐标
@@ -30,15 +40,38 @@ func _ready() -> void:
 		Events.player_combat_stat_context_changed.connect(_on_player_combat_stat_context_changed)
 	if not Events.player_turn_intent_context_ready.is_connected(_on_player_turn_intent_context_ready):
 		Events.player_turn_intent_context_ready.connect(_on_player_turn_intent_context_ready)
+	if not Events.player_drew_cards.is_connected(SinsStatus._on_player_drew_cards):
+		Events.player_drew_cards.connect(SinsStatus._on_player_drew_cards)
 
 
 func is_intent_reveal_pending() -> bool:
 	return _intent_reveal_pending
 
 
+## 场景布局敌人：直接复用战斗布局里的实例（保留 tscn override）；其余仍从 enemy_scene_path 实例化。
+func _spawn_enemy_from_layout_template(template: Enemy) -> Enemy:
+	var stats_res := template.stats as EnemyStats
+	if stats_res != null and stats_res.uses_scene_ui_layout:
+		var parent := template.get_parent()
+		if parent != null:
+			parent.remove_child(template)
+		return template
+	if stats_res != null:
+		var enemy := instantiate_enemy(stats_res)
+		enemy.position = template.position
+		template.queue_free()
+		return enemy
+	var fallback := template.duplicate() as Enemy
+	fallback.position = template.position
+	template.queue_free()
+	return fallback
+
+
 func setup_enemies(battle_stats: BattleStats) -> void:
 	if not battle_stats:
 		return
+	
+	SinsStatus.reset_combat()
 	
 	slot_positions.clear()
 	_has_spook_spawn_position = false
@@ -56,13 +89,20 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 		var template := layout_child as Enemy
 		if template == null:
 			continue
-		var new_enemy_child := template.duplicate() as Enemy
-		add_child(new_enemy_child)
-		new_enemy_child.status_handler.statuses_applied.connect(
-			_on_enemy_statuses_applied.bind(new_enemy_child)
-		)
+		var new_enemy_child := _spawn_enemy_from_layout_template(template)
+		if not is_instance_valid(new_enemy_child):
+			continue
+		if new_enemy_child.get_parent() != self:
+			add_child(new_enemy_child)
+		if is_instance_valid(new_enemy_child.status_handler):
+			new_enemy_child.status_handler.statuses_applied.connect(
+				_on_enemy_statuses_applied.bind(new_enemy_child)
+			)
 		if is_instance_valid(template.stats):
 			new_enemy_child.stats = template.stats
+		new_enemy_child.call_deferred("_apply_battle_spawn_visuals")
+		if new_enemy_child._uses_scene_ui_layout():
+			new_enemy_child.call_deferred("sync_scene_layout_ui")
 		if template.has_meta(META_SKELETON_SLOT):
 			var slot: int = int(template.get_meta(META_SKELETON_SLOT))
 			new_enemy_child.set_meta(META_SKELETON_SLOT, slot)
@@ -73,7 +113,8 @@ func setup_enemies(battle_stats: BattleStats) -> void:
 	
 	all_new_enemies.free()
 	LittleSkeltonIntentCoordinator.reset_combat()
-	BoneShewerIntentCoordinator.reset_combat()
+	BoneChewerIntentCoordinator.reset_combat()
+	PilgrimIntentCoordinator.reset_combat()
 	GhostSummonerCoordinator.reset_combat()
 
 
@@ -82,7 +123,8 @@ func reset_enemy_actions() -> void:
 	_turn_start_intent_refresh_locked = false
 	_ensure_enemy_action_pickers_ready()
 	LittleSkeltonIntentCoordinator.assign_for_handler(self)
-	BoneShewerIntentCoordinator.assign_for_handler(self)
+	BoneChewerIntentCoordinator.assign_for_handler(self)
+	PilgrimIntentCoordinator.assign_for_handler(self)
 	GhostSummonerCoordinator.assign_for_handler(self)
 	var enemies: Array[Enemy] = []
 	for child in get_children():
@@ -164,6 +206,22 @@ func _enemy_turn_order_key(enemy: Enemy) -> int:
 	return int(enemy.position.x)
 
 
+## 按行动顺序稳定收集存活敌人（避免 get_children 顺序影响 RNG）。
+static func collect_sorted_live_enemies(handler: EnemyHandler) -> Array[Enemy]:
+	var out: Array[Enemy] = []
+	if handler == null:
+		return out
+	for child in handler.get_children():
+		if not child is Enemy:
+			continue
+		var enemy := child as Enemy
+		if not handler._is_live_enemy(enemy):
+			continue
+		out.append(enemy)
+	out.sort_custom(EnemyTargeting.compare_enemies_stable)
+	return out
+
+
 func count_live_spooks() -> int:
 	var n := 0
 	for child in get_children():
@@ -216,9 +274,10 @@ func spawn_spook(variant: String, max_hp: int, slot: int = SpookEnemyStats.SPOOK
 	var stats: EnemyStats = _spook_stats_for_variant(variant)
 	if stats == null:
 		return null
-	var new_enemy := ENEMY_SCENE.instantiate() as Enemy
+	var new_enemy := instantiate_enemy(stats)
 	add_child(new_enemy)
 	new_enemy.stats = stats
+	new_enemy.call_deferred("_apply_battle_spawn_visuals")
 	SpookEnemyStats.apply_spawn_health(new_enemy.stats, max_hp)
 	new_enemy.position = spawn_pos
 	if not _has_spook_spawn_position:
@@ -234,7 +293,7 @@ func spawn_spook(variant: String, max_hp: int, slot: int = SpookEnemyStats.SPOOK
 		apply_spook_minion(new_enemy, summoner)
 		var scapeghost := ScapeghostStatus.get_on_enemy(summoner)
 		if scapeghost != null:
-			scapeghost._refresh_modifier()
+			scapeghost._refresh_modifier(true)
 	return new_enemy
 
 
@@ -288,14 +347,16 @@ func spawn_little_skelton(summoner: Enemy = null) -> Enemy:
 	if not slot_positions.has(slot):
 		return null
 	
-	var new_enemy := ENEMY_SCENE.instantiate() as Enemy
+	var new_enemy := instantiate_enemy(LITTLE_SKELTON_STATS)
 	add_child(new_enemy)
 	new_enemy.stats = LITTLE_SKELTON_STATS
+	new_enemy.call_deferred("_apply_battle_spawn_visuals")
 	if new_enemy.stats is LittleSkeltonEnemyStats and is_instance_valid(summoner):
 		LittleSkeltonEnemyStats.apply_spawned_health_from_summoner(new_enemy.stats, summoner)
 	new_enemy.position = slot_positions[slot]
 	new_enemy.set_meta(META_SKELETON_SLOT, slot)
 	new_enemy.status_handler.statuses_applied.connect(_on_enemy_statuses_applied.bind(new_enemy))
+	new_enemy.setup_ai()
 	new_enemy.clear_intent_display()
 	return new_enemy
 
@@ -392,3 +453,13 @@ func _refresh_all_enemy_intents() -> void:
 		if enemy.is_intent_suppressed():
 			continue
 		enemy.update_intent()
+
+
+## 玩家回合开始：扣敌人身上虚弱/易伤等 debuff 的 duration（覆盖刚结束的敌人回合）。
+func tick_enemy_debuffs_at_player_turn_start() -> void:
+	for child in get_children():
+		if not _is_live_enemy(child):
+			continue
+		var enemy := child as Enemy
+		if is_instance_valid(enemy.status_handler):
+			enemy.status_handler.apply_enemy_debuff_ticks_at_player_turn_start()

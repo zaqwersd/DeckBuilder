@@ -7,10 +7,10 @@
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "宝箱怪"
 awake_art = ExtResource("4_awake")
 ai = ExtResource("2_ai")
-health_bar_width = 160
-status_bar_offset = Vector2(20, 45)
+enemy_scene_path = "res://enemies/mimic/mimic_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "宝箱怪"
 max_health = 91
 art = ExtResource("3_sleep")

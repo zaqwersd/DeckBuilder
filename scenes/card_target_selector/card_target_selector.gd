@@ -18,6 +18,9 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if not targeting:
 		return
+	if not is_instance_valid(current_card):
+		_end_targeting()
+		return
 	var mouse := get_global_mouse_position()
 	var best := EnemyTargeting.pick_enemy_under_mouse(mouse, get_tree())
 	_apply_single_target(best)
@@ -35,7 +38,7 @@ func _refresh_all_feedback(mouse: Vector2, best: Enemy) -> void:
 
 
 func _apply_single_target(best: Enemy) -> void:
-	if not current_card or not targeting:
+	if not is_instance_valid(current_card) or not targeting:
 		return
 	var cur: Node = null
 	if current_card.targets.size() == 1:
@@ -52,6 +55,8 @@ func _apply_single_target(best: Enemy) -> void:
 
 func _get_points(arc_end_local: Vector2) -> Array:
 	var points := []
+	if not is_instance_valid(current_card):
+		return points
 	var start_g := current_card.global_position
 	start_g.x += current_card.size.x * 0.5
 	var start_local := to_local(start_g)
@@ -73,14 +78,21 @@ func ease_out_cubic(number: float) -> float:
 
 
 func _begin_targeting(card: CardUI) -> void:
-	if not card.card.is_single_targeted():
+	if not is_instance_valid(card) or not card.card.is_single_targeted():
 		return
 	var was_targeting := targeting
 	targeting = true
 	current_card = card
+	if is_instance_valid(current_card) and not current_card.tree_exiting.is_connected(_on_current_card_tree_exiting):
+		current_card.tree_exiting.connect(_on_current_card_tree_exiting)
 	if not was_targeting:
 		_apply_single_target(null)
 		_refresh_all_feedback(get_global_mouse_position(), null)
+
+
+func _on_current_card_tree_exiting() -> void:
+	if targeting:
+		_end_targeting()
 
 
 func _on_card_aim_started(card: CardUI) -> void:
@@ -99,4 +111,6 @@ func _end_targeting() -> void:
 	targeting = false
 	CardTargetingArc.clear_visual(card_arc, arc_head)
 	EnemyTargeting.clear_all_card_targeting_feedback(get_tree())
+	if is_instance_valid(current_card) and current_card.tree_exiting.is_connected(_on_current_card_tree_exiting):
+		current_card.tree_exiting.disconnect(_on_current_card_tree_exiting)
 	current_card = null

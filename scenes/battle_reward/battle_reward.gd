@@ -14,7 +14,7 @@ const GOLD_ICON := preload("res://art/gold.png")
 const GOLD_TEXT := "%s 金币"
 const CARD_ICON := preload("res://art/rarity.png")
 const CARD_TEXT := "添加新卡牌"
-const UPGRADE_ICON := preload("res://art/tile_0074.png")
+const UPGRADE_ICON := preload("res://art/upgraded.png")
 const UPGRADE_TEXT := "升级一张牌"
 
 ## 卡牌奖励升级概率（已移至 RunStats 动态计算）
@@ -761,6 +761,7 @@ func _on_card_reward_taken(picked_menu: Variant, from_global: Vector2) -> void:
 		run.play_deck_gain_card_visual_with_pick(menu, from_global)
 	
 	character_stats.deck.add_card(card)
+	Events.deck_card_added.emit(card)
 	_rebuild_reward_ui()
 
 
@@ -820,7 +821,7 @@ func _on_relic_reward_taken(relic: Relic, index: int) -> void:
 		if index >= 0 and index < _relics_taken.size():
 			_relics_taken[index] = false
 		_rebuild_reward_ui()
-		run.save_data.apply_battle_reward_pending_rollback_to(character_stats, relic_handler)
+		run.save_data.apply_battle_reward_pending_rollback_to(character_stats, relic_handler, potion_handler)
 		run.save_data.clear_battle_reward_pending_staging()
 		run._save_run(false)
 		return
@@ -866,6 +867,9 @@ func _save_battle_reward_pending_snapshot(run: Run, relic_index: int) -> void:
 		current_relics
 	)
 	
+	sd.battle_reward_pending_pre_potion_ids = PackedStringArray()
+	if potion_handler != null:
+		sd.battle_reward_pending_pre_potion_ids = potion_handler.get_ids_for_save()
 	## 保存RNG状态
 	sd.battle_reward_pending_pre_rng_seed = RNG.instance.seed
 	sd.battle_reward_pending_pre_rng_state = RNG.instance.state

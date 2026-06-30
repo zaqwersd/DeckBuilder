@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="SwiftStatus" format=3]
+[gd_resource type="Resource" script_class="SwiftStatus" format=3 uid="uid://c30d71462cyvi"]
 
-[ext_resource type="Texture2D" path="res://art/swift.png" id="1_icon"]
-[ext_resource type="Script" path="res://statuses/swift.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://cu136ciel7c0c" path="res://art/status_icons/swift.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://j5r4fi21imbd" path="res://statuses/swift.gd" id="2_script"]
 
 [resource]
 script = ExtResource("2_script")

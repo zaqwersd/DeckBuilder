@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BattleStats" format=3 uid="uid://wquxn7utigu8"]
+
+[ext_resource type="Script" uid="uid://bo2yy3tbqpsl" path="res://custom_resources/battle_stats.gd" id="1_bs"]
+[ext_resource type="PackedScene" uid="uid://dhueet4e2cbxd" path="res://battles/water_monster.tscn" id="2_scene"]
+[ext_resource type="Texture2D" uid="uid://ct28b2qck44rg" path="res://art/water_monster_battle_background.png" id="3_bg"]
+
+[resource]
+script = ExtResource("1_bs")
+weight = 1.0
+enemies = ExtResource("2_scene")
+background_texture = ExtResource("3_bg")

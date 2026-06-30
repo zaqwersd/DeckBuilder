@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="EphemeralMuscleStatus" format=3 uid="uid://bfdoxai16vwb5"]
 
-[ext_resource type="Texture2D" uid="uid://ohf61iunhev1" path="res://art/temp_strength.png" id="1_y2toa"]
+[ext_resource type="Texture2D" uid="uid://ohf61iunhev1" path="res://art/status_icons/temp_strength.png" id="1_y2toa"]
 [ext_resource type="Script" uid="uid://v7adrf5yqsjm" path="res://statuses/temp_strength.gd" id="2_xxx"]
 
 [resource]

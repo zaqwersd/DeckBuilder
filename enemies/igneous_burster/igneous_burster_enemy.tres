@@ -6,9 +6,9 @@
 
 [resource]
 script = ExtResource("1_es")
-display_name = "熔岩怪"
 ai = ExtResource("3_ai")
-health_bar_width = 200
-status_bar_offset = Vector2(0, 50)
+enemy_scene_path = "res://enemies/igneous_burster/igneous_burster_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "熔岩怪"
 max_health = 57
 art = ExtResource("2_art")

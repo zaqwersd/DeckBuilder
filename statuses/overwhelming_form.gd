@@ -42,12 +42,14 @@ static func apply_multiplier_to_final_attack_damage(player: Player, damage_after
 	return maxi(0, ceili(float(damage_after_vulnerable) * float(mult)))
 
 
-## 卡面预览：仅攻击牌且玩家在战斗上下文时，把已含力量/易伤等的伤害再乘巨剑。
+## 卡面预览：仅战斗卡面模式且为攻击牌时，把已含力量/易伤等的伤害再乘巨剑。
 static func apply_to_attack_card_preview_damage(
 	player: Node,
 	damage_preview: int,
 	card_type: Card.Type
 ) -> int:
+	if not Card.is_visual_number_bbcode_combat():
+		return damage_preview
 	if card_type != Card.Type.ATTACK or player == null or not (player is Player):
 		return damage_preview
 	return apply_multiplier_to_final_attack_damage(player as Player, damage_preview)

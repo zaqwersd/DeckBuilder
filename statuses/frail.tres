@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="FrailStatus" format=3 uid="uid://bekgejkvx838n"]
 
-[ext_resource type="Texture2D" uid="uid://ki8i4roa6fnb" path="res://art/frail.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://ki8i4roa6fnb" path="res://art/status_icons/frail.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://bwxdcuwicygsg" path="res://statuses/frail.gd" id="2_script"]
 
 [resource]

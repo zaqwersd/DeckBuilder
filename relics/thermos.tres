@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Texture2D" path="res://art/relics/thermos.png" id="1_icon"]
+[ext_resource type="Script" path="res://relics/thermos.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "保温杯"
+id = "thermos"
+type = 4
+rarity = 1
+icon = ExtResource("1_icon")
+tooltip = "拾起时，获得2个空药水栏位。"

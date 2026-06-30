@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="HeavyArmorStatus" format=3 uid="uid://dr6drv5vqvfqe"]
 
 [ext_resource type="Script" uid="uid://crjecvhgyobeb" path="res://statuses/heavy_armor.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://b8g6bvds4ftfl" path="res://art/heavy_armor.png" id="2_icon"]
+[ext_resource type="Texture2D" uid="uid://b8g6bvds4ftfl" path="res://art/status_icons/heavy_armor.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_script")

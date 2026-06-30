@@ -44,3 +44,7 @@ static func can_use_in_context_static(tree: SceneTree) -> bool:
 
 func perform_use(_targets: Array[Node]) -> void:
 	pass
+
+
+func perform_use_async(_tree: SceneTree, targets: Array[Node]) -> void:
+	perform_use(targets)

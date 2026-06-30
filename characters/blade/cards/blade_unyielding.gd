@@ -61,5 +61,4 @@ func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var block_effect := BlockEffect.new()
 	block_effect.amount = _block_amount()
 	block_effect.from_card_play = true
-	block_effect.sound = sound
 	block_effect.execute(targets)

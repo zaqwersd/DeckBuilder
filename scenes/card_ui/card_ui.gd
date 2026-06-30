@@ -6,6 +6,8 @@ const HAND_PICK_DELEGATE_META := &"hand_pick_delegate"
 
 ## 手牌内鼠标悬停时卡牌上移的像素
 const HAND_HOVER_LIFT_PX := 180.0
+## 抬起后交互命中区随视觉上移的比例（仅部分跟随，避免命中框完全跟上造成抖动）
+const HAND_HOVER_PICK_LIFT_FOLLOW := 0.35
 const HAND_HOVER_Z := 10
 ## 拾起/瞄准中的牌须高于手牌槽悬停层（Hand.HAND_SLOT_HOVER_Z = 500）
 const PICKED_CARD_Z_INDEX := 520
@@ -191,6 +193,31 @@ func _resolve_combat_hand() -> Hand:
 	return null
 
 
+func validate_and_fill_play_targets() -> bool:
+	if not card or not char_stats:
+		return false
+	if not char_stats.can_play_card(card, get_effective_mana_cost(), combat_player):
+		return false
+
+	if card.is_single_targeted():
+		_prune_invalid_targets()
+		if targets.is_empty():
+			return false
+		if not (targets[0] is Enemy):
+			return false
+		return true
+
+	if targets.is_empty():
+		var tree := get_tree()
+		if tree != null:
+			for enemy in tree.get_nodes_in_group("enemies"):
+				if is_instance_valid(enemy):
+					targets.append(enemy)
+		if targets.is_empty():
+			return false
+	return true
+
+
 func is_mouse_in_hand_zone() -> bool:
 	if not is_instance_valid(hand_slot):
 		return false
@@ -324,8 +351,10 @@ func sync_hand_hover_presentation() -> void:
 		return
 	if is_in_hand_combat_layout():
 		var is_foremost := _is_hand_interaction_foremost()
-		_sync_hand_area_input_pickable(is_foremost)
-		_set_hand_hover_visual_active(is_foremost)
+		var mp := get_global_mouse_position()
+		var in_protrusion := is_global_point_in_hand_protrusion(mp)
+		_sync_hand_area_input_pickable(is_foremost and not in_protrusion)
+		_set_hand_hover_visual_active(is_foremost and not in_protrusion)
 		return
 	_apply_hand_visual_mouse_pick_filter()
 	_set_hand_hover_visual_active(_is_hand_interaction_foremost())
@@ -358,72 +387,151 @@ func _get_scaled_hit_size() -> Vector2:
 	return Vector2(hit_w, hit_h)
 
 
-func _get_card_face_global_transform() -> Transform2D:
-	if not is_inside_tree():
-		return Transform2D.IDENTITY
-	if is_instance_valid(card_visuals) and card_visuals.is_inside_tree():
-		return card_visuals.get_global_transform()
-	var local_vis := Transform2D.IDENTITY
-	if is_instance_valid(card_visuals):
-		local_vis = Transform2D(0.0, card_visuals.position)
-	return get_global_transform() * local_vis
+## 卡面本体（210×220），用于抬起高度与 Voronoi 分牌，勿与点击命中框混用。
+func _get_hand_face_local_rect() -> Rect2:
+	return Rect2(Vector2.ZERO, Hand.CARD_UI_BASE_SIZE)
 
 
-func _current_hand_hover_lift_px() -> float:
+## 点击命中：在本体基础上合并描述区等溢出子控件，不影响抬起动画计算。
+func _get_hand_pick_local_rect() -> Rect2:
+	var merged := _get_hand_face_local_rect()
 	if not is_instance_valid(card_visuals):
+		return merged
+	if is_instance_valid(card_visuals.panel):
+		merged = merged.merge((card_visuals.panel as Control).get_rect())
+	if is_instance_valid(card_visuals.description_label):
+		merged = merged.merge((card_visuals.description_label as Control).get_rect())
+	var frame := card_visuals.get_node_or_null("%FramePanel") as Control
+	if frame != null:
+		merged = merged.merge(frame.get_rect())
+	return merged
+
+
+func _local_rect_to_global_quad(local_rect: Rect2, xf: Transform2D) -> PackedVector2Array:
+	if not is_instance_valid(card_visuals) or not card_visuals.is_inside_tree():
+		var gr := get_global_rect()
+		return PackedVector2Array([
+			gr.position,
+			Vector2(gr.end.x, gr.position.y),
+			gr.end,
+			Vector2(gr.position.x, gr.end.y),
+		])
+	return PackedVector2Array([
+		xf * local_rect.position,
+		xf * Vector2(local_rect.end.x, local_rect.position.y),
+		xf * local_rect.end,
+		xf * Vector2(local_rect.position.x, local_rect.end.y),
+	])
+
+
+## 命中/抬起主判定：未抬起（position.y=0）时的变换。
+func _card_visuals_global_transform_at_rest() -> Transform2D:
+	if not is_instance_valid(card_visuals) or not card_visuals.is_inside_tree():
+		return Transform2D.IDENTITY
+	var xf := card_visuals.get_global_transform()
+	var lift_y := card_visuals.position.y
+	if absf(lift_y) > 0.001:
+		xf.origin -= xf.y * lift_y
+	return xf
+
+
+func _hand_pick_interaction_lift_px() -> float:
+	if not _hand_hover_visual_active or not is_instance_valid(card_visuals):
 		return 0.0
-	var lift := maxf(0.0, -card_visuals.position.y)
-	if _hand_hover_visual_active:
-		lift = maxf(lift, maxf(0.0, -_hand_hover_target_visual_y))
-	elif _hover_lift_tween and _hover_lift_tween.is_running():
-		lift = maxf(lift, maxf(0.0, -_hand_hover_target_visual_y))
-	return lift
+	return maxf(0.0, -card_visuals.position.y * HAND_HOVER_PICK_LIFT_FOLLOW)
 
 
-func _global_rect_from_card_visuals_local(lift_px: float) -> Rect2:
-	if not is_instance_valid(card_visuals) or not is_inside_tree():
-		return get_global_rect()
-	var hit := _get_scaled_hit_size()
-	var xf: Transform2D = _get_card_face_global_transform()
-	var visuals_y := card_visuals.position.y
-	if absf(visuals_y) > 0.001:
-		xf.origin -= xf.y * visuals_y
-	var top_y := -lift_px
-	var bottom_y := hit.y
-	var global_pts: Array[Vector2] = [
-		xf * Vector2(0.0, bottom_y),
-		xf * Vector2(hit.x, bottom_y),
-		xf * Vector2(hit.x, top_y),
-		xf * Vector2(0.0, top_y),
-	]
-	var min_x := global_pts[0].x
-	var max_x := global_pts[0].x
-	var min_y := global_pts[0].y
-	var max_y := global_pts[0].y
-	for i in range(1, 4):
-		min_x = minf(min_x, global_pts[i].x)
-		max_x = maxf(max_x, global_pts[i].x)
-		min_y = minf(min_y, global_pts[i].y)
-		max_y = maxf(max_y, global_pts[i].y)
+## 手牌交互命中：槽位基准 + 抬起时略微上移，便于点到上移后的卡面。
+func _card_visuals_global_transform_for_hand_pick() -> Transform2D:
+	var xf := _card_visuals_global_transform_at_rest()
+	var lift := _hand_pick_interaction_lift_px()
+	if lift > 0.001:
+		xf.origin -= xf.y * lift
+	return xf
+
+
+func _get_hand_pick_global_quad() -> PackedVector2Array:
+	return _local_rect_to_global_quad(
+		_get_hand_pick_local_rect(),
+		card_visuals.get_global_transform()
+	)
+
+
+func _get_hand_pick_global_quad_at_rest() -> PackedVector2Array:
+	return _local_rect_to_global_quad(
+		_get_hand_pick_local_rect(),
+		_card_visuals_global_transform_for_hand_pick()
+	)
+
+
+func _get_hand_face_global_quad_at_rest() -> PackedVector2Array:
+	return _local_rect_to_global_quad(
+		_get_hand_face_local_rect(),
+		_card_visuals_global_transform_at_rest()
+	)
+
+
+func _aabb_from_points(points: PackedVector2Array) -> Rect2:
+	if points.is_empty():
+		return Rect2()
+	var min_x := points[0].x
+	var max_x := points[0].x
+	var min_y := points[0].y
+	var max_y := points[0].y
+	for i in range(1, points.size()):
+		min_x = minf(min_x, points[i].x)
+		max_x = maxf(max_x, points[i].x)
+		min_y = minf(min_y, points[i].y)
+		max_y = maxf(max_y, points[i].y)
 	return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
 
 
-func get_hand_base_pick_global_rect() -> Rect2:
+func _get_hand_pick_local_size() -> Vector2:
+	return _get_hand_pick_local_rect().size
+
+
+## 扇形旋转后 AABB 会比真实卡面大；命中须用旋转四边形，右侧牌否则明显错位。
+func is_global_point_in_hand_pick(global_point: Vector2) -> bool:
+	return Geometry2D.is_point_in_polygon(global_point, _get_hand_pick_global_quad())
+
+
+## 手牌扇形内的主目标/抬起判定：槽位基准；抬起时命中区随视觉上移一小段。
+func is_global_point_in_hand_pick_at_rest(global_point: Vector2) -> bool:
+	return Geometry2D.is_point_in_polygon(global_point, _get_hand_pick_global_quad_at_rest())
+
+
+## 抬起后随视觉上移的「突出段」：鼠标在此区域内则缩回，避免挡视野。
+func is_global_point_in_hand_protrusion(global_point: Vector2) -> bool:
+	if not _hand_hover_visual_active:
+		return false
+	if not is_global_point_in_hand_pick(global_point):
+		return false
+	return not is_global_point_in_hand_pick_at_rest(global_point)
+
+
+func get_hand_pick_global_center() -> Vector2:
 	if not is_instance_valid(card_visuals) or not card_visuals.is_inside_tree():
-		return get_global_rect()
-	var gr := card_visuals.get_global_rect()
-	var ly := card_visuals.position.y
-	if absf(ly) > 0.001:
-		var xf := card_visuals.get_global_transform()
-		gr.position -= xf.y * ly
-	return gr
+		return get_global_rect().get_center()
+	var face := _get_hand_face_local_rect()
+	return _card_visuals_global_transform_at_rest() * face.get_center()
+
+
+func get_hand_pick_global_top_y() -> float:
+	var quad := _get_hand_face_global_quad_at_rest()
+	var top_y := quad[0].y
+	for i in range(1, quad.size()):
+		top_y = minf(top_y, quad[i].y)
+	return top_y
+
+
+func get_hand_base_pick_global_rect() -> Rect2:
+	return _aabb_from_points(_get_hand_pick_global_quad())
 
 
 func get_hand_active_pick_global_rect() -> Rect2:
-	var lift_px := _current_hand_hover_lift_px()
-	if lift_px <= 0.001:
-		return get_hand_base_pick_global_rect()
-	return _global_rect_from_card_visuals_local(lift_px)
+	if _hand_hover_visual_active:
+		return _aabb_from_points(_get_hand_pick_global_quad_at_rest())
+	return get_hand_base_pick_global_rect()
 
 
 func _compute_unified_hand_hover_visual_y() -> float:
@@ -432,7 +540,7 @@ func _compute_unified_hand_hover_visual_y() -> float:
 	var hp := hand_slot.get_parent()
 	if not (hp is Hand):
 		return -HAND_HOVER_LIFT_PX
-	var cur_top := get_hand_base_pick_global_rect().position.y
+	var cur_top := get_hand_pick_global_top_y()
 	var target_top := (hp as Hand).get_hand_hover_unified_global_top()
 	return target_top - cur_top
 
@@ -440,20 +548,15 @@ func _compute_unified_hand_hover_visual_y() -> float:
 func sync_hand_interaction_collision_from_layout(base_size: Vector2 = Vector2.ZERO) -> void:
 	if not is_instance_valid(card_visuals):
 		return
+	var pick_rect := _get_hand_pick_local_rect()
 	var hit := base_size
 	if hit.x <= 0.001 or hit.y <= 0.001:
-		hit = _get_scaled_hit_size()
-	var lift_px := 0.0
-	if _hand_hover_visual_active and _is_hand_interaction_foremost():
-		lift_px = _current_hand_hover_lift_px()
-	elif _hover_lift_tween and _hover_lift_tween.is_running():
-		lift_px = _current_hand_hover_lift_px()
-	var total_h := hit.y + lift_px
-	var shape_center := Vector2(hit.x * 0.5, (hit.y - lift_px) * 0.5)
+		hit = pick_rect.size
+	var center := pick_rect.position + hit * 0.5
 	if is_instance_valid(drop_point_detector):
-		_apply_rect_pick_shape(drop_point_detector, Vector2(hit.x, total_h), shape_center)
+		_apply_rect_pick_shape(drop_point_detector, hit, center)
 	if is_instance_valid(card_visuals.area_2d):
-		_apply_rect_pick_shape(card_visuals.area_2d, Vector2(hit.x, total_h), shape_center)
+		_apply_rect_pick_shape(card_visuals.area_2d, hit, center)
 
 
 func _apply_rect_pick_shape(area: Area2D, size: Vector2, center: Vector2) -> void:
@@ -572,7 +675,7 @@ func sync_hand_hover_lift_from_mouse() -> void:
 func play() -> void:
 	if not card:
 		return
-	_play_resolved()
+	await _play_resolved()
 
 
 func _play_resolved() -> void:
@@ -596,6 +699,8 @@ func _play_resolved() -> void:
 	var start_center := get_global_rect().get_center()
 	played_card.set_play_visual_start_center(start_center)
 
+	if played_card.opens_hand_card_pick_on_play():
+		played_card.prepare_hand_card_pick_before_effects()
 	visible = false
 	await played_card.play(played_targets, stats, mods, get_effective_mana_cost())
 
@@ -632,7 +737,6 @@ func _play_resolved() -> void:
 
 	if (
 		do_defect_echo
-		and not Events.is_combat_ended()
 		and is_instance_valid(relic_h)
 		and relic_h.has_relic("defect_machine")
 		and fx
@@ -641,7 +745,14 @@ func _play_resolved() -> void:
 	):
 		await fx.animate_defect_machine_echo(played_card, played_targets, stats, mods)
 
+	await _flush_deferred_draw_pile_inserts_after_play()
 	queue_free()
+
+
+func _flush_deferred_draw_pile_inserts_after_play() -> void:
+	var ph := get_tree().get_first_node_in_group("player_handler") as PlayerHandler
+	if ph != null:
+		await ph.flush_deferred_draw_pile_insert_animations()
 
 
 func _resolve_enemy_from_target_node(node: Node) -> Enemy:
@@ -681,19 +792,17 @@ func _prune_invalid_targets() -> void:
 
 
 func is_hovered() -> bool:
-	return get_hand_hover_hit_global_rect().has_point(get_global_mouse_position())
+	return is_global_point_in_hand_pick(get_global_mouse_position())
 
 
 func get_hand_hover_hit_global_rect() -> Rect2:
-	if is_in_hand_combat_layout() and _is_hand_interaction_foremost():
-		return get_hand_active_pick_global_rect()
-	return get_hand_base_pick_global_rect()
+	return get_hand_active_pick_global_rect()
 
 
 func is_hand_hover_hit_overlapping() -> bool:
 	if disabled:
 		return false
-	return get_hand_base_pick_global_rect().has_point(get_global_mouse_position())
+	return is_global_point_in_hand_pick(get_global_mouse_position())
 
 
 func is_hand_pointer_over_this_card() -> bool:
@@ -704,7 +813,7 @@ func is_hand_pointer_over_this_card() -> bool:
 		return false
 	if (hp as Hand).get_mouse_foremost_hand_card() != self:
 		return false
-	return get_hand_active_pick_global_rect().has_point(get_global_mouse_position())
+	return is_global_point_in_hand_pick_at_rest(get_global_mouse_position())
 
 
 func refresh_combat_description() -> void:

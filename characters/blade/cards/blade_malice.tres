@@ -1,8 +1,8 @@
-[gd_resource type="Resource" format=3]
+[gd_resource type="Resource" format=3 uid="uid://dj36u3d3iar4w"]
 
-[ext_resource type="Texture2D" path="res://art/malice.png" id="1_icon"]
-[ext_resource type="Script" path="res://characters/blade/cards/blade_malice.gd" id="2_script"]
-[ext_resource type="AudioStream" path="res://art/overwhelming.ogg" id="3_sound"]
+[ext_resource type="Texture2D" uid="uid://cpwavw3p4cva6" path="res://art/cards/malice.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://cubp74qq64kvc" path="res://characters/blade/cards/blade_malice.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_sound"]
 
 [resource]
 script = ExtResource("2_script")
@@ -12,5 +12,5 @@ rarity = 3
 cost = 1
 card_name = "杀气"
 icon = ExtResource("1_icon")
-tooltip_text = "[center]敌人每有一层易伤，额外受到10%%伤害。[/center]"
+tooltip_text = "[center]敌人每有一层易伤，额外受到15%%伤害。[/center]"
 sound = ExtResource("3_sound")

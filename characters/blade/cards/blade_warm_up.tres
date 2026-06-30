@@ -1,0 +1,16 @@
+[gd_resource type="Resource" format=3 uid="uid://7pl2r7as1o5m"]
+
+[ext_resource type="Texture2D" uid="uid://ctvvufu5dhff2" path="res://art/cards/warm_up.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://bibyf412taonv" path="res://characters/blade/cards/blade_warm_up.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_warm_up"
+type = 1
+rarity = 2
+cost = 1
+card_name = "热身"
+icon = ExtResource("1_icon")
+tooltip_text = "[center]打出此牌后，本回合每当你造成攻击伤害，获得等于造成伤害值的格挡。[/center]"
+sound = ExtResource("3_sound")

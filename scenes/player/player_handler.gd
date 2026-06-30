@@ -40,20 +40,42 @@ var _battle_start_hand_cards_granted: bool = false
 var _first_turn_of_battle: bool = true
 ## 本次 draw_cards 批次内洗牌触发的额外抽牌（如莫比乌斯环），须在 draw_cards 返回前全部结算。
 var _shuffle_bonus_draws_pending: int = 0
+## 出牌协程期间延迟播放的「飞入抽牌堆」动画（由 draw_pile_insert_animation_requested 入队）。
+var _deferred_draw_pile_insert_anims: Array[Card] = []
+## player_drew_cards 同步回调期间入队的即时飞入动画，由 draw_cards 批次在抽牌飞行动画前播放。
+var _immediate_draw_pile_insert_anims: Array[Card] = []
 
 
 func _ready() -> void:
 	Events.card_played.connect(_on_card_played)
+	if not Events.draw_pile_insert_animation_requested.is_connected(_on_draw_pile_insert_animation_requested):
+		Events.draw_pile_insert_animation_requested.connect(_on_draw_pile_insert_animation_requested)
 
 
 ## 洗牌与堆初始化（不含 start_turn）。须先于 `BattleUI.initialize_card_pile_ui()`，
 ## 否则首次抽牌时 `BattleCardFx.draw_pile_button` 为空 → 飞入动画被跳过。
-func start_battle_prep(char_stats: CharacterStats) -> void:
+## combat_reload：战斗读档时跳过洗牌，从 combat_snapshot 恢复 setup 后的牌堆顺序。
+func start_battle_prep(char_stats: CharacterStats, combat_reload: bool = false) -> void:
 	character = char_stats
 	_battle_start_hand_cards_granted = false
 	_first_turn_of_battle = true
 	_shuffle_bonus_draws_pending = 0
+	_deferred_draw_pile_insert_anims.clear()
+	_immediate_draw_pile_insert_anims.clear()
 	_intrinsic_draw_priority = true
+	if combat_reload and _try_restore_piles_from_combat_snapshot():
+		pass
+	else:
+		if combat_reload:
+			push_warning("PlayerHandler: 战斗读档缺少 setup 牌堆快照，回退为重新洗牌")
+		_build_fresh_combat_piles_from_deck()
+	if not relics.relics_activated.is_connected(_on_relics_activated):
+		relics.relics_activated.connect(_on_relics_activated)
+	if not player.status_handler.statuses_applied.is_connected(_on_statuses_applied):
+		player.status_handler.statuses_applied.connect(_on_statuses_applied)
+
+
+func _build_fresh_combat_piles_from_deck() -> void:
 	var raw_pile := character.deck.custom_duplicate()
 	var intr: Array[Card] = []
 	var rest: Array[Card] = []
@@ -71,10 +93,16 @@ func start_battle_prep(char_stats: CharacterStats) -> void:
 	character.draw_pile.card_pile_size_changed.emit(character.draw_pile.cards.size())
 	character.discard = CardPile.new()
 	character.exhaust = CardPile.new()
-	if not relics.relics_activated.is_connected(_on_relics_activated):
-		relics.relics_activated.connect(_on_relics_activated)
-	if not player.status_handler.statuses_applied.is_connected(_on_statuses_applied):
-		player.status_handler.statuses_applied.connect(_on_statuses_applied)
+
+
+func _try_restore_piles_from_combat_snapshot() -> bool:
+	var run := get_tree().get_first_node_in_group("run")
+	if run == null:
+		return false
+	var save_data: SaveGame = run.get("save_data") as SaveGame
+	if save_data == null or save_data.combat_snapshot == null:
+		return false
+	return save_data.combat_snapshot.restore_battle_piles(character)
 
 
 func start_battle(char_stats: CharacterStats) -> void:
@@ -83,6 +111,7 @@ func start_battle(char_stats: CharacterStats) -> void:
 
 
 func start_turn() -> void:
+	_flush_deferred_end_turn_mana()
 	if Events.is_combat_ended():
 		Events.end_player_turn_start_resolving()
 		return
@@ -129,9 +158,23 @@ func _finish_player_turn_start_setup() -> void:
 	Events.player_combat_stat_context_changed.emit()
 	Events.end_player_turn_start_resolving()
 	draw_cards(character.cards_per_turn, true)
+	await _flush_deferred_end_turn_draws()
+
+
+func _flush_deferred_end_turn_mana() -> void:
+	var amount := Events.consume_deferred_end_turn_mana()
+	if amount > 0:
+		character.mana += amount
+
+
+func _flush_deferred_end_turn_draws() -> void:
+	var amount := Events.consume_deferred_end_turn_draw()
+	if amount > 0:
+		await draw_cards(amount, false, false, true)
 
 
 func end_turn() -> void:
+	Events.begin_player_turn_end_resolving()
 	hand.disable_hand()
 	relics.activate_relics_by_type(Relic.Type.END_OF_TURN)
 
@@ -247,23 +290,33 @@ func request_shuffle_bonus_draw(amount: int = 1) -> void:
 	_shuffle_bonus_draws_pending += maxi(0, amount)
 
 
-func draw_cards(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_enable: bool = false) -> void:
+func draw_cards(
+	amount: int,
+	is_start_of_turn_draw: bool = false,
+	suppress_hand_enable: bool = false,
+	defer_side_animations: bool = false
+) -> void:
 	if Events.is_combat_ended():
 		return
-	await _draw_cards_batch(amount, is_start_of_turn_draw, suppress_hand_enable)
-	await _flush_shuffle_bonus_draws(suppress_hand_enable)
+	await _draw_cards_batch(amount, is_start_of_turn_draw, suppress_hand_enable, defer_side_animations)
+	await _flush_shuffle_bonus_draws(suppress_hand_enable, defer_side_animations)
 
 
-func _flush_shuffle_bonus_draws(suppress_hand_enable: bool) -> void:
+func _flush_shuffle_bonus_draws(suppress_hand_enable: bool, defer_side_animations: bool) -> void:
 	while _shuffle_bonus_draws_pending > 0:
 		if Events.is_combat_ended():
 			_shuffle_bonus_draws_pending = 0
 			return
 		_shuffle_bonus_draws_pending -= 1
-		await _draw_cards_batch(1, false, suppress_hand_enable)
+		await _draw_cards_batch(1, false, suppress_hand_enable, defer_side_animations)
 
 
-func _draw_cards_batch(amount: int, is_start_of_turn_draw: bool = false, suppress_hand_enable: bool = false) -> void:
+func _draw_cards_batch(
+	amount: int,
+	is_start_of_turn_draw: bool = false,
+	suppress_hand_enable: bool = false,
+	defer_side_animations: bool = false
+) -> void:
 	if Events.is_combat_ended():
 		return
 	amount = maxi(0, amount)
@@ -288,6 +341,10 @@ func _draw_cards_batch(amount: int, is_start_of_turn_draw: bool = false, suppres
 		else:
 			to_hand.append(c)
 			pending_hand_count += 1
+
+	var drawn_count := to_hand.size() + to_discard.size()
+	_notify_player_drew_cards(drawn_count, defer_side_animations)
+	await _flush_immediate_draw_pile_insert_anims()
 
 	if Events.is_combat_ended():
 		_flush_drawn_cards_to_hand(to_hand)
@@ -323,6 +380,62 @@ func _draw_cards_batch(amount: int, is_start_of_turn_draw: bool = false, suppres
 		Events.player_hand_drawn.emit()
 
 
+func _notify_player_drew_cards(count: int, defer_side_animations: bool) -> void:
+	if count <= 0 or player == null:
+		return
+	Events.player_drew_cards.emit(player, count, defer_side_animations)
+
+
+func _on_draw_pile_insert_animation_requested(card: Card, defer_animation: bool) -> void:
+	if card == null:
+		return
+	if defer_animation:
+		_deferred_draw_pile_insert_anims.append(card)
+	else:
+		_immediate_draw_pile_insert_anims.append(card)
+
+
+func _flush_immediate_draw_pile_insert_anims() -> void:
+	while not _immediate_draw_pile_insert_anims.is_empty():
+		if Events.is_combat_ended():
+			_immediate_draw_pile_insert_anims.clear()
+			return
+		var card: Card = _immediate_draw_pile_insert_anims.pop_front()
+		await _play_draw_pile_insert_animation(card)
+
+
+func play_draw_pile_insert_animations(cards: Array[Card]) -> void:
+	for card in cards:
+		if card == null or Events.is_combat_ended():
+			return
+		await _play_draw_pile_insert_animation(card)
+
+
+func flush_deferred_draw_pile_insert_animations() -> void:
+	if _deferred_draw_pile_insert_anims.is_empty():
+		return
+	var batch := _deferred_draw_pile_insert_anims.duplicate()
+	_deferred_draw_pile_insert_anims.clear()
+	await play_draw_pile_insert_animations(batch)
+
+
+func _play_draw_pile_insert_animation(card: Card) -> void:
+	if card == null or Events.is_combat_ended():
+		return
+	if battle_card_fx == null or not is_instance_valid(battle_card_fx):
+		return
+	if not battle_card_fx.has_method("animate_inserted_card_flying_to_draw_pile"):
+		return
+	await battle_card_fx.animate_inserted_card_flying_to_draw_pile(card)
+
+
+func _trigger_end_turn_card_effect(card_ui: CardUI) -> void:
+	if card_ui == null or not is_instance_valid(card_ui) or card_ui.card == null:
+		return
+	if is_instance_valid(player):
+		await card_ui.card.on_end_turn_in_hand(player, self, card_ui)
+
+
 func discard_cards() -> void:
 	if Events.is_combat_ended():
 		_sync_discard_entire_hand()
@@ -338,6 +451,7 @@ func discard_cards() -> void:
 	for slot in hand.get_children():
 		var card_ui_a := hand.get_card_ui_in_slot(slot)
 		if card_ui_a and card_ui_a.card and not card_ui_a.card.ethereal and not card_ui_a.card.retains:
+			await _trigger_end_turn_card_effect(card_ui_a)
 			pending_non.append({
 				"ui": card_ui_a,
 				"card": card_ui_a.card,
@@ -420,6 +534,7 @@ func discard_cards() -> void:
 func _emit_player_hand_discarded_after_layout() -> void:
 	if is_instance_valid(hand):
 		hand.finalize_end_turn_hand_layout()
+	Events.end_player_turn_end_resolving()
 	Events.player_hand_discarded.emit()
 
 
@@ -438,6 +553,8 @@ func reshuffle_deck_from_discard() -> void:
 
 
 func _on_card_played(card: Card) -> void:
+	if card.is_replaying_effects_without_payment():
+		return
 	if card.exhausts:
 		if not card.defers_exhaust_to_end_of_play():
 			character.add_card_to_exhaust(card)

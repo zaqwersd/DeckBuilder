@@ -188,6 +188,7 @@ func _on_option_strike_block() -> void:
 	
 	var gained: Card = IRON_WAVE.duplicate(true) as Card
 	character_stats.deck.add_card(gained)
+	Events.deck_card_added.emit(gained)
 	if run:
 		run.play_deck_gain_card_visual(gained, Vector2.ZERO)
 	call_deferred("_finish_event_and_leave")
@@ -263,6 +264,7 @@ func _on_pair_reward_selected(picked_menu: Variant, from_global: Vector2) -> voi
 		if menu.card:
 			var copy: Card = menu.card.duplicate(true) as Card
 			character_stats.deck.add_card(copy)
+			Events.deck_card_added.emit(copy)
 			var run := get_tree().get_first_node_in_group("run") as Run
 			if run:
 				run.play_deck_gain_card_visual_with_pick(menu, from_global)

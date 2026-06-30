@@ -11,8 +11,25 @@ func get_display_name() -> String:
 
 @export_multiline var description: String
 @export var portrait: Texture
+## 多部件战斗立绘场景；非空时 Player 优先实例化该场景，否则使用 `art` 纹理。
+@export var art_scene: PackedScene
+@export_file("*.tscn") var art_scene_path: String = ""
+## 场景立绘在自动对齐后的额外偏移（像素，Player 局部坐标）。
+@export var art_scene_offset: Vector2 = Vector2.ZERO
 ## 与 Relic.CharacterType 键名（小写）对应，用于 can_appear_as_reward；留空则回退为 character_name
 @export var relic_match_id: String = ""
+
+
+func get_art_scene() -> PackedScene:
+	if art_scene:
+		return art_scene
+	if not art_scene_path.is_empty():
+		var loaded := load(art_scene_path) as PackedScene
+		if loaded:
+			return loaded
+	if relic_match_id.strip_edges().to_lower() == "blade":
+		return load("res://characters/blade/blade_visual.tscn") as PackedScene
+	return null
 
 @export_group("Gameplay Data")
 @export var starting_deck: CardPile
@@ -37,6 +54,16 @@ func set_mana(value: int) -> void:
 
 func reset_mana() -> void:
 	mana = max_mana
+
+
+func gain_mana(amount: int) -> void:
+	amount = maxi(0, amount)
+	if amount <= 0:
+		return
+	if Events.is_player_turn_end_resolving():
+		Events.defer_end_turn_mana(amount)
+		return
+	mana += amount
 
 
 func take_damage(damage: int) -> void:

@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://dhueet4e2cbxd"]
+
+[ext_resource type="PackedScene" uid="uid://f2jpcj1y27d0" path="res://enemies/water_monster/water_monster_enemy.tscn" id="1_enemy"]
+
+[node name="WaterMonster" type="Node2D" unique_id=1793026948]
+
+[node name="WaterMonsterEnemy" parent="." unique_id=337323004 instance=ExtResource("1_enemy")]
+position = Vector2(916, 302)

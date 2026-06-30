@@ -1,73 +1,48 @@
 extends Card
 
 const _HIT_DELAY_SEC := 0.12
-const _PER_HIT_DAMAGE := 6
-const _EFFECT_BODY := "你的消耗堆每有一张牌，对所有敌人造成%s点伤害1次。"
-const _EXHAUST_LINE := "消耗。"
+const _EFFECT_BODY := "你的%s每有一张牌，对所有敌人造成%s点伤害1次。"
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["exhaust_line"])
+	return PackedStringArray(["damage"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
-	if track_id == "exhaust_line":
-		return PackedInt32Array([0, 0])
-	return PackedInt32Array()
-
-
-func _exhaust_line_bbcode() -> String:
-	if not exhausts:
-		return ""
-	return _EXHAUST_LINE
-
-
-func _append_exhaust_line_bbcode(body: String) -> String:
-	var line := _exhaust_line_bbcode()
-	if line.is_empty():
-		return body
-	return "%s%s" % [body, line]
+	match track_id:
+		"damage":
+			return PackedInt32Array([5, 8])
+		_:
+			return PackedInt32Array()
 
 
 func _wrap_center(body: String) -> String:
 	return "[center]%s[/center]" % body
 
 
+func _exhaust_pile_word() -> String:
+	return CardKeywordTokens.bb_mechanic_link("消耗堆", "exhaust_pile")
+
+
 func _effect_body_bbcode(damage_bb: String) -> String:
-	return _EFFECT_BODY % damage_bb
+	return _EFFECT_BODY % [_exhaust_pile_word(), damage_bb]
 
 
 func get_upgrade_pick_description_bbcode() -> String:
-	return _wrap_center(
-		_append_exhaust_line_bbcode(_effect_body_bbcode(str(_PER_HIT_DAMAGE)))
-	)
+	var dmg_bb := bbcode_upgrade_pick_digit("damage", get_upgrade_value_at("damage"))
+	return _wrap_center(_effect_body_bbcode(dmg_bb))
 
 
-func _apply_upgraded_state() -> void:
-	super._apply_upgraded_state()
-	_sync_exhaust_from_upgrade()
-
-
-func sync_unlocked_intrinsic_flags_from_upgrade_tracks() -> void:
-	cost = 2
-	_sync_exhaust_from_upgrade()
-
-
-func _sync_exhaust_from_upgrade() -> void:
-	var ch := get_upgrade_chain("exhaust_line")
-	if ch.is_empty():
-		return
-	exhausts = not is_upgrade_track_maxed("exhaust_line")
+func defers_exhaust_to_end_of_play() -> bool:
+	return false
 
 
 func _per_hit_damage() -> int:
-	return _PER_HIT_DAMAGE
+	return get_upgrade_value_at("damage")
 
 
 func get_default_tooltip() -> String:
-	return _wrap_center(
-		_append_exhaust_line_bbcode(_effect_body_bbcode(str(_per_hit_damage())))
-	)
+	return _wrap_center(_effect_body_bbcode(str(_per_hit_damage())))
 
 
 func get_updated_tooltip(
@@ -77,9 +52,9 @@ func get_updated_tooltip(
 	var dmg_bb := bbcode_for_modified_number_with_upgrade_hint(
 		compute_attack_damage_dealt(d_base, player_modifiers, enemy_modifiers, combat_player),
 		d_base,
-		true
+		is_upgrade_track_maxed("damage")
 	)
-	return _wrap_center(_append_exhaust_line_bbcode(_effect_body_bbcode(dmg_bb)))
+	return _wrap_center(_effect_body_bbcode(dmg_bb))
 
 
 func get_combat_effect_summary_bbcode(

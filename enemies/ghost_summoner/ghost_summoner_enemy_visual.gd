@@ -43,7 +43,7 @@ func _schedule_blink() -> void:
 		_blink_timer.one_shot = true
 		add_child(_blink_timer)
 		_blink_timer.timeout.connect(_on_blink_timer)
-	_blink_timer.wait_time = RNG.instance.randf_range(1.0, 2.0)
+	_blink_timer.wait_time = randf_range(1.0, 2.0)
 	_blink_timer.start()
 
 

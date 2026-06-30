@@ -13,4 +13,4 @@ func execute(targets: Array[Node]) -> void:
 	if not player_handler:
 		return
 
-	await player_handler.draw_cards(cards_to_draw)
+	await player_handler.draw_cards(cards_to_draw, false, false, true)

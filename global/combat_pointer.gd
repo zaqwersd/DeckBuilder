@@ -36,6 +36,11 @@ static func node2d_shape_has_world_point(
 		return false
 	if collision_shape.shape == null:
 		return false
+	var circle_shape := collision_shape.shape as CircleShape2D
+	if circle_shape != null:
+		var inv_circle := collision_shape.global_transform.affine_inverse()
+		var local_circle: Vector2 = inv_circle * world_pos
+		return local_circle.length_squared() <= circle_shape.radius * circle_shape.radius
 	var rect_shape := collision_shape.shape as RectangleShape2D
 	if rect_shape == null:
 		return false

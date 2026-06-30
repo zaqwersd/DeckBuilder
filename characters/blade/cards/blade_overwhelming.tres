@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://b1yl5we8yv4oo"]
 
-[ext_resource type="Texture2D" uid="uid://qf4ykxsnd7bq" path="res://art/overwhelming.png" id="1_ktc67"]
+[ext_resource type="Texture2D" uid="uid://qf4ykxsnd7bq" path="res://art/cards/overwhelming.png" id="1_ktc67"]
 [ext_resource type="Script" uid="uid://c43eo58wglix7" path="res://characters/blade/cards/blade_overwhelming.gd" id="2_sc"]
 [ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_snd"]
 

@@ -2,9 +2,6 @@ extends Card
 
 ## 取舍 - 1费技能：获得格挡，选择消耗1张手牌。
 
-## 选牌 UI：`selection_finished` 回调写入，`finished` 为 true 后 `_show_card_selector` 继续
-var _selector_close_state: Dictionary = {}
-
 
 func get_upgrade_track_ids() -> PackedStringArray:
 	return PackedStringArray(["block"])
@@ -81,54 +78,82 @@ func get_updated_tooltip(
 	return "[center]获得%s点格挡。[br]%s。[/center]" % [block_bb, _exhaust_line_bbcode()]
 
 
+func meets_play_requirements(_char_stats: CharacterStats) -> bool:
+	return true
+
+
+func _count_pickable_hand_cards() -> int:
+	var hand := _get_hand()
+	if hand == null:
+		return 0
+	var n := 0
+	for slot in hand.get_children():
+		var cui := hand.get_card_ui_in_slot(slot)
+		if cui == null or cui.card == null or cui.modulate.a <= 0.01:
+			continue
+		n += 1
+	return n
+
+
+func allows_hand_drag_when_play_requirements_unmet() -> bool:
+	return true
+
+
+func requires_drag_outside_hand_before_play() -> bool:
+	return true
+
+
+func opens_hand_card_pick_on_play() -> bool:
+	return true
+
+
+var _pending_pick_overlay: HandCardPickOverlay = null
+
+
+func prepare_hand_card_pick_before_effects() -> void:
+	if _count_pickable_hand_cards() <= 0:
+		return
+	_pending_pick_overlay = _open_pick_overlay_sync()
+
+
 func apply_effects(targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var block_effect := BlockEffect.new()
 	block_effect.amount = get_upgrade_value_at("block")
 	block_effect.from_card_play = true
-	block_effect.sound = sound
 	block_effect.execute(targets)
-	await _show_card_selector()
+	await _await_card_selector()
 
 
-func _show_card_selector() -> void:
+func _open_pick_overlay_sync() -> HandCardPickOverlay:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
-		return
+		return null
 	var hand := _get_hand()
-	if hand == null or hand.get_child_count() == 0:
-		return
-
-	var has_any := false
-	for slot in hand.get_children():
-		var cui := hand.get_card_ui_in_slot(slot)
-		if cui != null and cui.card != null and cui.modulate.a > 0.01:
-			has_any = true
-			break
-	if not has_any:
-		return
-
+	if hand == null or _count_pickable_hand_cards() <= 0:
+		return null
 	## allow_cancel = false：强制选择，不可ESC取消
-	var overlay := HandCardPickOverlay.open_on_tree(
+	return HandCardPickOverlay.open_on_tree(
 		tree, hand, 1, Callable(), "选择要消耗的卡牌", false
 	)
-	_selector_close_state = {"finished": false}
-	overlay.selection_finished.connect(_on_selector_screen_finished, CONNECT_ONE_SHOT)
-
-	while not bool(_selector_close_state.get("finished", false)):
-		await tree.process_frame
-
-	if bool(_selector_close_state.get("confirmed", false)):
-		var picked: Variant = _selector_close_state.get("cards", [])
-		if picked is Array and not (picked as Array).is_empty():
-			await _exhaust_selected_cards(hand, picked as Array)
 
 
-func _on_selector_screen_finished(confirmed: bool, selected_cards: Array) -> void:
-	_selector_close_state = {
-		"finished": true,
-		"confirmed": confirmed,
-		"cards": selected_cards,
-	}
+func _await_card_selector() -> void:
+	if _pending_pick_overlay == null or not is_instance_valid(_pending_pick_overlay):
+		prepare_hand_card_pick_before_effects()
+	var overlay := _pending_pick_overlay
+	_pending_pick_overlay = null
+	if overlay == null or not is_instance_valid(overlay):
+		return
+	var hand := _get_hand()
+	if hand == null:
+		return
+	var result: Array = await overlay.selection_finished
+	if not result[0]:
+		return
+	var selected_cards: Array = result[1]
+	if selected_cards.is_empty():
+		return
+	await _exhaust_selected_cards(hand, selected_cards)
 
 
 func _exhaust_selected_cards(hand: Hand, selected_cards: Array) -> void:

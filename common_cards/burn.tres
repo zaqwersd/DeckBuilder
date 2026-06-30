@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Texture2D" path="res://art/cards/burn.png" id="1_icon"]
+[ext_resource type="Script" path="res://common_cards/burn.gd" id="2_script"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "burn"
+type = 3
+rarity = 5
+cost = -1
+card_name = "灼伤"
+icon = ExtResource("1_icon")
+description = "[center]不能被打出。[br]若回合结束时仍在你的手牌，则你受到2点伤害。[/center]"
+tooltip_text = "[center]不能被打出。[br]若回合结束时仍在你的手牌，则你受到2点伤害。[/center]"
+sound = ExtResource("3_sound")

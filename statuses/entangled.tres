@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="EntangledStatus" format=3 uid="uid://pa17h2s6xp21"]
 
-[ext_resource type="Texture2D" uid="uid://6j4e37u0djdw" path="res://art/entangled.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://6j4e37u0djdw" path="res://art/status_icons/entangled.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://d0iv6hiepvjkw" path="res://statuses/entangled.gd" id="2_script"]
 
 [resource]

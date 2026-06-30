@@ -45,6 +45,12 @@ var _card_slots: Array = []
 var _relic_slots: Array = []
 var _potion_slots: Array = []
 var _pending_sold_apply_data: Dictionary = {}
+var _shop_blink_entry_state := 0
+var _shop_blink_seq := 0
+
+var _tooltip_hovered_relic: ShopRelic = null
+var _tooltip_hovered_potion: ShopPotion = null
+var _tooltip_hide_serial := 0
 
 
 func gather_listing_card_menus_for_keyword_tooltip() -> Array[CardMenuUI]:
@@ -69,8 +75,112 @@ func _ready() -> void:
 	Events.shop_relic_bought.connect(_on_shop_relic_bought)
 	Events.shop_potion_bought.connect(_on_shop_potion_bought)
 	_connect_shop_refresh_signals()
+	_shop_blink_entry_state = RNG.instance.state
+	_shop_blink_seq = 0
 	_blink_timer_setup()
 	blink_timer.timeout.connect(_on_blink_timer_timeout)
+	set_process(true)
+
+
+func _exit_tree() -> void:
+	_clear_shop_item_tooltips()
+
+
+func _process(_delta: float) -> void:
+	if not visible:
+		_clear_shop_item_tooltips()
+		return
+	_update_shop_item_tooltip_hover()
+
+
+func _update_shop_item_tooltip_hover() -> void:
+	var relic := _shop_relic_under_pointer()
+	if relic != null:
+		if relic == _tooltip_hovered_relic:
+			return
+		if _tooltip_hovered_relic != null or _tooltip_hovered_potion != null:
+			_cancel_pending_shop_tooltip_hide()
+		_tooltip_hovered_relic = relic
+		_tooltip_hovered_potion = null
+		Events.relic_tooltip_hover_show.emit(relic.relic, relic.get_tooltip_anchor())
+		return
+
+	var potion := _shop_potion_under_pointer()
+	if potion != null:
+		if potion == _tooltip_hovered_potion:
+			return
+		if _tooltip_hovered_relic != null or _tooltip_hovered_potion != null:
+			_cancel_pending_shop_tooltip_hide()
+		_tooltip_hovered_relic = null
+		_tooltip_hovered_potion = potion
+		var anchor := potion.get_tooltip_anchor()
+		anchor.set_meta(ShopPotion.TOOLTIP_ICON_GAP_META, ShopPotion.SHOP_POTION_TOOLTIP_ICON_GAP)
+		Events.potion_tooltip_hover_show.emit(potion.potion, anchor)
+		return
+
+	if _tooltip_hovered_relic != null or _tooltip_hovered_potion != null:
+		_tooltip_hovered_relic = null
+		_tooltip_hovered_potion = null
+		_schedule_deferred_shop_tooltip_hide()
+
+
+func _shop_relic_under_pointer() -> ShopRelic:
+	for slot in _relic_slots:
+		var relic := slot as ShopRelic
+		if relic != null and not relic.is_sold() and relic.is_pointer_over():
+			return relic
+	return null
+
+
+func _shop_potion_under_pointer() -> ShopPotion:
+	for slot in _potion_slots:
+		var potion := slot as ShopPotion
+		if potion != null and not potion.is_sold() and potion.is_pointer_over():
+			return potion
+	return null
+
+
+func _cancel_pending_shop_tooltip_hide() -> void:
+	_tooltip_hide_serial += 1
+
+
+func _schedule_deferred_shop_tooltip_hide() -> void:
+	_tooltip_hide_serial += 1
+	var serial := _tooltip_hide_serial
+	call_deferred("_deferred_shop_tooltip_hide", serial)
+
+
+func _deferred_shop_tooltip_hide(serial: int) -> void:
+	if serial != _tooltip_hide_serial:
+		return
+	var relic := _shop_relic_under_pointer()
+	if relic != null:
+		_cancel_pending_shop_tooltip_hide()
+		_tooltip_hovered_relic = relic
+		_tooltip_hovered_potion = null
+		Events.relic_tooltip_hover_show.emit(relic.relic, relic.get_tooltip_anchor())
+		return
+	var potion := _shop_potion_under_pointer()
+	if potion != null:
+		_cancel_pending_shop_tooltip_hide()
+		_tooltip_hovered_relic = null
+		_tooltip_hovered_potion = potion
+		var anchor := potion.get_tooltip_anchor()
+		anchor.set_meta(ShopPotion.TOOLTIP_ICON_GAP_META, ShopPotion.SHOP_POTION_TOOLTIP_ICON_GAP)
+		Events.potion_tooltip_hover_show.emit(potion.potion, anchor)
+		return
+	Events.relic_tooltip_hover_hide.emit()
+	Events.potion_tooltip_hover_hide.emit()
+
+
+func _clear_shop_item_tooltips() -> void:
+	_cancel_pending_shop_tooltip_hide()
+	if _tooltip_hovered_relic == null and _tooltip_hovered_potion == null:
+		return
+	_tooltip_hovered_relic = null
+	_tooltip_hovered_potion = null
+	Events.relic_tooltip_hover_hide.emit()
+	Events.potion_tooltip_hover_hide.emit()
 
 
 func _connect_shop_refresh_signals() -> void:
@@ -669,7 +779,9 @@ func _sync_shop_pending() -> void:
 
 
 func _blink_timer_setup() -> void:
-	blink_timer.wait_time = randf_range(1.0, 5.0)
+	_shop_blink_seq += 1
+	var roll := hash("%d/%d/%d" % [RNG.instance.seed, _shop_blink_entry_state, _shop_blink_seq])
+	blink_timer.wait_time = 1.0 + float(absi(roll) % 4001) / 1000.0
 	blink_timer.start()
 
 
@@ -728,6 +840,7 @@ func _shop_card_purchase_flow(_card: Card, _gold_cost: int, _from: Control) -> v
 	if run:
 		run.play_deck_gain_card_visual(_card, from_center)
 	char_stats.deck.add_card(_card)
+	Events.deck_card_added.emit(_card)
 	run_stats.gold -= _gold_cost
 	_update_items()
 	_refresh_remove_card_button()

@@ -1,8 +1,13 @@
+@tool
 class_name IntentSlot
 extends HBoxContainer
 
 
 func setup(intent: Intent) -> void:
+	modulate = Color.WHITE
+	scale = Vector2.ONE
+	if Engine.is_editor_hint() and intent != null and Intent.is_editor_placeholder(intent):
+		intent = Intent.editor_materialize(intent)
 	var icon := get_node_or_null("Icon") as TextureRect
 	var value_label := get_node_or_null("ValueLabel") as Label
 	if intent == null or icon == null or value_label == null:

@@ -43,7 +43,7 @@ window/stretch/mode="viewport"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/enemy_stats_inspector/plugin.cfg")
+enabled=PackedStringArray("res://addons/enemy_stats_inspector/plugin.cfg", "res://addons/aseprite_importer/plugin.cfg")
 
 [gui]
 

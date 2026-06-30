@@ -6,12 +6,14 @@ const HEAL_FLOAT_COLOR := Color(0.35, 1.0, 0.5, 1.0)
 
 @export var stats: CharacterStats : set = set_character_stats
 
-@onready var sprite_2d: Sprite2D = $Sprite2D
+@onready var _art_root: Node2D = $ArtRoot
+@onready var _legacy_sprite: Sprite2D = $ArtRoot/Sprite2D
 @onready var stats_ui: StatusBar = $StatusBar
 @onready var hover_name_overlay: Label = $HoverNameOverlay
 @onready var status_handler: StatusHandler = $StatusBar/StatusHandler
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
 
+var _art_instance: Node2D
 var _pending_damage_dealer: Enemy
 var _lethal_death_pending := false
 var _pointer_hover := false
@@ -32,12 +34,26 @@ func _ready() -> void:
 		hover_name_overlay.hide_immediate()
 	if is_instance_valid(stats):
 		_connect_stats_combat_signals(stats)
+	if not Events.player_attack_hit_enemy.is_connected(_on_player_attack_hit_enemy):
+		Events.player_attack_hit_enemy.connect(_on_player_attack_hit_enemy)
 	call_deferred("_layout_status_bar")
+	if is_instance_valid(stats):
+		call_deferred("_finish_update_player")
 	set_process(false)
+
+
+func _ensure_art_nodes() -> bool:
+	if not is_instance_valid(_art_root):
+		_art_root = get_node_or_null("ArtRoot") as Node2D
+	if not is_instance_valid(_legacy_sprite) and is_instance_valid(_art_root):
+		_legacy_sprite = _art_root.get_node_or_null("Sprite2D") as Sprite2D
+	return is_instance_valid(_art_root) and is_instance_valid(_legacy_sprite)
 
 
 func _exit_tree() -> void:
 	set_process(false)
+	if Events.player_attack_hit_enemy.is_connected(_on_player_attack_hit_enemy):
+		Events.player_attack_hit_enemy.disconnect(_on_player_attack_hit_enemy)
 	if is_instance_valid(hover_name_overlay):
 		hover_name_overlay.hide_immediate()
 
@@ -54,11 +70,114 @@ func _process(_delta: float) -> void:
 	_update_pointer_hover_state()
 
 
+func get_blade_visual() -> BladeVisual:
+	if _art_instance is BladeVisual:
+		return _art_instance as BladeVisual
+	return null
+
+
+func _uses_scene_art() -> bool:
+	return is_instance_valid(_art_instance)
+
+
+func _get_art_node() -> Node2D:
+	if _uses_scene_art():
+		return _art_instance
+	return _legacy_sprite
+
+
+func _get_art_bounds_local() -> Rect2:
+	if _uses_scene_art():
+		if _art_instance is BladeVisual:
+			return (_art_instance as BladeVisual).get_opaque_bounds_local()
+		if _art_instance.has_method("get_opaque_bounds_local"):
+			var opaque: Variant = _art_instance.call("get_opaque_bounds_local")
+			if opaque is Rect2 and (opaque as Rect2).has_area():
+				return opaque
+	if is_instance_valid(_legacy_sprite) and _legacy_sprite.visible and _legacy_sprite.texture != null:
+		var opaque := Enemy._opaque_bounds_rect_sprite_local(_legacy_sprite)
+		if opaque.has_area():
+			return opaque
+		return _legacy_sprite.get_rect()
+	return Rect2()
+
+
+## 与旧版 `sprite_2d.get_rect()` 一致，用于血条/飘字（不含 scale）。
+func _get_art_layout_rect_local() -> Rect2:
+	if _uses_scene_art():
+		if _art_instance is BladeVisual:
+			return (_art_instance as BladeVisual).get_combined_rect_local()
+		if _art_instance.has_method("get_combined_rect_local"):
+			var rect: Variant = _art_instance.call("get_combined_rect_local")
+			if rect is Rect2:
+				return rect
+	if is_instance_valid(_legacy_sprite) and _legacy_sprite.texture != null:
+		return _legacy_sprite.get_rect()
+	return Rect2()
+
+
+func _set_art_flash_material(material: Material) -> void:
+	if _uses_scene_art() and _art_instance is BladeVisual:
+		(_art_instance as BladeVisual).set_flash_material(material)
+	elif is_instance_valid(_legacy_sprite):
+		_legacy_sprite.material = material
+
+
+func _clear_art_instance() -> void:
+	if is_instance_valid(_art_instance):
+		_art_instance.queue_free()
+	_art_instance = null
+
+
+func _art_visual_offset() -> Vector2:
+	if not _uses_scene_art():
+		return Vector2.ZERO
+	if _art_instance is BladeVisual:
+		return (_art_instance as BladeVisual).get_layout_display_offset()
+	if stats is CharacterStats:
+		return (stats as CharacterStats).art_scene_offset
+	return Vector2.ZERO
+
+
+func _apply_art_visual() -> void:
+	if not stats is CharacterStats or not _ensure_art_nodes():
+		return
+	_clear_art_instance()
+	var art_scene := stats.get_art_scene()
+	if art_scene == null:
+		_legacy_sprite.visible = true
+		_legacy_sprite.texture = stats.art
+		if stats is CharacterStats:
+			_legacy_sprite.position = (stats as CharacterStats).art_scene_offset
+		_layout_status_bar()
+		return
+	_legacy_sprite.visible = false
+	_art_instance = art_scene.instantiate() as Node2D
+	_art_root.add_child(_art_instance)
+	if stats is CharacterStats and not (_art_instance is BladeVisual):
+		_art_instance.position = (stats as CharacterStats).art_scene_offset
+	if _art_instance.has_method("apply_layout_now"):
+		_art_instance.call("apply_layout_now")
+	_layout_status_bar()
+
+
+func _art_layout_origin() -> Vector2:
+	var art_node := _get_art_node()
+	if not is_instance_valid(art_node):
+		return Vector2.ZERO
+	var root := _art_root if is_instance_valid(_art_root) else self
+	return root.position + art_node.position
+
+
 func _pointer_over_sprite() -> bool:
-	if not is_instance_valid(sprite_2d) or sprite_2d.texture == null:
+	var bounds := _get_art_bounds_local()
+	if bounds.size == Vector2.ZERO:
 		return false
-	var local_point := sprite_2d.to_local(get_global_mouse_position())
-	return sprite_2d.get_rect().has_point(local_point)
+	var art_node := _get_art_node()
+	if not is_instance_valid(art_node):
+		return false
+	var local_point := art_node.to_local(get_global_mouse_position())
+	return bounds.has_point(local_point)
 
 
 func _pointer_over_status_ui(screen_global: Vector2) -> bool:
@@ -111,29 +230,34 @@ func _schedule_layout_status_bar() -> void:
 
 
 func _layout_status_bar() -> void:
-	if not is_instance_valid(stats_ui) or not is_instance_valid(sprite_2d) or stats == null:
+	if not is_instance_valid(stats_ui) or not is_instance_valid(_art_root) or stats == null:
 		return
 	var foot_y := _sprite_foot_local_y()
 	var off := stats.status_bar_offset
 	var w := maxf(stats_ui.size.x, stats_ui.get_combined_minimum_size().x)
 	stats_ui.position = Vector2(-w * 0.5 + off.x, foot_y + off.y)
 	if is_instance_valid(hover_name_overlay):
-		hover_name_overlay.sync_layout_from_status_bar(stats_ui)
+		hover_name_overlay.z_as_relative = true
+		hover_name_overlay.z_index = CombatantHoverName.DRAW_Z_INDEX
+		move_child(hover_name_overlay, get_child_count() - 1)
+		hover_name_overlay.call_deferred("sync_layout_from_status_bar", stats_ui)
 
 
 func _sprite_foot_local_y() -> float:
-	if sprite_2d.texture == null:
+	var rect := _get_art_layout_rect_local()
+	if not rect.has_area():
 		return 40.0
-	var r := sprite_2d.get_rect()
-	return sprite_2d.position.y + r.position.y + r.size.y
+	var origin := _art_layout_origin()
+	return origin.y + rect.position.y + rect.size.y - _art_visual_offset().y
 
 
 func _floating_number_anchor_local() -> Vector2:
-	if not is_instance_valid(sprite_2d) or sprite_2d.texture == null:
+	var rect := _get_art_layout_rect_local()
+	if not rect.has_area():
 		return Vector2(0, -48)
-	var r := sprite_2d.get_rect()
-	var cx := sprite_2d.position.x + r.get_center().x
-	var top := sprite_2d.position.y + r.position.y
+	var origin := _art_layout_origin()
+	var cx := origin.x + rect.get_center().x
+	var top := origin.y + rect.position.y
 	return Vector2(cx, top - 6.0)
 
 
@@ -165,6 +289,11 @@ func _on_stats_healing_applied(amount: int) -> void:
 	FloatingCombatNumber.spawn(self, _floating_number_anchor_local(), amount, HEAL_FLOAT_COLOR)
 
 
+func _on_player_attack_hit_enemy(_enemy: Enemy, _amount: int) -> void:
+	if _art_instance is BladeVisual:
+		(_art_instance as BladeVisual).play_attack_lunge()
+
+
 func set_character_stats(value: CharacterStats) -> void:
 	if is_instance_valid(stats):
 		_disconnect_stats_combat_signals(stats)
@@ -183,7 +312,13 @@ func update_player() -> void:
 	if not is_inside_tree(): 
 		await ready
 
-	sprite_2d.texture = stats.art
+	call_deferred("_finish_update_player")
+
+
+func _finish_update_player() -> void:
+	if not stats is CharacterStats:
+		return
+	_apply_art_visual()
 	_sync_combatant_hover_name_text()
 	update_stats()
 	_sync_combat_process_enabled()
@@ -224,7 +359,7 @@ func _play_damage_shake() -> void:
 func _on_take_damage_tween_finished() -> void:
 	if not is_instance_valid(self) or _lethal_death_pending:
 		return
-	sprite_2d.material = null
+	_set_art_flash_material(null)
 	if stats.health <= 0:
 		if handle_lethal_if_needed():
 			return
@@ -243,13 +378,13 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 	if stats.health <= 0 or _lethal_death_pending:
 		return
 	
-	sprite_2d.material = WHITE_SPRITE_MATERIAL
+	_set_art_flash_material(WHITE_SPRITE_MATERIAL)
 	var modified_damage := modifier_handler.get_modified_value(damage, which_modifier)
 	
 	if not use_tween_delay:
 		Shaker.shake(self, 72, 0.15)
 		_apply_damage_to_stats(modified_damage)
-		sprite_2d.material = null
+		_set_art_flash_material(null)
 		if stats.health <= 0:
 			if handle_lethal_if_needed():
 				return
@@ -268,11 +403,11 @@ func take_damage(damage: int, which_modifier: Modifier.Type, use_tween_delay: bo
 func take_damage_final(final_damage: int, use_tween_delay: bool = true) -> void:
 	if stats.health <= 0 or _lethal_death_pending:
 		return
-	sprite_2d.material = WHITE_SPRITE_MATERIAL
+	_set_art_flash_material(WHITE_SPRITE_MATERIAL)
 	if not use_tween_delay:
 		Shaker.shake(self, 72, 0.15)
 		_apply_damage_to_stats(final_damage)
-		sprite_2d.material = null
+		_set_art_flash_material(null)
 		if stats.health <= 0:
 			if handle_lethal_if_needed():
 				return

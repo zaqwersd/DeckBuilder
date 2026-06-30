@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="DarknessStatus" format=3]
+
+[ext_resource type="Texture2D" path="res://art/status_icons/darkness.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/darkness.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "darkness"
+type = 0
+stack_type = 1
+stacks = 4
+polarity = 0
+icon = ExtResource("1_icon")
+name = "黑暗"
+tooltip = "每回合开始时，获得%s点力量。"

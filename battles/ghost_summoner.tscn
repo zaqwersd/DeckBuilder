@@ -1,18 +1,15 @@
 [gd_scene format=3 uid="uid://5mln2ilebrj6"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
-[ext_resource type="Resource" uid="uid://cn0edx84sr3ju" path="res://enemies/ghost_summoner/ghost_summoner.tres" id="2_summoner"]
-[ext_resource type="Resource" uid="uid://d3sgqqqmho2vm" path="res://enemies/ghost_summoner/spook.tres" id="3_spook"]
+[ext_resource type="PackedScene" uid="uid://dpufnpoeyfyjm" path="res://enemies/ghost_summoner/ghost_summoner_enemy.tscn" id="2_summoner"]
+[ext_resource type="PackedScene" uid="uid://cqf0xyn7of0ge" path="res://enemies/ghost_summoner/spook_enemy.tscn" id="3_spook"]
 
 [node name="GhostSummonerBattle" type="Node2D" unique_id=1904047133]
 
 [node name="Slot2" type="Node2D" parent="." unique_id=27528887]
 position = Vector2(650, 340)
 
-[node name="GhostSummoner" parent="." unique_id=869099104 instance=ExtResource("1_enemy")]
-position = Vector2(880, 302)
-stats = ExtResource("2_summoner")
+[node name="GhostSummoner" parent="." unique_id=869099104 instance=ExtResource("2_summoner")]
+position = Vector2(970, 310)
 
-[node name="Spook" parent="." unique_id=1481248100 instance=ExtResource("1_enemy")]
-position = Vector2(590, 280)
-stats = ExtResource("3_spook")
+[node name="Spook" parent="." unique_id=1481248100 instance=ExtResource("3_spook")]
+position = Vector2(680, 288)

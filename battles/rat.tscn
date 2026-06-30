@@ -1,10 +1,8 @@
 [gd_scene format=3 uid="uid://d0pre41rujn1s"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
-[ext_resource type="Resource" uid="uid://dfo5cm16ctvi0" path="res://enemies/rat/rat_enemy.tres" id="2_rat"]
+[ext_resource type="PackedScene" path="res://enemies/rat/rat_enemy.tscn" id="2_rat"]
 
 [node name="Rat" type="Node2D" unique_id=1331915320]
 
-[node name="Enemy" parent="." unique_id=1074913423 instance=ExtResource("1_enemy")]
+[node name="Enemy" parent="." unique_id=1074913423 instance=ExtResource("2_rat")]
 position = Vector2(900, 332)
-stats = ExtResource("2_rat")

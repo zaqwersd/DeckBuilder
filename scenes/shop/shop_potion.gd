@@ -14,7 +14,6 @@ var gold_cost: int = -1
 var _run_stats: RunStats
 var _sold := false
 var _inventory_full := false
-var _tooltip_hover_depth := 0
 
 
 func _ready() -> void:
@@ -23,7 +22,8 @@ func _ready() -> void:
 		gui_input.connect(_on_gui_input)
 	if icon_anchor:
 		icon_anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bind_potion_tooltip_hover(self)
+	if icon_rect:
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if gold_cost < 0:
 		gold_cost = maxi(1, int(round(RNG.instance.randi_range(80, 120) * Shop.SHOP_POTION_PRICE_FACTOR)))
 	alignment = BoxContainer.ALIGNMENT_CENTER
@@ -31,43 +31,17 @@ func _ready() -> void:
 	_lock_layout_size()
 
 
-func _bind_potion_tooltip_hover(target: Control) -> void:
-	if not target.mouse_entered.is_connected(_on_potion_tooltip_show):
-		target.mouse_entered.connect(_on_potion_tooltip_show)
-	if not target.mouse_exited.is_connected(_on_potion_tooltip_hide):
-		target.mouse_exited.connect(_on_potion_tooltip_hide)
-
-
-func _on_potion_tooltip_show() -> void:
-	_tooltip_hover_depth += 1
-	if _tooltip_hover_depth != 1 or _sold or potion == null:
-		return
-	var anchor: Control = icon_anchor if icon_anchor else self
-	anchor.set_meta(TOOLTIP_ICON_GAP_META, SHOP_POTION_TOOLTIP_ICON_GAP)
-	Events.potion_tooltip_hover_show.emit(potion, anchor)
-
-
-func _on_potion_tooltip_hide() -> void:
-	_tooltip_hover_depth = maxi(0, _tooltip_hover_depth - 1)
-	if _tooltip_hover_depth > 0:
-		return
-	call_deferred("_deferred_emit_potion_tooltip_hide")
-
-
-func _deferred_emit_potion_tooltip_hide() -> void:
-	if _tooltip_hover_depth > 0:
-		return
+func is_pointer_over() -> bool:
+	if _sold or not is_instance_valid(self):
+		return false
 	var viewport := get_viewport()
 	if viewport == null:
-		Events.potion_tooltip_hover_hide.emit()
-		return
-	var screen_pos := CombatPointer.screen_mouse(viewport)
-	var peers := TooltipHoverUtil.collect_sibling_controls(self, ShopPotion)
-	if TooltipHoverUtil.pointer_over_control_or_peers(screen_pos, self, peers):
-		return
-	if icon_anchor and icon_anchor.has_meta(TOOLTIP_ICON_GAP_META):
-		icon_anchor.remove_meta(TOOLTIP_ICON_GAP_META)
-	Events.potion_tooltip_hover_hide.emit()
+		return false
+	return CombatPointer.control_has_screen_point(self, CombatPointer.screen_mouse(viewport))
+
+
+func get_tooltip_anchor() -> Control:
+	return icon_anchor if icon_anchor else self
 
 
 func configure_cost(cost: int) -> void:

@@ -14,17 +14,23 @@ const HEAL_FLOAT_COLOR := Color(0.35, 1.0, 0.5, 1.0)
 const HITBOX_ALPHA_THRESHOLD := 0.08
 const HITBOX_PAD_PX := 4.0
 const INTERACTION_FADE_SEC := 0.2
+## 场景布局敌人：StatusBar 绘制在 Visual / Sprite 外观之上。
+const SCENE_LAYOUT_STATUS_BAR_Z := 10
 ## key -> `Rect2i`（贴图像素坐标下的不透明 AABB，size 至少为 1×1）
 static var _opaque_texel_aabb_cache: Dictionary = {}
 
 @export var stats: EnemyStats : set = set_enemy_stats
 
-@onready var sprite_2d: Sprite2D = $Sprite2D
+@export_group("编辑器 UI 预览")
+## 在 `*_enemy.tscn` 中指定示例行动（AI 子节点名）；留空则取 AI 第一个行动。不写入 .tres。
+@export var editor_preview_action: StringName = &"" : set = set_editor_preview_action
+
+@onready var sprite_2d: Sprite2D = get_node_or_null("Sprite2D") as Sprite2D
 @onready var collision_shape_2d: CollisionShape2D = $CollisionShape2D
 @onready var arrow: Sprite2D = $Arrow
 @onready var target_highlight: EnemyTargetHighlight = $TargetHighlight
 @onready var stats_ui: StatusBar = $StatusBar
-@onready var hover_name_overlay: Label = $HoverNameOverlay
+@onready var hover_name_overlay: CombatantHoverName = $HoverNameOverlay as CombatantHoverName
 @onready var intent_ui: IntentUI = $IntentUI
 @onready var status_handler: StatusHandler = $StatusBar/StatusHandler
 @onready var modifier_handler: ModifierHandler = $ModifierHandler
@@ -48,32 +54,101 @@ var _intent_suppressed := false
 ## 多帧动画敌人：用全部帧不透明区域并集，避免逐帧收缩导致瞄准盒跳动。
 var _fixed_sprite_hitbox_local: Rect2 = Rect2()
 var _hitbox_locked := false
-## take_damage 调用时若在攻击牌窗口内计数；实际扣血后发出 player_dealt_attack_damage_to_enemy（tween 晚于 end_attack_card_effects）
+## 场景布局敌人：血条/意图位置以 `*_enemy.tscn` 为准，运行时不再重排。
+## 攻击牌窗口内 take_damage 计数，用于 player_dealt_attack_damage_to_enemy 信号。
 var _pending_player_attack_card_hits: int = 0
 var _death_sequence_started := false
+var _battle_home_position: Vector2 = Vector2.ZERO
+var _battle_home_global_position: Vector2 = Vector2.ZERO
+var _battle_home_captured := false
 var _pointer_hover := false
 var _card_targeting_active := false
 var _card_targeting_valid := false
 var _interaction_fade_tween: Tween
+var _editor_stats_listener: EnemyStats
 
 
 func _ready() -> void:
+	_resolve_battle_sprite_2d()
 	status_handler.status_owner = self
 	stats_ui.resized.connect(_schedule_layout_status_bar)
 	if is_instance_valid(target_highlight):
 		target_highlight.modulate.a = 0.0
 		target_highlight.hide()
-	if is_instance_valid(hover_name_overlay):
-		hover_name_overlay.hide_immediate()
+	_hide_hover_name_immediate()
 	if is_instance_valid(stats):
 		if Engine.is_editor_hint():
-			call_deferred("refresh_editor_battle_preview")
+			if Enemy.editor_preview_script_ready(self):
+				call_deferred("refresh_editor_battle_preview")
+			call_deferred("_sync_status_bar_health_width")
 		else:
 			_connect_stats_combat_signals(stats)
-	call_deferred("_layout_status_bar")
+	if _uses_scene_ui_layout():
+		call_deferred("sync_scene_layout_ui")
+	else:
+		call_deferred("_layout_status_bar")
 	if not Engine.is_editor_hint():
 		call_deferred("_deferred_connect_intent_tooltip_handlers")
+		if not Events.enemy_action_completed.is_connected(_on_own_action_completed_restore_position):
+			Events.enemy_action_completed.connect(_on_own_action_completed_restore_position)
 	set_process(false)
+
+
+func capture_battle_home_position() -> void:
+	if Engine.is_editor_hint():
+		return
+	_battle_home_position = position
+	_battle_home_global_position = global_position
+	_battle_home_captured = true
+	Shaker.bind_home(self, _battle_home_position)
+
+
+func restore_battle_position() -> void:
+	if not _battle_home_captured or _death_sequence_started:
+		return
+	global_position = _battle_home_global_position
+
+
+func get_battle_home_global_position() -> Vector2:
+	if _battle_home_captured:
+		return _battle_home_global_position
+	return global_position
+
+
+func _on_own_action_completed_restore_position(completed: Enemy) -> void:
+	if completed == self:
+		restore_battle_position()
+
+
+func _uses_scene_ui_layout() -> bool:
+	if _enemy_scene_uses_hand_placed_ui():
+		return true
+	if Engine.is_editor_hint():
+		var ed_stats := _editor_resolved_stats()
+		if ed_stats != null:
+			return ed_stats.uses_scene_ui_layout
+		return _scene_ui_layout_flag_from_stats()
+	return _scene_ui_layout_flag_from_stats()
+
+
+## 供 StatusBar 等 UI 节点查询，避免跨脚本调用私有方法。
+func uses_scene_ui_layout() -> bool:
+	return _uses_scene_ui_layout()
+
+
+func _enemy_scene_uses_hand_placed_ui() -> bool:
+	var path := get_scene_file_path()
+	if path.is_empty():
+		path = scene_file_path
+	return path.ends_with("_enemy.tscn")
+
+
+func _scene_ui_layout_flag_from_stats() -> bool:
+	if not is_instance_valid(stats) or not stats is EnemyStats:
+		return false
+	if Engine.is_editor_hint() and Stats.is_editor_placeholder(stats):
+		return false
+	return (stats as EnemyStats).uses_scene_ui_layout
 
 
 func _enter_tree() -> void:
@@ -81,29 +156,162 @@ func _enter_tree() -> void:
 
 
 func _editor_bind_stats_preview_listener() -> void:
-	if not Engine.is_editor_hint() or not is_instance_valid(stats):
+	if not Engine.is_editor_hint():
 		return
-	if not stats.changed.is_connected(_on_editor_stats_resource_changed):
-		stats.changed.connect(_on_editor_stats_resource_changed)
+	_editor_unbind_stats_preview_listener()
+	var ed_stats := _editor_resolved_stats()
+	if ed_stats == null:
+		return
+	_editor_stats_listener = ed_stats
+	if not ed_stats.changed.is_connected(_on_editor_stats_resource_changed):
+		ed_stats.changed.connect(_on_editor_stats_resource_changed)
 
 
 func _editor_unbind_stats_preview_listener() -> void:
-	if is_instance_valid(stats) and stats.changed.is_connected(_on_editor_stats_resource_changed):
-		stats.changed.disconnect(_on_editor_stats_resource_changed)
+	if is_instance_valid(_editor_stats_listener) and _editor_stats_listener.changed.is_connected(_on_editor_stats_resource_changed):
+		_editor_stats_listener.changed.disconnect(_on_editor_stats_resource_changed)
+	_editor_stats_listener = null
+
+
+## 在 *_enemy.tscn 中 stats 常为 ExtResource placeholder（resource_path 为空）；从场景路径等推断 .tres 并 load。
+func _editor_resolved_stats() -> EnemyStats:
+	if not Engine.is_editor_hint():
+		return stats if is_instance_valid(stats) else null
+	for path in _editor_stats_resource_paths():
+		if path.is_empty() or not ResourceLoader.exists(path):
+			continue
+		var loaded := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) as EnemyStats
+		var resolved := _editor_materialize_stats(loaded)
+		if resolved != null:
+			return resolved
+	if is_instance_valid(stats) and not Stats.is_editor_placeholder(stats):
+		var resolved := _editor_materialize_stats(stats)
+		if resolved != null:
+			return resolved
+	return null
+
+
+static func _editor_materialize_stats(res: EnemyStats) -> EnemyStats:
+	if res == null:
+		return null
+	if _editor_stats_resource_usable(res):
+		return res
+	var dup := res.duplicate(true) as EnemyStats
+	if dup != null and _editor_stats_resource_usable(dup):
+		return dup
+	return null
+
+
+static func _editor_stats_resource_usable(res: Stats) -> bool:
+	if res == null or not res is EnemyStats:
+		return false
+	if Engine.is_editor_hint():
+		if Stats.is_editor_placeholder(res):
+			return false
+		if not Stats.is_editor_ui_usable(res):
+			return false
+	return Callable(res, "build_editor_preview_intents").is_valid()
+
+
+func _editor_stats_resource_paths() -> PackedStringArray:
+	var paths: PackedStringArray = []
+	var seen: Dictionary = {}
+	var add_path := func(path: String) -> void:
+		if path.is_empty() or seen.has(path):
+			return
+		seen[path] = true
+		paths.append(path)
+	if is_instance_valid(stats):
+		add_path.call(stats.resource_path)
+		if stats is EnemyStats:
+			var scene_path := SaveGameMigrations.remap_resource_path((stats as EnemyStats).enemy_scene_path.strip_edges())
+			if scene_path.ends_with("_enemy.tscn"):
+				add_path.call(scene_path.replace("_enemy.tscn", "_enemy.tres"))
+				add_path.call(scene_path.replace("_enemy.tscn", ".tres"))
+	var owner_scene := get_scene_file_path()
+	if owner_scene.is_empty():
+		owner_scene = scene_file_path
+	if owner_scene.ends_with("_enemy.tscn"):
+		add_path.call(owner_scene.replace("_enemy.tscn", "_enemy.tres"))
+		add_path.call(owner_scene.replace("_enemy.tscn", ".tres"))
+	return paths
 
 
 func _on_editor_stats_resource_changed() -> void:
-	call_deferred("refresh_editor_battle_preview")
+	if Enemy.editor_preview_script_ready(self):
+		call_deferred("refresh_editor_battle_preview")
 
 
 func _schedule_layout_status_bar() -> void:
+	if _uses_scene_ui_layout():
+		_sync_status_bar_health_width()
+		return
 	call_deferred("_layout_status_bar")
+
+
+func _sync_status_bar_health_width() -> void:
+	var sb := get_node_or_null("StatusBar")
+	if sb != null and sb.has_method("sync_health_bar_to_container_width"):
+		sb.sync_health_bar_to_container_width()
+		return
+	var sb_ctrl := get_node_or_null("StatusBar") as Control
+	var health_row := get_node_or_null("StatusBar/HealthRow") as HealthBar
+	if health_row != null and sb_ctrl != null:
+		_sync_health_row_width_from_status_bar_container(health_row)
+
+
+func _sync_scene_ui_hover_name() -> void:
+	if not is_instance_valid(stats_ui) or not is_instance_valid(hover_name_overlay):
+		return
+	if _hover_name_is_hand_placed():
+		return
+	if not is_inside_tree():
+		return
+	var name_ui := _hover_name_ui()
+	if name_ui != null:
+		name_ui.call_deferred("sync_layout_from_status_bar", stats_ui)
+
+
+func _hover_name_is_hand_placed() -> bool:
+	if not is_instance_valid(hover_name_overlay):
+		return false
+	if hover_name_overlay.has_meta(&"hand_placed_hover_name"):
+		return true
+	if hover_name_overlay.has_meta(&"auto_layout_from_status_bar"):
+		return false
+	# *_enemy.tscn 里生成器留下的 HoverName 占位 offset 不算手摆，默认跟 StatusBar 对齐。
+	if _uses_scene_ui_layout():
+		return false
+	var lbl := hover_name_overlay as Control
+	var offset_w := absf(lbl.offset_right - lbl.offset_left)
+	var offset_h := absf(lbl.offset_bottom - lbl.offset_top)
+	if offset_w >= 1.0 or offset_h >= 1.0:
+		return true
+	if lbl.position.length_squared() > 1.0:
+		return true
+	return false
 
 
 func _deferred_connect_intent_tooltip_handlers() -> void:
 	var tree := get_tree()
 	if tree:
 		IntentUI.ensure_intent_tooltip_handlers_connected(tree)
+
+
+func _hover_name_ui() -> CombatantHoverName:
+	if not is_instance_valid(hover_name_overlay):
+		return null
+	# 编辑器 placeholder 节点上自定义脚本尚未就绪；运行时无 placeholder。
+	if Engine.is_editor_hint() and not hover_name_overlay.has_method("hide_immediate"):
+		return null
+	return hover_name_overlay
+
+
+func _hide_hover_name_immediate() -> void:
+	var name_ui := _hover_name_ui()
+	if name_ui == null:
+		return
+	name_ui.hide_immediate()
 
 
 func _process(_delta: float) -> void:
@@ -179,12 +387,13 @@ func _enemy_has_display_name() -> bool:
 
 
 func _sync_combatant_hover_name_text() -> void:
-	if not is_instance_valid(hover_name_overlay):
+	var name_ui := _hover_name_ui()
+	if name_ui == null:
 		return
 	var name_text := ""
 	if stats is EnemyStats:
 		name_text = (stats as EnemyStats).get_display_name()
-	hover_name_overlay.set_display_name(name_text)
+	name_ui.set_display_name(name_text)
 
 
 func _sync_combat_process_enabled() -> void:
@@ -220,7 +429,9 @@ func _tween_interaction_visuals(frame_alpha: float, name_alpha: float) -> void:
 	if is_instance_valid(target_highlight):
 		tw.tween_property(target_highlight, "modulate:a", frame_alpha, INTERACTION_FADE_SEC)
 	if is_instance_valid(hover_name_overlay):
-		hover_name_overlay.tween_visibility(name_alpha)
+		var name_ui := _hover_name_ui()
+		if name_ui != null:
+			name_ui.tween_visibility(name_alpha)
 	tw.finished.connect(
 		func() -> void:
 			if is_instance_valid(target_highlight) and target_highlight.modulate.a <= 0.001:
@@ -239,8 +450,7 @@ func _clear_interaction_visuals_immediate() -> void:
 	if is_instance_valid(target_highlight):
 		target_highlight.modulate.a = 0.0
 		target_highlight.hide()
-	if is_instance_valid(hover_name_overlay):
-		hover_name_overlay.hide_immediate()
+	_hide_hover_name_immediate()
 
 
 func _hide_intent_hover_tooltip_if_active() -> void:
@@ -251,9 +461,14 @@ func _hide_intent_hover_tooltip_if_active() -> void:
 
 
 func _apply_intent_ui_offset() -> void:
-	if not is_instance_valid(intent_ui) or stats == null:
+	if not is_instance_valid(intent_ui):
 		return
-	var o := stats.intent_ui_offset
+	if _uses_scene_ui_layout():
+		return
+	var s := _editor_resolved_stats() if Engine.is_editor_hint() else stats
+	if s == null:
+		return
+	var o := s.intent_ui_offset
 	intent_ui.offset_left = _INTENT_UI_BASE_LEFT + o.x
 	intent_ui.offset_right = _INTENT_UI_BASE_RIGHT + o.x
 	intent_ui.offset_top = _INTENT_UI_BASE_TOP - o.y
@@ -263,7 +478,28 @@ func _apply_intent_ui_offset() -> void:
 func refresh_editor_battle_preview() -> void:
 	if not Engine.is_editor_hint():
 		return
+	if not Callable(self, "_finish_editor_battle_preview").is_valid():
+		return
 	call_deferred("_finish_editor_battle_preview")
+
+
+static func editor_preview_script_ready(node: Node) -> bool:
+	if node == null or not is_instance_valid(node):
+		return false
+	if not node is Enemy:
+		return false
+	var scr: Script = node.get_script() as Script
+	if scr == null or not scr is GDScript:
+		return false
+	if not (scr as GDScript).is_tool():
+		return false
+	return Callable(node, "refresh_editor_battle_preview").is_valid()
+
+
+static func request_editor_battle_preview(node: Node) -> void:
+	if not editor_preview_script_ready(node):
+		return
+	Callable(node, "refresh_editor_battle_preview").call_deferred()
 
 
 func _apply_editor_battle_preview() -> void:
@@ -271,21 +507,44 @@ func _apply_editor_battle_preview() -> void:
 
 
 func _finish_editor_battle_preview() -> void:
-	if not Engine.is_editor_hint() or not is_instance_valid(stats):
+	if not Engine.is_editor_hint():
 		return
-	if not is_instance_valid(sprite_2d) or not is_instance_valid(stats_ui):
+	_resolve_editor_sprite_2d()
+	if is_instance_valid(stats_ui) and stats_ui.has_method("uses_scene_container_width"):
+		if stats_ui.uses_scene_container_width() and stats_ui.has_method("sync_health_bar_to_container_width"):
+			stats_ui.sync_health_bar_to_container_width()
+	var ed_stats := _editor_resolved_stats()
+	if is_instance_valid(stats_ui) and ed_stats != null:
+		_apply_editor_battle_ui_preview(ed_stats)
+	if ed_stats == null or not is_instance_valid(sprite_2d):
+		queue_redraw()
 		return
 	_stop_art_animation()
 	_apply_editor_static_art()
-	if stats is EnemyStats:
-		sprite_2d.scale = stats.art_scale
+	if ed_stats is EnemyStats:
+		_apply_art_scale_from_stats()
 	if is_instance_valid(arrow):
 		arrow.hide()
 	_sync_hitbox_to_sprite()
-	var health_bar := stats_ui.health as HealthBar
-	if health_bar:
-		health_bar.ensure_theme_ready()
-	stats_ui.update_stats(_editor_preview_stats())
+	queue_redraw()
+
+
+func _apply_editor_battle_ui_preview(ed_stats: EnemyStats) -> void:
+	if ed_stats.uses_scene_ui_layout:
+		sync_scene_layout_ui()
+		return
+	var health_row := _get_health_bar_row()
+	if health_row is HealthBar:
+		var hb := health_row as HealthBar
+		_sync_health_row_width_from_status_bar_container(hb)
+		hb.commit_bar_width_to_host(0)
+		hb.ensure_theme_ready()
+	var preview := _editor_preview_stats()
+	if preview != null and is_instance_valid(stats_ui):
+		if health_row is HealthBar:
+			(health_row as HealthBar).ensure_theme_ready()
+		stats_ui.update_stats(preview)
+	_sync_scene_editor_health_bar_preview()
 	_apply_intent_ui_offset()
 	_layout_status_bar()
 	_apply_editor_preview_intents()
@@ -296,46 +555,274 @@ func _finish_editor_battle_preview() -> void:
 	if is_instance_valid(intent_ui):
 		intent_ui.queue_sort()
 		intent_ui.queue_redraw()
-	queue_redraw()
+
+
+func _resolved_intent_ui() -> IntentUI:
+	if is_instance_valid(intent_ui):
+		return intent_ui
+	return get_node_or_null("IntentUI") as IntentUI
 
 
 func _apply_editor_preview_intents() -> void:
-	if not is_instance_valid(intent_ui) or stats == null:
+	var ui := _resolved_intent_ui()
+	if ui == null:
 		return
-	if not stats is EnemyStats:
-		intent_ui.update_intents([])
+	var ed_stats := _editor_resolved_stats()
+	if ed_stats == null or not _editor_stats_resource_usable(ed_stats):
+		_sync_scene_intent_slots([])
 		return
-	var intents := (stats as EnemyStats).build_editor_preview_intents(self)
-	intent_ui.update_intents(intents)
+	var intents := ed_stats.build_editor_preview_intents(self, editor_preview_action)
+	if ed_stats.uses_scene_ui_layout:
+		_sync_scene_intent_slots(intents)
+		return
+	intents = _finalize_editor_preview_intents(intents)
+	ui.update_intents(intents)
+
+
+func _sync_scene_intent_slots(intents: Array[Intent]) -> void:
+	var ui := _resolved_intent_ui()
+	if ui == null:
+		return
+	if not Engine.is_editor_hint() and intents.is_empty():
+		ui.hide()
+		for child in ui.get_children():
+			if child is IntentSlot:
+				(child as IntentSlot).hide()
+		return
+	if Engine.is_editor_hint():
+		intents = _finalize_editor_preview_intents(intents)
+	var display := Intent.merge_by_kind_for_display(intents)
+	var slots: Array[IntentSlot] = []
+	for child in ui.get_children():
+		if child is IntentSlot:
+			slots.append(child as IntentSlot)
+	while slots.size() > display.size():
+		var extra: IntentSlot = slots.pop_back()
+		ui.remove_child(extra)
+		extra.queue_free()
+	while slots.size() < display.size():
+		var slot: IntentSlot = IntentUI.INTENT_SLOT.instantiate() as IntentSlot
+		slot.name = "EditorPreviewIntentSlot%d" % slots.size()
+		ui.add_child(slot)
+		if Engine.is_editor_hint():
+			slot.owner = ui.owner if ui.owner else self
+		slots.append(slot)
+	for i in display.size():
+		slots[i].setup(display[i])
+		slots[i].show()
+	if display.is_empty():
+		ui.hide()
+	else:
+		ui.show()
+
+
+func _resolve_editor_sprite_2d() -> void:
+	_resolve_battle_sprite_2d()
+
+
+## 指向实际战斗贴图（跳过隐藏占位 Sprite2D、箭矢、水纹等装饰）。
+func _resolve_battle_sprite_2d() -> void:
+	if _is_primary_battle_sprite(sprite_2d):
+		return
+	for node in find_children("*", "Sprite2D", true, false):
+		var candidate := node as Sprite2D
+		if _is_primary_battle_sprite(candidate):
+			sprite_2d = candidate
+			return
+
+
+func _is_primary_battle_sprite(sprite: Sprite2D) -> bool:
+	if not is_instance_valid(sprite) or sprite == arrow:
+		return false
+	if not sprite.visible or sprite.texture == null:
+		return false
+	var label := str(sprite.get_path()) if sprite.is_inside_tree() else str(sprite.name)
+	if "Shallows" in label or "BlockBadge" in label:
+		return false
+	return true
+
+
+func _apply_art_scale_from_stats() -> void:
+	# *_enemy.tscn：贴图缩放完全以场景内手调为准（Visual / Body / Sprite2D 等）。
+	if _enemy_scene_uses_hand_placed_ui():
+		return
+	if stats is EnemyStats and is_instance_valid(sprite_2d):
+		sprite_2d.scale = (stats as EnemyStats).art_scale
+
+
+func _finalize_editor_preview_intents(intents: Array[Intent]) -> Array[Intent]:
+	if intents.is_empty():
+		return [_make_default_editor_attack_preview_intent()]
+	var out: Array[Intent] = []
+	for intent in intents:
+		if intent == null:
+			continue
+		var mat := Intent.editor_materialize(intent) if Engine.is_editor_hint() else intent
+		if mat == null:
+			continue
+		if mat.kind == Intent.Kind.ATTACK:
+			if mat.display_number == Intent.NUMBER_HIDDEN and mat.current_text.is_empty():
+				mat.set_attack_segments_display(10, 1)
+		out.append(mat)
+	return out
+
+
+static func _make_default_editor_attack_preview_intent() -> Intent:
+	var intent := Intent.new()
+	intent.kind = Intent.Kind.ATTACK
+	intent.set_attack_segments_display(10, 1)
+	return intent
 
 
 func _apply_editor_static_art() -> void:
-	if stats == null or not is_instance_valid(sprite_2d):
+	var ed_stats := _editor_resolved_stats() if Engine.is_editor_hint() else stats
+	if ed_stats == null or not is_instance_valid(sprite_2d):
 		return
-	if _uses_sequence_art() and stats.art_frames.size() > 0:
-		sprite_2d.texture = stats.art_frames[0]
-	elif stats.art_frames.size() >= 1:
-		sprite_2d.texture = stats.art_frames[0]
-	elif stats.art:
-		sprite_2d.texture = stats.art
+	if Engine.is_editor_hint():
+		if ed_stats.art_frames.size() >= 1:
+			sprite_2d.texture = ed_stats.art_frames[0]
+		elif ed_stats.art:
+			sprite_2d.texture = ed_stats.art
+		return
+	if _uses_sequence_art() and ed_stats.art_frames.size() > 0:
+		sprite_2d.texture = ed_stats.art_frames[0]
+	elif ed_stats.art_frames.size() >= 1:
+		sprite_2d.texture = ed_stats.art_frames[0]
+	elif ed_stats.art:
+		sprite_2d.texture = ed_stats.art
 
 
 func _editor_preview_stats() -> Stats:
-	var preview := stats.duplicate() as Stats
-	preview.health = preview.max_health
-	preview.block = 0
+	var source := _editor_resolved_stats()
+	if source == null or not _editor_stats_resource_usable(source):
+		return null
+	var preview := source.duplicate(true) as Stats
+	if preview == null or preview.max_health <= 0:
+		return null
+	preview.set("health", preview.max_health)
+	preview.set("block", 0)
 	return preview
 
 
+## 场景布局敌人：只同步血条宽度与数值，不改动 tscn 里手摆的 StatusBar / IntentUI 位置。
+func sync_scene_layout_ui() -> void:
+	if not _uses_scene_ui_layout():
+		return
+	if is_instance_valid(stats_ui) and stats_ui.has_method("sync_health_bar_to_container_width"):
+		stats_ui.sync_health_bar_to_container_width()
+	var health_row := _get_health_bar_row()
+	if health_row is HealthBar:
+		var hb := health_row as HealthBar
+		hb.show_max_hp = true
+		_sync_health_row_width_from_status_bar_container(hb)
+		hb.commit_bar_width_to_host(0)
+		hb.ensure_theme_ready()
+	if Engine.is_editor_hint():
+		var preview := _editor_preview_stats()
+		if preview != null and is_instance_valid(stats_ui):
+			stats_ui.update_stats(preview)
+		_apply_editor_preview_intents()
+	elif is_instance_valid(stats) and is_instance_valid(stats_ui):
+		stats_ui.update_stats(stats)
+	if not _hover_name_is_hand_placed():
+		_sync_scene_ui_hover_name()
+	_ensure_status_bar_draw_order()
+	if is_instance_valid(stats_ui):
+		stats_ui.queue_sort()
+		stats_ui.queue_redraw()
+	if is_instance_valid(intent_ui):
+		intent_ui.queue_sort()
+		intent_ui.queue_redraw()
+
+
+func _ensure_status_bar_draw_order() -> void:
+	if not _uses_scene_ui_layout() or not is_instance_valid(stats_ui):
+		return
+	stats_ui.z_as_relative = true
+	stats_ui.z_index = SCENE_LAYOUT_STATUS_BAR_Z
+	var name_ui := _hover_name_ui()
+	if name_ui != null:
+		name_ui.z_as_relative = true
+		name_ui.z_index = CombatantHoverName.DRAW_Z_INDEX
+		move_child(name_ui, get_child_count() - 1)
+
+
 func _layout_status_bar() -> void:
-	if not is_instance_valid(stats_ui) or not is_instance_valid(sprite_2d) or stats == null:
+	if not is_instance_valid(stats_ui):
+		return
+	if _uses_scene_ui_layout():
+		_sync_status_bar_health_width()
+		_ensure_status_bar_draw_order()
+		if is_inside_tree() and not _hover_name_is_hand_placed():
+			_sync_scene_ui_hover_name()
+		return
+	if not is_instance_valid(sprite_2d):
+		return
+	var s := _editor_resolved_stats() if Engine.is_editor_hint() else stats
+	if s == null:
 		return
 	var foot_y := _sprite_foot_local_y()
-	var off := stats.status_bar_offset
+	var off := s.status_bar_offset
 	var w := maxf(stats_ui.size.x, stats_ui.get_combined_minimum_size().x)
 	stats_ui.position = Vector2(-w * 0.5 + off.x, foot_y + off.y)
 	if is_instance_valid(hover_name_overlay):
-		hover_name_overlay.sync_layout_from_status_bar(stats_ui)
+		var name_ui := _hover_name_ui()
+		if name_ui != null:
+			name_ui.call_deferred("sync_layout_from_status_bar", stats_ui)
+
+
+func _get_health_bar_row() -> HealthBar:
+	if not is_instance_valid(stats_ui):
+		return null
+	return stats_ui.get_node_or_null("HealthRow") as HealthBar
+
+
+## 血条宽度以 StatusBar 容器为准（拉伸 StatusBar 时实时同步 BarHost）。
+func _sync_health_row_width_from_status_bar_container(health_row: HealthBar) -> void:
+	if health_row == null or not is_instance_valid(stats_ui):
+		return
+	if stats_ui is StatusBar and stats_ui.has_method("uses_scene_container_width"):
+		if not (stats_ui as StatusBar).uses_scene_container_width():
+			return
+	if stats_ui.has_method("sync_health_bar_to_container_width"):
+		stats_ui.sync_health_bar_to_container_width()
+		return
+	if stats_ui.has_method("read_container_width"):
+		var sb_w: int = stats_ui.read_container_width()
+		if sb_w > 0:
+			health_row.apply_width_from_status_bar_container(sb_w)
+			return
+	var sb_w := HealthBar.read_status_bar_container_width(stats_ui)
+	if sb_w > 0:
+		health_row.apply_width_from_status_bar_container(sb_w)
+
+
+func _resolved_health_bar_width() -> float:
+	if stats == null:
+		return 180.0
+	if stats.uses_scene_ui_layout:
+		var health_row := _get_health_bar_row()
+		if health_row != null:
+			return float(health_row.get_authoritative_bar_width(0))
+	var bw := float(HealthBar.clamp_bar_width(stats.health_bar_width))
+	return bw
+
+
+func _sync_scene_editor_health_bar_preview() -> void:
+	if not Engine.is_editor_hint():
+		return
+	var ed_stats := _editor_resolved_stats()
+	if ed_stats == null or not ed_stats.uses_scene_ui_layout:
+		return
+	var health_row := _get_health_bar_row()
+	if health_row == null:
+		return
+	health_row.show_max_hp = true
+	var preview := _editor_preview_stats()
+	if preview == null:
+		return
+	health_row.ensure_theme_ready()
+	health_row.update_stats(preview)
 
 
 func _sprite_foot_local_y() -> float:
@@ -386,8 +873,9 @@ func _on_stats_unblocked_damage_taken(amount: int) -> void:
 	var heavy_armor := HeavyArmorStatus.get_on_enemy(self)
 	if heavy_armor != null and amount > 0:
 		heavy_armor.register_damage_taken(amount, self)
-	LayeredArmorStatus.on_unblocked_attack_damage(self, amount)
 	if _pending_player_attack_card_hits > 0:
+		if amount > 0:
+			LayeredArmorStatus.on_unblocked_attack_damage(self, amount)
 		_pending_player_attack_card_hits -= 1
 		if amount > 0 and not Events.is_combat_ended():
 			Events.player_dealt_attack_damage_to_enemy.emit(self, amount)
@@ -411,6 +899,14 @@ func _set_current_action_silent(value: EnemyAction) -> void:
 	_skip_intent_on_action_assign = true
 	current_action = value
 	_skip_intent_on_action_assign = false
+
+
+func set_editor_preview_action(value: StringName) -> void:
+	if editor_preview_action == value:
+		return
+	editor_preview_action = value
+	if Engine.is_editor_hint() and Enemy.editor_preview_script_ready(self):
+		call_deferred("refresh_editor_battle_preview")
 
 
 func set_enemy_stats(value: EnemyStats) -> void:
@@ -439,6 +935,24 @@ func set_enemy_stats(value: EnemyStats) -> void:
 	update_enemy()
 
 
+## 战斗生成后再同步一次贴图缩放，避免 stats 赋值早于 @onready / 子类 repoint sprite。
+func _apply_battle_spawn_visuals() -> void:
+	if not is_instance_valid(stats):
+		return
+	_resolve_battle_sprite_2d()
+	if not _enemy_scene_uses_hand_placed_ui():
+		_apply_art_scale_from_stats()
+	if stats is EnemyStats:
+		(stats as EnemyStats).setup_battle_visual(self)
+	if not is_instance_valid(sprite_2d):
+		return
+	_sync_hitbox_to_sprite()
+	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
+	if is_instance_valid(arrow):
+		arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
+	capture_battle_home_position()
+
+
 func setup_ai() -> void:
 	if enemy_action_picker:
 		enemy_action_picker.queue_free()
@@ -450,6 +964,11 @@ func setup_ai() -> void:
 
 
 func update_stats() -> void:
+	if _uses_scene_ui_layout():
+		sync_scene_layout_ui()
+		return
+	if Engine.is_editor_hint():
+		return
 	stats_ui.update_stats(stats)
 	_layout_status_bar()
 
@@ -480,15 +999,13 @@ func update_enemy() -> void:
 	if not is_inside_tree(): 
 		await ready
 	
+	_resolve_battle_sprite_2d()
 	_apply_enemy_art()
-	if stats is EnemyStats:
-		sprite_2d.scale = stats.art_scale
+	_apply_art_scale_from_stats()
 	var half_width := sprite_2d.get_rect().size.x * absf(sprite_2d.scale.x) * 0.5
 	arrow.position = Vector2.RIGHT * (half_width + ARROW_OFFSET)
 	_sync_hitbox_to_sprite()
 	setup_ai()
-	if stats is EnemyStats:
-		stats.setup_battle_visual(self)
 	update_stats()
 	_apply_intent_ui_offset()
 	call_deferred("_apply_intent_ui_offset")
@@ -571,22 +1088,29 @@ func get_card_targeting_rect_local() -> Rect2:
 		return Rect2()
 	if not is_instance_valid(stats_ui) or not is_instance_valid(intent_ui):
 		return Rect2()
-	var health_ctrl := stats_ui.health as Control
-	if not is_instance_valid(health_ctrl):
-		return Rect2()
-	var health_gr := health_ctrl.get_global_rect()
-	var health_top_global := health_gr.position
 	var intent_gr := intent_ui.get_global_rect()
-	var intent_bottom_global := intent_gr.position + Vector2(0.0, intent_gr.size.y)
-	var health_top_local := to_local(health_top_global)
-	var intent_bottom_local := to_local(intent_bottom_global)
-	var w := float(clampi(stats.health_bar_width, 40, 400))
+	var intent_bottom_local := to_local(intent_gr.position + Vector2(0.0, intent_gr.size.y))
 	var y_top := intent_bottom_local.y
+	var w := _resolved_health_bar_width()
+	var health_row := _get_health_bar_row()
+	var health_top_local: Vector2
+	var cx: float
+	if health_row != null and is_instance_valid(health_row.bar_host):
+		var bar_gr := health_row.bar_host.get_global_rect()
+		health_top_local = to_local(bar_gr.position)
+		cx = to_local(bar_gr.position + Vector2(bar_gr.size.x * 0.5, 0.0)).x
+		w = maxf(w, bar_gr.size.x)
+	else:
+		var health_ctrl := stats_ui.get_node_or_null("HealthRow") as Control
+		if not is_instance_valid(health_ctrl):
+			return Rect2()
+		var health_gr := health_ctrl.get_global_rect()
+		health_top_local = to_local(health_gr.position)
+		cx = to_local(health_gr.position + Vector2(health_gr.size.x * 0.5, 0.0)).x
 	var y_bottom := health_top_local.y
 	var h := y_bottom - y_top
 	if h <= 0.0:
 		return Rect2()
-	var cx := to_local(health_gr.position + Vector2(health_gr.size.x * 0.5, 0.0)).x
 	return Rect2(cx - w * 0.5, y_top, w, h)
 
 
@@ -732,7 +1256,10 @@ func is_intent_suppressed() -> bool:
 
 func _apply_intent_ui_hidden() -> void:
 	if is_instance_valid(intent_ui):
-		intent_ui.update_intents([])
+		if _uses_scene_ui_layout():
+			_sync_scene_intent_slots([])
+		else:
+			intent_ui.update_intents([])
 	_hide_intent_hover_tooltip_if_active()
 	_sync_combat_process_enabled()
 
@@ -756,7 +1283,10 @@ func update_intent() -> void:
 	if current_action:
 		current_action.update_planned_intents()
 		planned = current_action.get_planned_intents()
-	intent_ui.update_intents(planned)
+	if _uses_scene_ui_layout():
+		_sync_scene_intent_slots(planned)
+	else:
+		intent_ui.update_intents(planned)
 	if planned.is_empty():
 		_hide_intent_hover_tooltip_if_active()
 	_sync_combat_process_enabled()
@@ -841,11 +1371,14 @@ func _play_damage_shake() -> void:
 func _on_take_damage_tween_finished() -> void:
 	if not is_instance_valid(self) or _death_sequence_started:
 		return
+	restore_battle_position()
 	sprite_2d.material = null
 	if stats.health <= 0:
 		_death_sequence_started = true
 		_clear_interaction_visuals_immediate()
 		Events.enemy_died.emit(self)
+		if stats is SpookEnemyStats and not Events.is_player_turn_start_resolving() and not Events.is_combat_ended():
+			Events.player_combat_stat_context_changed.emit()
 		queue_free()
 
 
@@ -871,13 +1404,12 @@ func take_damage(damage: int, which_modifier: Modifier.Type) -> void:
 		and Events.is_inside_attack_card_effects()
 	):
 		var p := get_tree().get_first_node_in_group("battle_player") as Player
-		var combined := MaliceStatus.get_combined_vulnerable_percent(p, self) if p else -1.0
-		if combined >= 0.0:
-			modified_damage = maxi(0, ceili(float(damage) * (1.0 + combined)))
-		else:
-			modified_damage = modifier_handler.get_modified_value(damage, which_modifier)
+		modified_damage = EnemyIncomingAttackDamage.compute(damage, self, p)
 		if p:
 			modified_damage = OverwhelmingStatus.apply_multiplier_to_final_attack_damage(p, modified_damage)
+	elif which_modifier == Modifier.Type.DMG_TAKEN:
+		var p := get_tree().get_first_node_in_group("battle_player") as Player
+		modified_damage = EnemyIncomingAttackDamage.compute(damage, self, p)
 	else:
 		modified_damage = modifier_handler.get_modified_value(damage, which_modifier)
 	
@@ -1035,6 +1567,11 @@ func _on_art_anim_timer_timeout() -> void:
 
 
 func _exit_tree() -> void:
+	if (
+		not Engine.is_editor_hint()
+		and Events.enemy_action_completed.is_connected(_on_own_action_completed_restore_position)
+	):
+		Events.enemy_action_completed.disconnect(_on_own_action_completed_restore_position)
 	_editor_unbind_stats_preview_listener()
 	_stop_art_animation()
 	_clear_interaction_visuals_immediate()

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://7vwghchanmp5"]
 
-[ext_resource type="Texture2D" uid="uid://cruutapj2ff8y" path="res://art/crossbody_bag.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://cruutapj2ff8y" path="res://art/relics/crossbody_bag.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://nwuj2r1s4bb" path="res://relics/crossbody_bag.gd" id="2_script"]
 
 [resource]

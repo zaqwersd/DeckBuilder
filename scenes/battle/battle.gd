@@ -14,6 +14,10 @@ extends Node2D
 ## 已为 `start_battle()` 布置过敌人；用于忽略换波时短暂的 `enemy_handler` 空子节点，避免误判战斗胜利。
 var _combat_started: bool = false
 var _victory_backdrop_applied: bool = false
+## 战斗读档时由 Run 统一同步 BGM，避免未预热就 play。
+var skip_initial_battle_music := false
+## 战斗中途读档：恢复快照中的牌堆顺序，并在 setup 后对齐 setup RNG。
+var combat_reload := false
 
 
 func _ready() -> void:
@@ -36,6 +40,8 @@ func _ready() -> void:
 	## player_hand_discarded 在 start_battle() 布置完敌人后再连接，见 _connect_enemy_turn_after_discard()
 	
 	Events.player_died.connect(_on_player_died)
+	if not Events.battle_over_screen_requested.is_connected(_on_battle_over_screen_requested):
+		Events.battle_over_screen_requested.connect(_on_battle_over_screen_requested)
 
 
 func _exit_tree() -> void:
@@ -47,6 +53,8 @@ func _exit_tree() -> void:
 		Events.player_turn_ended.disconnect(player_handler.end_turn)
 	if Events.player_died.is_connected(_on_player_died):
 		Events.player_died.disconnect(_on_player_died)
+	if Events.battle_over_screen_requested.is_connected(_on_battle_over_screen_requested):
+		Events.battle_over_screen_requested.disconnect(_on_battle_over_screen_requested)
 
 
 func _connect_enemy_turn_after_discard() -> void:
@@ -60,7 +68,8 @@ func _connect_enemy_turn_after_discard() -> void:
 
 func start_battle() -> void:
 	get_tree().paused = false
-	MusicPlayer.play(music, true)
+	if not skip_initial_battle_music:
+		_play_battle_music_async()
 	
 	## 设置战斗背景图（优先使用配置的，其次使用层默认）
 	_setup_background()
@@ -83,15 +92,27 @@ func start_battle() -> void:
 		relics.relics_activated.connect(_on_relics_activated)
 	
 	visible = true
+	_capture_reload_snapshot_before_first_draw()
 	relics.activate_relics_by_type(Relic.Type.START_OF_COMBAT, true)
 
+
+func _capture_reload_snapshot_before_first_draw() -> void:
+	if combat_reload:
+		return
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run == null:
+		return
+	if run.has_method("_sync_combat_snapshot_post_setup"):
+		run._sync_combat_snapshot_post_setup(self)
+	if run.has_method("_save_run"):
+		run._save_run(false)
 
 ## 在显示战斗 UI 前：洗牌堆、绑定牌堆计数、清零格挡并刷新玩家状态栏。
 func _prepare_combat_data() -> void:
 	if not is_instance_valid(player_handler) or not is_instance_valid(battle_ui) or not is_instance_valid(player):
 		return
 	
-	player_handler.start_battle_prep(char_stats)
+	player_handler.start_battle_prep(char_stats, combat_reload)
 	char_stats.block = 0
 	char_stats.reset_mana()
 	
@@ -133,15 +154,8 @@ func _setup_background_modulate() -> void:
 		return
 	
 	match run.current_act:
-		1:
-			## 第1层：调暗并偏向蓝绿色调
-			bg_sprite.modulate = Color(0.5, 0.7, 0.75, 1)
-		2:
-			## 第2层：正常亮度
-			bg_sprite.modulate = Color(1, 1, 1, 1)
-		3:
-			## 第3层：降低饱和度并略偏褐色
-			bg_sprite.modulate = Color(0.86, 0.80, 0.72, 1)
+		1, 2, 3:
+			bg_sprite.modulate = get_act_background_modulate(run.current_act)
 		_:
 			bg_sprite.modulate = Color(1, 1, 1, 1)
 
@@ -158,6 +172,19 @@ func _get_default_background_for_act(act: int) -> Texture2D:
 			## 第3层使用专属背景图
 			return preload("res://art/act3_background.png")
 	return preload("res://art/background.png")
+
+
+## 与 `_setup_background_modulate` 一致，供战斗内装饰（如水怪水纹）复用层色调。
+static func get_act_background_modulate(act: int) -> Color:
+	match act:
+		1:
+			return Color(0.5, 0.7, 0.75, 1)
+		2:
+			return Color(1, 1, 1, 1)
+		3:
+			return Color(0.86, 0.80, 0.72, 1)
+		_:
+			return Color(1, 1, 1, 1)
 
 
 ## 控制台指令用：将所有敌人生命值清零，走正常击杀 → 胜利面板 → 奖励流程。
@@ -234,8 +261,8 @@ func _on_player_died() -> void:
 func enter_post_victory_backdrop(is_reload: bool = false) -> void:
 	get_tree().paused = false
 	visible = true
-	if not is_reload and music != null:
-		MusicPlayer.play(music, true)
+	if not is_reload:
+		_play_battle_music()
 	_setup_background()
 	if char_stats != null and is_instance_valid(player):
 		player.stats = char_stats
@@ -255,6 +282,13 @@ func _show_victory_backdrop_only() -> void:
 		return
 	_hide_victory_phase_ui()
 	_victory_backdrop_applied = true
+
+
+func _on_battle_over_screen_requested(_message: String, type: BattleOverPanel.Type) -> void:
+	if type == BattleOverPanel.Type.LOSE:
+		RunBgm.on_run_exit()
+	else:
+		MusicPlayer.fade_out_battle_overlays()
 
 
 func _hide_victory_phase_ui() -> void:
@@ -288,3 +322,22 @@ func _on_relics_activated(type: Relic.Type) -> void:
 			player_handler.start_turn()
 		Relic.Type.END_OF_COMBAT:
 			Events.battle_over_screen_requested.emit("胜利！", BattleOverPanel.Type.WIN)
+
+
+func _play_battle_music_async() -> void:
+	await MusicPlayer.ensure_act1_streams_ready()
+	var run := get_tree().get_first_node_in_group("run") as Run
+	var room: Room = null
+	if run != null:
+		if run.save_data != null and run.save_data.combat_snapshot != null:
+			room = run.save_data.combat_snapshot.room
+		elif run.map != null:
+			room = run.map.last_room
+		RunBgm.on_battle_music(run, room)
+		return
+	if music != null:
+		MusicPlayer.play(music, true)
+
+
+func _play_battle_music() -> void:
+	_play_battle_music_async()

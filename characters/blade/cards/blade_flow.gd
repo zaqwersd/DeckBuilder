@@ -55,6 +55,10 @@ func plays_card_sound_on_play() -> bool:
 	return true
 
 
+func requires_drag_outside_hand_before_play() -> bool:
+	return true
+
+
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
@@ -69,7 +73,7 @@ func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
 		return
 
 	var draw_count := _get_draw_count()
-	await ph.draw_cards(draw_count)
+	await ph.draw_cards(draw_count, false, false, true)
 	await tree.process_frame
 
 	hand = ph.hand

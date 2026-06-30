@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="WaterMonsterEnemyStats" format=3 uid="uid://be2gk45iwi6fv"]
+
+[ext_resource type="Script" uid="uid://dh5fxrdf0xlr3" path="res://enemies/water_monster/water_monster_enemy_stats.gd" id="1_stats"]
+[ext_resource type="PackedScene" path="res://enemies/water_monster/water_monster_enemy_ai.tscn" id="2_ai"]
+[ext_resource type="Texture2D" uid="uid://d2df6wxij46ul" path="res://art/water_monster1.png" id="3_art"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/water_monster/water_monster_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "水怪"
+max_health = 240
+art = ExtResource("3_art")

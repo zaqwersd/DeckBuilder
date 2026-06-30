@@ -10,7 +10,10 @@
 [node name="Player" type="Node2D" groups=["player"]]
 script = ExtResource("1_il1gs")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="ArtRoot" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="ArtRoot"]
+centered = true
 scale = Vector2(3, 3)
 texture = ExtResource("1_0r2oj")
 

@@ -1,3 +1,4 @@
+@tool
 class_name Intent
 extends Resource
 
@@ -36,6 +37,55 @@ func set_attack_segments_display(per_hit: int, segment_count: int = 1) -> void:
 ## 与 `IntentSlot` 一致：仅攻击会在图标旁显示文案/数字；其它种类只显示图标。
 func shows_numeric_label() -> bool:
 	return kind == Kind.ATTACK
+
+
+## 编辑器中 SubResource / ExtResource 常为 placeholder，不可读 display_number / current_text。
+static func is_editor_placeholder(res: Resource) -> bool:
+	if res == null or not Engine.is_editor_hint():
+		return false
+	if res.get_script() == null:
+		return true
+	if not res is Intent:
+		return false
+	return res.get(&"display_number") == null
+
+
+## 编辑器预览：从 placeholder 或 SubResource 得到可写 Intent 实例。
+static func editor_materialize(source: Intent) -> Intent:
+	if source == null:
+		return null
+	if not Engine.is_editor_hint():
+		return source.duplicate() as Intent
+	var dup := source.duplicate(true) as Intent
+	if dup != null and not is_editor_placeholder(dup):
+		return dup
+	var intent := Intent.new()
+	var kind_val: Variant = source.get(&"kind")
+	if kind_val is int:
+		intent.kind = kind_val as Kind
+	var icon_val: Variant = source.get(&"icon")
+	if icon_val is Texture2D:
+		intent.icon = icon_val
+	var base_val: Variant = source.get(&"base_text")
+	if base_val is String:
+		intent.base_text = base_val
+	return intent
+
+
+static func editor_get_display_number(intent: Intent) -> int:
+	if intent == null:
+		return NUMBER_HIDDEN
+	if Engine.is_editor_hint() and is_editor_placeholder(intent):
+		return NUMBER_HIDDEN
+	return intent.display_number
+
+
+static func editor_get_current_text(intent: Intent) -> String:
+	if intent == null:
+		return ""
+	if Engine.is_editor_hint() and is_editor_placeholder(intent):
+		return ""
+	return intent.current_text
 
 
 func get_display_icon() -> Texture2D:

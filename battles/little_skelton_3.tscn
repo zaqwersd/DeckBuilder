@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://ddw250ips24kw"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_enemy"]
-[ext_resource type="Resource" path="res://enemies/little_skelton/little_skelton_enemy.tres" id="2_stats"]
+[ext_resource type="PackedScene" path="res://enemies/little_skelton/little_skelton_enemy.tscn" id="2_stats"]
 
 [node name="LittleSkelton_3" type="Node2D"]
 
@@ -20,17 +19,14 @@ position = Vector2(909.5, 348)
 [node name="Slot5" type="Node2D" parent="."]
 position = Vector2(1040, 348)
 
-[node name="Enemy" parent="." instance=ExtResource("1_enemy")]
+[node name="Enemy" parent="." instance=ExtResource("2_stats")]
 position = Vector2(765.5, 348)
-stats = ExtResource("2_stats")
 metadata/skeleton_slot = 3
 
-[node name="Enemy2" parent="." instance=ExtResource("1_enemy")]
+[node name="Enemy2" parent="." instance=ExtResource("2_stats")]
 position = Vector2(909.5, 348)
-stats = ExtResource("2_stats")
 metadata/skeleton_slot = 4
 
-[node name="Enemy3" parent="." instance=ExtResource("1_enemy")]
+[node name="Enemy3" parent="." instance=ExtResource("2_stats")]
 position = Vector2(1040, 348)
-stats = ExtResource("2_stats")
 metadata/skeleton_slot = 5

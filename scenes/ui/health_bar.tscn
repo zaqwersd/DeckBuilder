@@ -1,20 +1,27 @@
-[gd_scene format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/ui/health_bar.gd" id="1_health_bar"]
 [ext_resource type="Texture2D" path="res://art/BlockImage.png" id="2_qi2ti"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_track"]
+bg_color = Color(0.07, 0.07, 0.08, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fill"]
+bg_color = Color(0.945, 0.161, 0.2, 1)
+
 [node name="HealthBar" type="HBoxContainer" unique_id=779721695]
-offset_right = 200.0
-offset_bottom = 10.0
+custom_minimum_size = Vector2(0, 10)
 theme_override_constants/separation = 0
 script = ExtResource("1_health_bar")
 show_max_hp = true
 
 [node name="BarHost" type="Control" parent="." unique_id=2141628118]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 10)
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
+size_flags_horizontal = 3
 size_flags_vertical = 4
+clip_contents = false
 
 [node name="HPBar" type="ProgressBar" parent="BarHost" unique_id=1493146357]
 unique_name_in_owner = true
@@ -25,6 +32,8 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_track")
+theme_override_styles/fill = SubResource("StyleBoxFlat_fill")
 max_value = 14.0
 value = 4.0
 show_percentage = false
@@ -39,7 +48,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-text = "4"
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.85)
+theme_override_constants/outline_size = 3
+text = "4/14"
 horizontal_alignment = 1
 vertical_alignment = 1
 

@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://dic7wofhyxxo6"]
+
+[ext_resource type="PackedScene" uid="uid://dfjwad6nq0yq7" path="res://enemies/bone_chewer/bone_chewer_enemy.tscn" id="2_stats"]
+
+[node name="BoneChewer" type="Node2D" unique_id=783156444]
+
+[node name="Enemy" parent="." unique_id=79425392 instance=ExtResource("2_stats")]
+position = Vector2(890, 359)

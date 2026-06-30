@@ -32,6 +32,7 @@ func duplicate_last_card() -> void:
 		run.mark_event_flag("helpful_boi_dup")
 		run.play_deck_gain_card_visual(dup, Vector2.ZERO)
 	character_stats.deck.add_card(dup)
+	Events.deck_card_added.emit(dup)
 	duplicate_last_card_button.disabled = true
 
 

@@ -34,7 +34,7 @@ func perform_action() -> void:
 
 func _perform_strike_and_debuff(per_hit: int, debuff_fn: Callable) -> void:
 	var tween := create_tween().set_trans(Tween.TRANS_QUINT)
-	var start := enemy.global_position
+	var start := EnemyAction.attack_lunge_home(enemy)
 	var end := EnemyAction.attack_lunge_position(start)
 	var damage_effect := make_final_player_damage_effect(per_hit)
 	var target_array: Array[Node] = [target]

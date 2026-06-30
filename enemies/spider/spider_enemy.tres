@@ -7,11 +7,11 @@
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "蜘蛛"
 ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/spider/spider_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "蜘蛛"
 art_scale = Vector2(4, 4)
 art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2")])
-health_bar_width = 150
-status_bar_offset = Vector2(29, 80)
 max_health = 46
 art = ExtResource("3_art1")

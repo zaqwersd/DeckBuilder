@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="OsteogenesisStatus" format=3 uid="uid://cv0dkxvmqrqv3"]
 
-[ext_resource type="Texture2D" uid="uid://cyvdfx152l274" path="res://art/osteogenesis.png" id="1_hudyd"]
+[ext_resource type="Texture2D" uid="uid://cyvdfx152l274" path="res://art/status_icons/osteogenesis.png" id="1_hudyd"]
 [ext_resource type="Script" uid="uid://r05qn2wh583c" path="res://statuses/osteogenesis.gd" id="2_script"]
 
 [resource]

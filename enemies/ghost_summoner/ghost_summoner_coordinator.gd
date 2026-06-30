@@ -21,7 +21,7 @@ static func reset_combat() -> void:
 	_initial_spawned = false
 	_spook_prepared = false
 	_summon_order = SPOOK_VARIANTS.duplicate()
-	_summon_order.shuffle()
+	RNG.array_shuffle(_summon_order)
 	_summon_order_index = 0
 
 
@@ -29,7 +29,7 @@ static func reset_combat() -> void:
 static func take_next_summon_variant() -> String:
 	if _summon_order.is_empty():
 		_summon_order = SPOOK_VARIANTS.duplicate()
-		_summon_order.shuffle()
+		RNG.array_shuffle(_summon_order)
 	var variant := _summon_order[_summon_order_index % _summon_order.size()]
 	_summon_order_index += 1
 	return variant
@@ -129,4 +129,4 @@ static func _refresh_summoner_scapeghost(summoner: Enemy) -> void:
 		return
 	var scapeghost := ScapeghostStatus.get_on_enemy(summoner)
 	if scapeghost != null:
-		scapeghost._refresh_modifier()
+		scapeghost._refresh_modifier(true)

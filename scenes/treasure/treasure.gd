@@ -72,6 +72,9 @@ func generate_relic() -> void:
 # Called from the AnimationPlayer, at the
 # end of the 'open' animation.
 func _on_treasure_opened() -> void:
+	var run := get_tree().get_first_node_in_group("run") as Run
+	if run != null and RunBgm.is_row8_tense_treasure_room(run):
+		RunBgm.on_row8_tense_treasure_opened(run)
 	Events.treasure_room_exited.emit(found_relic)
 
 

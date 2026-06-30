@@ -1,0 +1,16 @@
+[gd_resource type="Resource" format=3 uid="uid://bioiowgy8awoh"]
+
+[ext_resource type="Texture2D" uid="uid://dus6f5rwc77ge" path="res://art/cards/deterrence.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://djjj3ejb6fbet" path="res://characters/blade/cards/blade_deterrence.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_deterrence"
+type = 2
+rarity = 2
+cost = 1
+card_name = "威慑"
+icon = ExtResource("1_icon")
+tooltip_text = "[center]每回合结束时获得1点力量，然后对所有敌人造成等于你当前力量的伤害。[/center]"
+sound = ExtResource("3_sound")

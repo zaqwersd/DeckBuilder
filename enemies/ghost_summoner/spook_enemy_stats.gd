@@ -18,8 +18,37 @@ const VARIANT_AI: Dictionary = {
 	"green": preload("res://enemies/ghost_summoner/spook_green_ai.tscn"),
 }
 
+const VARIANT_DISPLAY_SUFFIX: Dictionary = {
+	"red": "（红）",
+	"green": "（绿）",
+	"blue": "（蓝）",
+}
+
 ## 运行时由 `create_for_variant` 写入；红/蓝/绿共用 `spook.tres` 的 UI 偏移。
-var spook_variant: String = "red"
+## 须 @export：`Enemy.set_enemy_stats` 会 duplicate stats，非导出字段会在复制时丢失。
+@export var spook_variant: String = "red"
+
+
+func get_display_name() -> String:
+	var base := super.get_display_name()
+	if base.is_empty():
+		base = "小幽灵"
+	return base + String(VARIANT_DISPLAY_SUFFIX.get(_effective_variant(), ""))
+
+
+func create_instance() -> Resource:
+	var instance := super.create_instance() as SpookEnemyStats
+	instance.spook_variant = spook_variant
+	return instance
+
+
+func _effective_variant() -> String:
+	if VARIANT_ART.get(spook_variant) == art:
+		return spook_variant
+	for key: String in VARIANT_ART:
+		if VARIANT_ART[key] == art:
+			return key
+	return spook_variant
 
 
 static func apply_spawn_health(stats: EnemyStats, hp: int) -> void:

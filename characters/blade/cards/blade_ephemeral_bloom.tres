@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://066uu2rv3sgo"]
 
-[ext_resource type="Texture2D" uid="uid://waxv7rnttgt8" path="res://art/ephemeral_bloom.png" id="1_f7p2u"]
+[ext_resource type="Texture2D" uid="uid://waxv7rnttgt8" path="res://art/cards/ephemeral_bloom.png" id="1_f7p2u"]
 [ext_resource type="Script" uid="uid://cclcsjjyuegsd" path="res://characters/blade/cards/blade_ephemeral_bloom.gd" id="2_xxx"]
 [ext_resource type="AudioStream" uid="uid://dssxww3rwylt5" path="res://art/ephemeral_bloom.ogg" id="3_822ib"]
 

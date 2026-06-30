@@ -48,7 +48,7 @@ func setup(handler: PotionHandler, index: int, anchor: Control, potion: Potion) 
 
 func _finish_setup() -> void:
 	if _handler != null:
-		_use_button.disabled = not _handler.can_use_now()
+		_use_button.disabled = not _handler.can_use_potion(_pending_potion)
 	if _pending_potion != null:
 		_panel.tooltip_text = _pending_potion.tooltip
 	_hide_panel_for_layout()
@@ -155,7 +155,7 @@ func _on_use_pressed() -> void:
 	if ok:
 		_close()
 	else:
-		_use_button.disabled = not _handler.can_use_now()
+		_use_button.disabled = not _handler.can_use_potion(_pending_potion)
 		reposition_to_anchor()
 
 

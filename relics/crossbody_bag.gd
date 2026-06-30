@@ -16,5 +16,5 @@ func _draw_extra(owner: RelicUI) -> void:
 	var player_handler := tree.get_first_node_in_group("player_handler") as PlayerHandler
 	if player_handler == null:
 		return
-	player_handler.draw_cards(extra_draw)
+	player_handler.draw_cards(extra_draw, false, false, false)
 	owner.flash()

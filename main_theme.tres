@@ -2,8 +2,8 @@
 
 [ext_resource type="StyleBox" uid="uid://cqdg4q8yisvsm" path="res://scenes/card_ui/card_base_stylebox.tres" id="1_cof14"]
 [ext_resource type="StyleBox" uid="uid://ckekdoebsn0h8" path="res://scenes/card_ui/card_hover_stylebox.tres" id="1_lro6f"]
-[ext_resource type="FontFile" uid="uid://c30fkeil6tur2" path="res://art/Unifont点阵黑.ttf" id="3_0omi4"]
 [ext_resource type="Texture2D" uid="uid://rcns1rktu00i" path="res://art/unchecked.png" id="4_unchecked"]
+[ext_resource type="FontFile" uid="uid://dha2tq6e8sqhb" path="res://art/AiDianFengYaHei（ShangYongMianFei）-2.ttf" id="5_466ly"]
 [ext_resource type="Texture2D" uid="uid://bkn7buwpnipjv" path="res://art/checked.png" id="5_checked"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_r8u4k"]
@@ -26,7 +26,7 @@ border_color = Color(0.615686, 0.576471, 0.282353, 1)
 
 [resource]
 default_base_scale = 2.0
-default_font = ExtResource("3_0omi4")
+default_font = ExtResource("5_466ly")
 default_font_size = 32
 Button/styles/disabled = SubResource("StyleBoxFlat_r8u4k")
 Button/styles/focus = SubResource("StyleBoxEmpty_dmy1r")

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://cgdh8eiirsp18"]
 
-[ext_resource type="Texture2D" uid="uid://c1417rupy2gso" path="res://art/lava_shard.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://c1417rupy2gso" path="res://art/relics/lava_shard.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://8ce1nbbbmiff" path="res://relics/lava_shard.gd" id="2_script"]
 
 [resource]

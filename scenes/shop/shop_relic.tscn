@@ -1,7 +1,6 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3 uid="uid://dshoprelic7slot01"]
 
 [ext_resource type="Script" path="res://scenes/shop/shop_relic.gd" id="1_b84y1"]
-[ext_resource type="PackedScene" path="res://scenes/relic_handler/relic_ui.tscn" id="1_h34vc"]
 [ext_resource type="Resource" path="res://relics/candle.tres" id="2_uujtg"]
 [ext_resource type="Texture2D" path="res://art/gold.png" id="4_0iw0f"]
 
@@ -10,12 +9,20 @@ theme_override_constants/separation = 4
 script = ExtResource("1_b84y1")
 relic = ExtResource("2_uujtg")
 
-[node name="RelicContainer" type="CenterContainer" parent="."]
+[node name="RelicIconAnchor" type="CenterContainer" parent="."]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
 
-[node name="RelicUI" parent="RelicContainer" instance=ExtResource("1_h34vc")]
+[node name="RelicIcon" type="TextureRect" parent="RelicIconAnchor"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
 layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Price" type="HBoxContainer" parent="."]
 unique_name_in_owner = true

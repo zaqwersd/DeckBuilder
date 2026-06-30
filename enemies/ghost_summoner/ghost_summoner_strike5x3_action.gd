@@ -9,7 +9,7 @@ func perform_action() -> void:
 		return
 	var final_dmg := compute_damage_against_player(hit_damage)
 	var tween := create_tween().set_trans(Tween.TRANS_QUINT)
-	var start := enemy.global_position
+	var start := EnemyAction.attack_lunge_home(enemy)
 	var end := EnemyAction.attack_lunge_position(start)
 	var dmg_eff := make_final_player_damage_effect(final_dmg)
 	var arr: Array[Node] = [target]

@@ -16,7 +16,11 @@
 [ext_resource type="Resource" uid="uid://bnbguff04tkfj" path="res://relics/cross.tres" id="16_cross"]
 [ext_resource type="Resource" uid="uid://xauh3bj7ne61" path="res://relics/fishbone.tres" id="17_fishbone"]
 [ext_resource type="Resource" uid="uid://fy2jitede3my" path="res://relics/demons_bell.tres" id="18_demons_bell"]
+[ext_resource type="Resource" path="res://relics/flour.tres" id="19_flour"]
+[ext_resource type="Resource" path="res://relics/thermos.tres" id="20_thermos"]
+[ext_resource type="Resource" path="res://relics/saltine.tres" id="21_saltine"]
+[ext_resource type="Resource" path="res://relics/headphone.tres" id="22_headphone"]
 
 [resource]
 script = ExtResource("1_script")
-relics = Array[ExtResource("1_wvm5d")]([ExtResource("2_r0"), ExtResource("3_r1"), ExtResource("4_r2"), ExtResource("7_r5"), ExtResource("8_r6"), ExtResource("10_r8"), ExtResource("11_r9"), ExtResource("12_r10"), ExtResource("13_r11"), ExtResource("14_emerald_axe"), ExtResource("15_greatshield"), ExtResource("16_cross"), ExtResource("17_fishbone"), ExtResource("18_demons_bell")])
+relics = Array[ExtResource("1_wvm5d")]([ExtResource("2_r0"), ExtResource("3_r1"), ExtResource("4_r2"), ExtResource("7_r5"), ExtResource("8_r6"), ExtResource("10_r8"), ExtResource("11_r9"), ExtResource("12_r10"), ExtResource("13_r11"), ExtResource("14_emerald_axe"), ExtResource("15_greatshield"), ExtResource("16_cross"), ExtResource("17_fishbone"), ExtResource("18_demons_bell"), ExtResource("19_flour"), ExtResource("20_thermos"), ExtResource("21_saltine"), ExtResource("22_headphone")])

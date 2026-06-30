@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ThunderStatus" format=3]
+
+[ext_resource type="Texture2D" path="res://art/status_icons/thunder.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/thunder.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "thunder"
+type = 2
+stack_type = 1
+stacks = 1
+polarity = 0
+icon = ExtResource("1_icon")
+name = "雷电"
+tooltip = "该敌人存活时，你每打出一张牌，受到%s点伤害。"

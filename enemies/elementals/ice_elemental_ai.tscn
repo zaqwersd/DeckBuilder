@@ -1,0 +1,46 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://enemies/elementals/elemental_ice_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_simple_attack_action.gd" id="2_attack"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_debuff_action.gd" id="3_debuff"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_block_action.gd" id="4_block"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
+
+[sub_resource type="Resource" id="I_attack"]
+script = ExtResource("5_intent")
+
+[sub_resource type="Resource" id="I_weak"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "虚弱"
+
+[sub_resource type="Resource" id="I_frail"]
+script = ExtResource("5_intent")
+kind = 3
+base_text = "脆弱"
+
+[sub_resource type="Resource" id="I_block"]
+script = ExtResource("5_intent")
+kind = 1
+
+[node name="IceElementalAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="Attack" type="Node" parent="."]
+script = ExtResource("2_attack")
+intent = SubResource("I_attack")
+sound = ExtResource("6_atk")
+damage = 8
+
+[node name="Debuff" type="Node" parent="."]
+script = ExtResource("3_debuff")
+weak_intent = SubResource("I_weak")
+frail_intent = SubResource("I_frail")
+
+[node name="Block" type="Node" parent="."]
+script = ExtResource("4_block")
+intent = SubResource("I_block")
+sound = ExtResource("7_blk")
+block = 12

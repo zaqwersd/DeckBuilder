@@ -5,7 +5,7 @@
 [ext_resource type="Resource" uid="uid://bxypytwk7opd3" path="res://characters/blade/blade_draftable_cards.tres" id="2_jojs0"]
 [ext_resource type="Texture2D" uid="uid://bw7ohm7o03srv" path="res://art/blade_potrait.png" id="3_apv5j"]
 [ext_resource type="Resource" uid="uid://dyyfi3rcfxyug" path="res://characters/blade/blade_starting_deck.tres" id="3_d68oj"]
-[ext_resource type="Resource" path="res://relics/lycoris.tres" id="5_wfusn"]
+[ext_resource type="Resource" uid="uid://b5esmqau3id5d" path="res://relics/lycoris.tres" id="5_wfusn"]
 
 [resource]
 script = ExtResource("1_d8ou5")
@@ -13,6 +13,7 @@ character_name = "剑客"
 description = "流浪的无名少女。
 精通剑术，但总是会忘记什么。"
 portrait = ExtResource("3_apv5j")
+art_scene_path = "res://characters/blade/blade_visual.tscn"
 relic_match_id = "blade"
 starting_deck = ExtResource("3_d68oj")
 draftable_cards = ExtResource("2_jojs0")

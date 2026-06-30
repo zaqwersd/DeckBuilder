@@ -9,11 +9,11 @@ signal unblocked_damage_taken(amount: int)
 signal healing_applied(amount: int)
 
 @export_group("Battle UI")
-## 血条（HealthRow 内）水平宽度（像素）。在角色 CharacterStats / 敌人 EnemyStats 的 .tres 中按立绘调整。
-@export_range(40, 400, 1) var health_bar_width: int = 180 : set = set_health_bar_width
-## StatusBar（血条+状态）相对「精灵脚底、水平居中」锚点的偏移；X 正向右，Y 正向下（与脚底间距）。
+## 血条宽度（像素）。`uses_scene_ui_layout = true` 的敌人请改 `*_enemy.tscn` → StatusBar.container_width，此字段无效。
+@export var health_bar_width: int = 180 : set = set_health_bar_width
+## 已废弃：请改 `EnemyStats.enemy_scene` 内 StatusBar 位置。仅 `uses_scene_ui_layout = false` 时生效。
 @export var status_bar_offset: Vector2 = Vector2(0, 14) : set = set_status_bar_offset
-## 意图条相对 `enemy.tscn` 默认 IntentUI 边距的偏移：X 正向右；Y 正向上（会整体平移 offset_top / offset_bottom，并与 offset_left / offset_right 联动）。
+## 已废弃：请改 `EnemyStats.enemy_scene` 内 IntentUI 边距。仅 `uses_scene_ui_layout = false` 时生效。
 @export var intent_ui_offset: Vector2 = Vector2.ZERO : set = set_intent_ui_offset
 
 @export var max_health := 1 : set = set_max_health
@@ -28,11 +28,18 @@ var filter_unblocked_hp_loss: Callable
 
 
 func set_health_bar_width(value: int) -> void:
-	var clamped := clampi(value, 40, 400)
+	var clamped := HealthBar.normalize_bar_width(value)
 	if health_bar_width == clamped:
 		return
 	health_bar_width = clamped
+	if self is EnemyStats and (self as EnemyStats).uses_scene_ui_layout:
+		return
 	notify_battle_ui_preview_changed()
+
+
+## 已废弃：场景布局敌人不再写回 .tres。
+func apply_health_bar_width_from_scene(_value: int) -> void:
+	pass
 
 
 func set_status_bar_offset(value: Vector2) -> void:
@@ -75,7 +82,7 @@ static func _refresh_editor_battle_layout_previews(changed_stats: Stats) -> void
 			continue
 		var enemy_stats: Variant = node.get("stats")
 		if _editor_stats_matches(enemy_stats, changed_stats):
-			node.call("refresh_editor_battle_preview")
+			Enemy.request_editor_battle_preview(node)
 
 
 static func _editor_stats_matches(enemy_stats: Variant, changed_stats: Stats) -> bool:
@@ -165,3 +172,30 @@ func create_instance() -> Resource:
 	instance.health = max_health
 	instance.block = 0
 	return instance
+
+
+## 编辑器中 ExtResource 常为 placeholder（脚本未挂载），不可读 health/block 或调用脚本方法。
+static func is_editor_placeholder(res: Resource) -> bool:
+	if res == null or not Engine.is_editor_hint():
+		return false
+	if res.get_script() == null:
+		return true
+	if not res is Stats:
+		return false
+	# placeholder 仍可能暴露导出的 max_health，但读不到脚本里的 health/block。
+	if res.get(&"health") == null:
+		return true
+	return false
+
+
+static func is_editor_ui_usable(res: Stats) -> bool:
+	if res == null:
+		return false
+	if not Engine.is_editor_hint():
+		return true
+	if is_editor_placeholder(res):
+		return false
+	var max_hp: Variant = res.get(&"max_health")
+	if max_hp == null or int(max_hp) <= 0:
+		return false
+	return res.get(&"block") != null

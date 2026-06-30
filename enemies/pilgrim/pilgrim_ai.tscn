@@ -1,0 +1,45 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://enemies/pilgrim/pilgrim_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/pilgrim/pilgrim_opening_action.gd" id="2_opening"]
+[ext_resource type="Script" path="res://enemies/pilgrim/pilgrim_strike4x3_action.gd" id="3_strike4x3"]
+[ext_resource type="Script" path="res://enemies/pilgrim/pilgrim_buff_action.gd" id="4_buff"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="5_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="7_blk"]
+
+[sub_resource type="Resource" id="Intent_erosion"]
+script = ExtResource("5_intent")
+kind = 4
+
+[sub_resource type="Resource" id="Intent_strike4x3"]
+script = ExtResource("5_intent")
+
+[sub_resource type="Resource" id="Intent_strength"]
+script = ExtResource("5_intent")
+kind = 2
+base_text = "+%d 力量"
+
+[sub_resource type="Resource" id="Intent_block"]
+script = ExtResource("5_intent")
+kind = 1
+
+[node name="PilgrimAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="PilgrimOpening" type="Node" parent="."]
+script = ExtResource("2_opening")
+erosion_intent = SubResource("Intent_erosion")
+sound = ExtResource("7_blk")
+
+[node name="PilgrimStrike4x3" type="Node" parent="."]
+script = ExtResource("3_strike4x3")
+intent = SubResource("Intent_strike4x3")
+sound = ExtResource("6_atk")
+
+[node name="PilgrimBuff" type="Node" parent="."]
+script = ExtResource("4_buff")
+block = 20
+strength_intent = SubResource("Intent_strength")
+block_intent = SubResource("Intent_block")
+sound = ExtResource("7_blk")

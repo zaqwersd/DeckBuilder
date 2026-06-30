@@ -1,0 +1,63 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://enemies/water_monster/water_monster_enemy_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/water_monster/water_monster_triple_debuff_action.gd" id="2_debuff"]
+[ext_resource type="Script" path="res://enemies/water_monster/water_monster_block_action.gd" id="3_block"]
+[ext_resource type="Script" path="res://enemies/water_monster/water_monster_strike_action.gd" id="4_strike"]
+[ext_resource type="Script" path="res://enemies/water_monster/water_monster_strength_action.gd" id="5_strength"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="6_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="7_atk"]
+[ext_resource type="AudioStream" path="res://art/enemy_block.ogg" id="8_blk"]
+
+[sub_resource type="Resource" id="R_weak"]
+script = ExtResource("6_intent")
+kind = 3
+base_text = ""
+
+[sub_resource type="Resource" id="R_frail"]
+script = ExtResource("6_intent")
+kind = 3
+base_text = ""
+
+[sub_resource type="Resource" id="R_vulnerable"]
+script = ExtResource("6_intent")
+kind = 3
+base_text = ""
+
+[sub_resource type="Resource" id="R_block"]
+script = ExtResource("6_intent")
+kind = 1
+
+[sub_resource type="Resource" id="R_strike"]
+script = ExtResource("6_intent")
+kind = 0
+base_text = ""
+
+[sub_resource type="Resource" id="R_strength"]
+script = ExtResource("6_intent")
+kind = 2
+
+[node name="WaterMonsterEnemyAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="TripleDebuff" type="Node" parent="."]
+script = ExtResource("2_debuff")
+weak_intent = SubResource("R_weak")
+frail_intent = SubResource("R_frail")
+vulnerable_intent = SubResource("R_vulnerable")
+sound = ExtResource("8_blk")
+
+[node name="Block10" type="Node" parent="."]
+script = ExtResource("3_block")
+intent = SubResource("R_block")
+sound = ExtResource("8_blk")
+
+[node name="Strike20" type="Node" parent="."]
+script = ExtResource("4_strike")
+intent = SubResource("R_strike")
+sound = ExtResource("7_atk")
+
+[node name="Strength5" type="Node" parent="."]
+script = ExtResource("5_strength")
+intent = SubResource("R_strength")
+sound = ExtResource("8_blk")

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="VipCardRelic" format=3 uid="uid://nnuvl3yc7nrn"]
 
-[ext_resource type="Texture2D" uid="uid://68s5056to6va" path="res://art/vip_card.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://68s5056to6va" path="res://art/relics/vip_card.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://dsiq3dk5xc5ct" path="res://relics/vip_card.gd" id="2_script"]
 
 [resource]

@@ -87,7 +87,7 @@ static func load_relics_from_ids(ids: PackedStringArray) -> Array[Relic]:
 
 
 static func load_potion_template(potion_id: String) -> Potion:
-	var id := String(potion_id)
+	var id := SaveGameMigrations.resolve_potion_id(String(potion_id))
 	if id.is_empty():
 		return null
 	if _potion_template_cache.has(id):

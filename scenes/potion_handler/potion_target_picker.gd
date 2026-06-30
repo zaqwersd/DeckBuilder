@@ -20,6 +20,7 @@ var _aim_anchor: Control
 func _ready() -> void:
 	hide()
 	set_process(false)
+	set_process_input(false)
 	set_process_unhandled_input(false)
 	CardTargetingArc.clear_visual(_aim_arc, _arc_head)
 
@@ -42,11 +43,15 @@ func start_pick() -> void:
 	CardTargetingArc.clear_visual(_aim_arc, _arc_head)
 	show()
 	set_process(true)
+	set_process_input(true)
 	set_process_unhandled_input(true)
 
 
 func _process(_delta: float) -> void:
 	if not _active:
+		return
+	if Input.is_action_just_pressed("right_mouse"):
+		_end_pick(false, null)
 		return
 	var mouse := get_global_mouse_position()
 	_hovered_enemy = EnemyTargeting.pick_enemy_under_mouse(mouse, get_tree())
@@ -87,14 +92,12 @@ func _aim_origin_global() -> Vector2:
 	return global_position
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if not _active:
 		return
-	if event.is_action_pressed("ui_cancel"):
-		_end_pick(false, null)
-		get_viewport().set_input_as_handled()
+	if _try_cancel_with_right_mouse(event):
 		return
-	if event.is_action_pressed("right_mouse"):
+	if event.is_action_pressed("ui_cancel"):
 		_end_pick(false, null)
 		get_viewport().set_input_as_handled()
 		return
@@ -102,6 +105,35 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _hovered_enemy != null:
 			_end_pick(true, _hovered_enemy)
 			get_viewport().set_input_as_handled()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _active:
+		return
+	if _try_cancel_with_right_mouse(event):
+		return
+	if event.is_action_pressed("ui_cancel"):
+		_end_pick(false, null)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("left_mouse"):
+		if _hovered_enemy != null:
+			_end_pick(true, _hovered_enemy)
+			get_viewport().set_input_as_handled()
+
+
+func _try_cancel_with_right_mouse(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_RIGHT and (mb.pressed or not mb.pressed):
+			get_viewport().set_input_as_handled()
+			_end_pick(false, null)
+			return true
+	if event.is_action_pressed("right_mouse") or event.is_action_released("right_mouse"):
+		get_viewport().set_input_as_handled()
+		_end_pick(false, null)
+		return true
+	return false
 
 
 func _end_pick(confirmed: bool, target: Enemy) -> void:
@@ -116,5 +148,6 @@ func _end_pick(confirmed: bool, target: Enemy) -> void:
 	EnemyTargeting.clear_all_card_targeting_feedback(get_tree())
 	hide()
 	set_process(false)
+	set_process_input(false)
 	set_process_unhandled_input(false)
 	finished.emit(confirmed, target)

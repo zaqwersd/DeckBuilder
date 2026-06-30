@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3 uid="uid://d25wkl7jqeejl"]
+
+[ext_resource type="Texture2D" uid="uid://dq3d4f4bo0fs8" path="res://art/cards/profane.png" id="1_art"]
+[ext_resource type="Script" uid="uid://byukie0o48bf4" path="res://common_cards/profane.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://de2ryat1pxq6" path="res://art/enemy_attack.ogg" id="3_snd"]
+
+[resource]
+script = ExtResource("2_script")
+id = "profane"
+type = 3
+rarity = 5
+exhausts = true
+card_name = "亵渎"
+icon = ExtResource("1_art")
+description = "[center]受到5点伤害。[br]抽1张牌。[br]消耗。[/center]"
+tooltip_text = "[center]受到5点伤害。[br]抽1张牌。[br]消耗。[/center]"
+sound = ExtResource("3_snd")

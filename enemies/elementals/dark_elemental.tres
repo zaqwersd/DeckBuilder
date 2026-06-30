@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ElementalEnemyStats" format=3 uid="uid://bhwnjjqda1h8y"]
+
+[ext_resource type="Script" uid="uid://bilrebgxdsd44" path="res://enemies/elementals/elemental_enemy_stats.gd" id="1_stats"]
+[ext_resource type="PackedScene" path="res://enemies/elementals/dark_elemental_ai.tscn" id="2_ai"]
+[ext_resource type="Texture2D" uid="uid://xuo8i5goauvc" path="res://art/dark_elemental.png" id="3_art"]
+[ext_resource type="Script" uid="uid://bgw186o0jltl8" path="res://custom_resources/status.gd" id="3_g87d7"]
+
+[resource]
+script = ExtResource("1_stats")
+ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/elementals/elemental_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "元素球（暗）"
+art_scale = Vector2(2, 2)
+art_frames = Array[Texture]([ExtResource("3_art")])
+max_health = 32
+art = ExtResource("3_art")

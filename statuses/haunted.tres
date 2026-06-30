@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="HauntedStatus" format=3 uid="uid://bhauntedres01"]
 
-[ext_resource type="Texture2D" uid="uid://cao406og7u7u" path="res://art/haunted.png" id="1_d6sdf"]
+[ext_resource type="Texture2D" uid="uid://cao406og7u7u" path="res://art/status_icons/haunted.png" id="1_d6sdf"]
 [ext_resource type="Script" uid="uid://c70s1lvyvn5g" path="res://statuses/haunted.gd" id="2_haunt"]
 
 [resource]

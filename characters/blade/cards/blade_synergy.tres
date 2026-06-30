@@ -1,0 +1,17 @@
+[gd_resource type="Resource" format=3 uid="uid://c0d3m7dxhvdlg"]
+
+[ext_resource type="Texture2D" path="res://art/cards/synergy.png" id="1_icon"]
+[ext_resource type="Script" path="res://characters/blade/cards/blade_synergy.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://b5d7aqcjlw84w" path="res://art/sword_flash.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_synergy"
+type = 0
+rarity = 2
+target = 1
+cost = 3
+card_name = "连携"
+icon = ExtResource("1_icon")
+tooltip_text = "造成%s点伤害。本回合的下一张牌可以免费打出。"
+sound = ExtResource("3_sound")

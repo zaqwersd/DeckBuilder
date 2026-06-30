@@ -17,13 +17,30 @@ static func configure_listing_grid_defaults(grid: GridContainer) -> void:
 	grid.columns = LISTING_GRID_COLUMNS
 
 
-## 与卡牌图鉴一致：稀有度 → 类型（攻/技/能/态）→ id。
+## 稀有度 → 类型（攻/技/能/态）→ id。
 static func sort_rarity_then_id(a: Card, b: Card) -> bool:
 	if a.rarity != b.rarity:
 		return a.rarity < b.rarity
 	if a.type != b.type:
 		return a.type < b.type
 	return String(a.id) < String(b.id)
+
+
+## 图鉴专用：非状态牌先按稀有度排序，状态牌统一排在最后并按 id 排序。
+static func sort_compendium_listing(a: Card, b: Card) -> bool:
+	var a_status := a.type == Card.Type.STATUS
+	var b_status := b.type == Card.Type.STATUS
+	if a_status != b_status:
+		return not a_status
+	if a_status:
+		return String(a.id) < String(b.id)
+	return sort_rarity_then_id(a, b)
+
+
+## 图鉴展示：状态牌统一为 STATUSES 稀有度（边框 #607d8b）。
+static func apply_compendium_display_overrides(card: Card) -> void:
+	if card != null and card.type == Card.Type.STATUS:
+		card.rarity = Card.Rarity.STATUSES
 
 
 static func sorted_card_entries(cards: Array[Card]) -> Array[Dictionary]:

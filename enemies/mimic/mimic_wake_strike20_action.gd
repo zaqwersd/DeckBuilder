@@ -8,7 +8,7 @@ func perform_action() -> void:
 		return
 	
 	var tween := create_tween().set_trans(Tween.TRANS_QUINT)
-	var start := enemy.global_position
+	var start := EnemyAction.attack_lunge_home(enemy)
 	var end := EnemyAction.attack_lunge_position(start)
 	var per_hit := compute_damage_against_player(damage)
 	var damage_effect := make_final_player_damage_effect(per_hit)

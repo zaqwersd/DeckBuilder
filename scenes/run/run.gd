@@ -11,6 +11,10 @@ const POTION_REWARD_POOL := preload("res://potions/potion_reward_pool.tres")
 const WIN_SCREEN_SCENE := preload("res://scenes/win_screen/win_screen.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
 const DEBUG_CONSOLE := preload("res://scenes/battle/battle_debug_console.gd")
+const MAP_ROOM_TOOLTIP := preload("res://global/map_room_tooltip_util.gd")
+const UNKNOWN_ROOM_EVENT_WEIGHT := 5.0
+const UNKNOWN_ROOM_BATTLE_WEIGHT := 3.0
+const UNKNOWN_ROOM_SHOP_WEIGHT := 2.0
 
 @export var run_startup: RunStartup
 
@@ -41,6 +45,10 @@ var save_data: SaveGame
 var current_act: int = 1  ## 当前层数（1-3），用于三层游戏结构
 ## 失败/通关界面出现后：禁止再写入存档，退出主菜单时删除存档。
 var run_finished: bool = false
+## Act Boss 奖励关闭时跳过 battle_reward_exited 触发的旧地图展示。
+var _skip_battle_reward_map := false
+var _run_bgm_sync_serial := 0
+var _load_bgm_instant_overlays := false
 
 
 func _ready() -> void:
@@ -57,10 +65,17 @@ func _ready() -> void:
 			character = run_startup.picked_character.create_instance()
 			_start_run()
 		RunStartup.Type.CONTINUED_RUN:
-			_load_run()
+			_begin_continued_run()
 	
 	call_deferred("_warmup_battle_assets")
 	_ensure_debug_console()
+
+
+func _begin_continued_run() -> void:
+	await MusicPlayer.ensure_act1_streams_ready()
+	_load_run()
+
+
 func _start_run() -> void:
 	stats = RunStats.new()
 	current_act = 1
@@ -69,17 +84,27 @@ func _start_run() -> void:
 	_setup_top_bar()
 	
 	map.generate_new_map(current_act)
-	map.unlock_floor(0)
-	map.show_map()
 	
 	save_data = SaveGame.new()
 	save_data.sync_potion_ids_for_save(potion_handler.get_ids_for_save())
-	call_deferred("_save_run", true)
+	MusicPlayer.after_run_exit_fade(_finish_start_run_bgm)
+
+
+func _finish_start_run_bgm() -> void:
+	if not is_inside_tree():
+		return
+	MusicPlayer.prepare_for_run_sync()
+	await MusicPlayer.ensure_act1_streams_ready()
+	_enter_act_with_intro(current_act)
+	_sync_run_bgm()
 	call_deferred("_warmup_battle_assets")
 
 
 func mark_run_finished() -> void:
+	if run_finished:
+		return
 	run_finished = true
+	RunBgm.on_run_exit()
 
 
 ## 从失败/通关界面返回主菜单：删除存档并结束本局。
@@ -87,6 +112,7 @@ func abandon_finished_run_to_main_menu() -> void:
 	mark_run_finished()
 	SaveGame.delete_data()
 	get_tree().paused = false
+	MusicPlayer.stop_for_menu_transition()
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
 
@@ -123,9 +149,11 @@ func _save_run(was_on_map: bool) -> void:
 	if save_data.combat_snapshot != null and not was_on_map:
 		# 战斗中：只同步遗物 id；药水/快照内遗物均保持「进战瞬间」，读档由 combat_snapshot 回退
 		save_data.sync_relic_ids_for_save(current_relics)
-		_sync_combat_snapshot_shadow_samurai_from_battle()
+		_sync_combat_snapshot_battle_ai_from_battle()
 	else:
 		# 正常保存：没有快照或在地图上
+		if was_on_map:
+			save_data.combat_snapshot = null
 		save_data.char_stats = character
 		save_data.current_deck = character.deck
 		save_data.current_health = character.health
@@ -140,6 +168,7 @@ func _load_run() -> void:
 	GameContent.clear_relic_template_cache()
 	save_data = SaveGame.load_data()
 	assert(save_data, "无法加载上次的存档")
+	_restore_rng_for_loaded_run()
 	
 	stats = save_data.run_stats
 	character = save_data.char_stats
@@ -157,6 +186,7 @@ func _load_run() -> void:
 	_setup_event_connections()
 	
 	map.load_map(save_data.map_data, save_data.floors_climbed, save_data.last_room, current_act)
+	SaveGame.sync_saved_map_room_refs(save_data)
 	
 	if save_data.last_room and not save_data.was_on_map:
 		# 不在地图上（战斗、商店、事件等房间）
@@ -179,7 +209,7 @@ func _load_run() -> void:
 			if save_data.battle_reward_entry_staged:
 				if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
 					## 点了遗物但拾取效果未完成：回滚到点击前（含牌组/遗物栏），而非整屏奖励重置
-					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler, potion_handler)
 				else:
 					save_data.apply_battle_reward_entry_rollback_to(
 						character, relic_handler, potion_handler
@@ -200,7 +230,7 @@ func _load_run() -> void:
 			else:
 				## 旧存档：遗物领取异步中途退出
 				if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
-					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+					save_data.apply_battle_reward_pending_rollback_to(character, relic_handler, potion_handler)
 					save_data.clear_battle_reward_pending_staging()
 				else:
 					_load_relics_from_save_data()
@@ -244,11 +274,7 @@ func _load_run() -> void:
 					save_data.has_scene_entry_snapshot
 					and save_data.last_room != null
 					and save_data.scene_entry_room_type == save_data.last_room.type
-					and save_data.last_room.type in [
-						Room.Type.SHOP,
-						Room.Type.TREASURE,
-						Room.Type.EVENT
-					]
+					and _is_scene_entry_reload_room(save_data.last_room)
 				)
 				
 				if should_apply_snapshot:
@@ -278,8 +304,36 @@ func _load_run() -> void:
 		RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
 		map.show_map()
 
+	MusicPlayer.after_run_exit_fade(_finish_load_run_bgm)
 
-## 仅关闭叠在战斗奖励之上的子模态（选牌/升级/三选一），保留 BattleReward。
+
+func _finish_load_run_bgm() -> void:
+	if not is_inside_tree():
+		return
+	MusicPlayer.prepare_for_run_sync()
+	await RunBgm.sync_for_run_after_load(self)
+
+
+func _sync_run_bgm() -> void:
+	RunBgm.sync_for_run(self, _load_bgm_instant_overlays)
+	_schedule_deferred_run_bgm_sync()
+
+
+func _schedule_deferred_run_bgm_sync() -> void:
+	_run_bgm_sync_serial += 1
+	var serial := _run_bgm_sync_serial
+	call_deferred("_deferred_sync_run_bgm", serial)
+
+
+func _deferred_sync_run_bgm(serial: int) -> void:
+	if serial != _run_bgm_sync_serial:
+		return
+	if not is_inside_tree():
+		return
+	RunBgm.sync_for_run(self, _load_bgm_instant_overlays)
+	_load_bgm_instant_overlays = false
+
+
 func dismiss_modal_sub_overlays() -> void:
 	var tree := get_tree()
 	if tree == null:
@@ -373,6 +427,7 @@ func _change_view(scene: PackedScene, configure_before_add: Callable = Callable(
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
 	Events.card_keyword_tooltip_hide.emit()
+	Events.map_room_tooltip_hover_hide.emit()
 	
 	## 清理旧场景前先断开其信号连接
 	if current_view.get_child_count() > 0:
@@ -402,11 +457,16 @@ func _change_view(scene: PackedScene, configure_before_add: Callable = Callable(
 
 
 func _show_map() -> void:
+	if _skip_battle_reward_map:
+		_skip_battle_reward_map = false
+		return
+
 	Events.relic_tooltip_hover_hide.emit()
 	Events.potion_tooltip_hover_hide.emit()
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
 	Events.card_keyword_tooltip_hide.emit()
+	Events.map_room_tooltip_hover_hide.emit()
 	BattleReward.dismiss_all_on_tree(get_tree())
 	if current_view.get_child_count() > 0:
 		current_view.get_child(0).queue_free()
@@ -421,6 +481,32 @@ func _show_map() -> void:
 		save_data.clear_campfire_pending_staging()
 		save_data.clear_room_pending()
 		save_data.clear_scene_entry_snapshot()  # 清除场景进入快照
+	_save_run(true)
+	_sync_run_bgm()
+
+
+func _enter_act_with_intro(act: int) -> void:
+	RunBgm.on_act_entered(act)
+	Events.relic_tooltip_hover_hide.emit()
+	Events.potion_tooltip_hover_hide.emit()
+	Events.status_tooltip_hover_hide.emit()
+	Events.intent_tooltip_hover_hide.emit()
+	Events.card_keyword_tooltip_hide.emit()
+	Events.map_room_tooltip_hover_hide.emit()
+	BattleReward.dismiss_all_on_tree(get_tree())
+	if current_view.get_child_count() > 0:
+		current_view.get_child(0).queue_free()
+
+	map.reconcile_visited_flags()
+	map.unlock_floor(0)
+	map.begin_act_intro(act)
+
+	if save_data:
+		if save_data.campfire_leave_pending:
+			save_data.commit_campfire_pending_to(character)
+		save_data.clear_campfire_pending_staging()
+		save_data.clear_room_pending()
+		save_data.clear_scene_entry_snapshot()
 	_save_run(true)
 
 
@@ -518,8 +604,8 @@ func _setup_top_bar() -> void:
 		relic_handler.add_relic(character.starting_relic)
 	else:
 		print("_setup_top_bar: 已有 %d 个遗物，跳过初始遗物添加" % current_relics.size())
-	if not Events.relic_tooltip_hover_show.is_connected(game_tooltip.show_tooltip):
-		Events.relic_tooltip_hover_show.connect(game_tooltip.show_tooltip)
+	if not Events.relic_tooltip_hover_show.is_connected(_on_run_relic_tooltip_hover_show):
+		Events.relic_tooltip_hover_show.connect(_on_run_relic_tooltip_hover_show)
 	if not Events.relic_tooltip_hover_hide.is_connected(game_tooltip.hide_tooltip):
 		Events.relic_tooltip_hover_hide.connect(game_tooltip.hide_tooltip)
 	if not Events.status_tooltip_hover_show.is_connected(_on_run_status_tooltip_hover_show):
@@ -534,6 +620,12 @@ func _setup_top_bar() -> void:
 		Events.card_keyword_tooltip_show.connect(_on_card_keyword_tooltip_show)
 	if not Events.card_keyword_tooltip_hide.is_connected(_on_card_keyword_tooltip_hide):
 		Events.card_keyword_tooltip_hide.connect(_on_card_keyword_tooltip_hide)
+	if not Events.map_room_tooltip_hover_show.is_connected(_on_map_room_tooltip_hover_show):
+		Events.map_room_tooltip_hover_show.connect(_on_map_room_tooltip_hover_show)
+	if not Events.map_room_tooltip_hover_reposition.is_connected(_on_map_room_tooltip_hover_reposition):
+		Events.map_room_tooltip_hover_reposition.connect(_on_map_room_tooltip_hover_reposition)
+	if not Events.map_room_tooltip_hover_hide.is_connected(_on_map_room_tooltip_hover_hide):
+		Events.map_room_tooltip_hover_hide.connect(_on_map_room_tooltip_hover_hide)
 	
 	deck_button.card_pile = character.deck
 	deck_view.card_pile = character.deck
@@ -735,7 +827,7 @@ func _persist_battle_reward_quit_snapshot() -> void:
 		return
 	dismiss_reward_flow_overlays()
 	if save_data.battle_reward_pending_kind == SaveGame.BATTLE_REWARD_PENDING_RELIC:
-		save_data.apply_battle_reward_pending_rollback_to(character, relic_handler)
+		save_data.apply_battle_reward_pending_rollback_to(character, relic_handler, potion_handler)
 		stats = save_data.run_stats
 	elif save_data.battle_reward_entry_staged:
 		save_data.apply_battle_reward_entry_rollback_to(
@@ -985,6 +1077,7 @@ func _open_battle_reward_overlay() -> BattleReward:
 	Events.status_tooltip_hover_hide.emit()
 	Events.intent_tooltip_hover_hide.emit()
 	Events.card_keyword_tooltip_hide.emit()
+	Events.map_room_tooltip_hover_hide.emit()
 	map.hide_map()
 	var reward_scene := BattleReward.open_on_tree(get_tree())
 	reward_scene.run_stats = stats
@@ -1069,6 +1162,7 @@ func _show_regular_battle_rewards() -> void:
 
 ## 层BOSS奖励：给予100-150金币和必定Rare的卡牌奖励
 func _show_act_boss_rewards() -> void:
+	_skip_battle_reward_map = true
 	var gold_reward := BattleGoldRewards.roll(current_act, 3)
 	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
@@ -1093,16 +1187,11 @@ func _on_act_reward_finished() -> void:
 	
 	## 生成新的地图（新的一层），传递当前层数以加载对应内容池
 	map.generate_new_map(current_act)
-	map.unlock_floor(0)
-	
+
 	## 重置已攀爬层数（新的一层从0开始）
 	map.floors_climbed = 0
-	
-	## 显示地图
-	_show_map()
-	
-	## 保存进度
-	_save_run(true)
+
+	_enter_act_with_intro(current_act)
 
 
 func _ensure_room_battle_assigned(room: Room) -> void:
@@ -1116,7 +1205,39 @@ func _ensure_room_battle_assigned(room: Room) -> void:
 	room.battle_stats = act_pool.draw_battle_for_tier(tier)
 
 
+func _restore_combat_room_battle_stats(room: Room) -> void:
+	if room == null or save_data == null or save_data.combat_snapshot == null:
+		return
+	var snap := save_data.combat_snapshot
+	if snap.battle_stats != null:
+		room.battle_stats = snap.battle_stats
+		return
+	var snap_room := snap.room
+	if snap_room != null and snap_room.battle_stats != null:
+		room.battle_stats = snap_room.battle_stats
+
+
+func _restore_rng_for_loaded_run() -> void:
+	if save_data == null:
+		return
+	if (
+		save_data.combat_snapshot != null
+		and save_data.last_room != null
+		and not save_data.was_on_map
+		and save_data.pending_room_kind != SaveGame.PENDING_BATTLE_REWARD
+		and not save_data.campfire_leave_pending
+	):
+		RNG.set_from_save_data(
+			save_data.combat_snapshot.rng_seed,
+			save_data.combat_snapshot.rng_state
+		)
+	else:
+		RNG.set_from_save_data(save_data.rng_seed, save_data.rng_state)
+
+
 func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
+	if is_reload:
+		_restore_combat_room_battle_stats(room)
 	_ensure_room_battle_assigned(room)
 	if not is_reload and save_data != null:
 		## 已进新战斗：若仍残留上一场战斗奖励 pending，清掉以免读档/roll 沿用旧药水
@@ -1133,11 +1254,41 @@ func _on_battle_room_entered(room: Room, is_reload: bool = false) -> void:
 	battle_scene.char_stats = character
 	battle_scene.battle_stats = room.battle_stats
 	battle_scene.relics = relic_handler
+	battle_scene.skip_initial_battle_music = is_reload
+	battle_scene.combat_reload = is_reload
 	battle_scene.start_battle()
-	_sync_combat_snapshot_shadow_samurai_from_battle()
+	if is_reload:
+		_restore_combat_setup_rng()
+	else:
+		if save_data.combat_snapshot != null and not save_data.combat_snapshot.has_setup_rng:
+			_sync_combat_snapshot_post_setup(battle_scene)
+			_save_run(false)
+	_sync_combat_snapshot_battle_ai_from_battle()
+	if not is_reload:
+		_schedule_deferred_run_bgm_sync()
 
 
-func _sync_combat_snapshot_shadow_samurai_from_battle() -> void:
+func _sync_combat_snapshot_post_setup(battle: Battle) -> void:
+	if save_data == null or save_data.combat_snapshot == null:
+		return
+	if battle == null or not is_instance_valid(battle.player_handler):
+		return
+	var ph := battle.player_handler
+	if ph.character == null:
+		return
+	save_data.combat_snapshot.capture_post_setup(ph.character)
+
+
+func _restore_combat_setup_rng() -> void:
+	if save_data == null or save_data.combat_snapshot == null:
+		return
+	var snap := save_data.combat_snapshot
+	if not snap.has_setup_rng:
+		return
+	RNG.set_from_save_data(snap.setup_rng_seed, snap.setup_rng_state)
+
+
+func _sync_combat_snapshot_battle_ai_from_battle() -> void:
 	if save_data == null or save_data.combat_snapshot == null:
 		return
 	if current_view.get_child_count() == 0:
@@ -1145,11 +1296,23 @@ func _sync_combat_snapshot_shadow_samurai_from_battle() -> void:
 	var battle := current_view.get_child(0) as Battle
 	if battle == null or not is_instance_valid(battle.enemy_handler):
 		return
+	var elemental_enemies: Array[Enemy] = []
 	for child in battle.enemy_handler.get_children():
 		if child is Enemy:
-			var picker := (child as Enemy).enemy_action_picker
-			if picker is ShadowSamuraiAI:
-				(picker as ShadowSamuraiAI).write_cycle_to_snapshot(save_data.combat_snapshot)
+			elemental_enemies.append(child as Enemy)
+	ElementalAISnapshot.write_spawn_stat_paths(elemental_enemies)
+	for enemy in elemental_enemies:
+		var picker := enemy.enemy_action_picker
+		if picker is ShadowSamuraiAI:
+			(picker as ShadowSamuraiAI).write_cycle_to_snapshot(save_data.combat_snapshot)
+		elif picker is ElementalIceAI:
+			(picker as ElementalIceAI).write_state_to_snapshot()
+		elif picker is ElementalAlternatingRandomAI:
+			(picker as ElementalAlternatingRandomAI).write_state_to_snapshot()
+
+
+func _sync_combat_snapshot_shadow_samurai_from_battle() -> void:
+	_sync_combat_snapshot_battle_ai_from_battle()
 
 
 func _save_combat_snapshot(room: Room) -> void:
@@ -1172,6 +1335,8 @@ func _clear_combat_snapshot() -> void:
 
 
 func _on_treasure_room_entered(is_reload: bool = false) -> void:
+	if not is_reload and RunBgm.is_row8_tense_treasure_room(self):
+		RunBgm.on_row8_tense_treasure_entered()
 	var treasure_scene := _change_view(TREASURE_SCENE) as Treasure
 	treasure_scene.relic_handler = relic_handler
 	treasure_scene.char_stats = character
@@ -1179,6 +1344,7 @@ func _on_treasure_room_entered(is_reload: bool = false) -> void:
 
 
 func _on_treasure_room_exited(relic: Relic) -> void:
+	RunBgm.try_unlock_tense_from_treasure(self)
 	var reward_scene := _open_battle_reward_overlay()
 	reward_scene.setup_from_run(false)
 
@@ -1321,6 +1487,7 @@ func _on_pause_save_and_quit() -> void:
 		else:
 			# 战斗中：保持 combat_snapshot，不覆盖为当前状态
 			_save_run(map.visible)
+	RunBgm.on_run_exit()
 	get_tree().change_scene_to_file(MAIN_MENU_PATH)
 
 
@@ -1337,7 +1504,75 @@ func _on_window_close_requested() -> void:
 			_save_run(map.visible)
 
 
+func _on_run_relic_tooltip_hover_show(relic: Relic, near_to: Control) -> void:
+	if map != null and map.visible:
+		map.dismiss_room_tooltip_hover()
+	if game_tooltip != null:
+		game_tooltip.show_tooltip(relic, near_to)
+
+
+func _on_map_room_tooltip_hover_show(room: Room, map_room: MapRoom) -> void:
+	if game_tooltip == null or room == null or map_room == null:
+		return
+	var bbcode := MAP_ROOM_TOOLTIP.get_tooltip_bbcode(room)
+	if bbcode.is_empty():
+		return
+	game_tooltip.show_titled_bbcode_at_screen_rect(
+		bbcode,
+		map_room.get_tooltip_screen_rect(),
+		GameTooltip.Placement.ICON_RIGHT
+	)
+
+
+func _on_map_room_tooltip_hover_reposition(map_room: MapRoom) -> void:
+	if game_tooltip == null or map_room == null:
+		return
+	game_tooltip.update_follow_screen_rect(map_room.get_tooltip_screen_rect())
+
+
+func _on_map_room_tooltip_hover_hide() -> void:
+	if game_tooltip == null:
+		return
+	game_tooltip.hide_tooltip()
+
+
+func _is_scene_entry_reload_room(room: Room) -> bool:
+	if room.type == Room.Type.TREASURE:
+		return true
+	if room.type == Room.Type.SHOP:
+		return true
+	if room.type == Room.Type.EVENT:
+		return true
+	if room.type == Room.Type.UNKNOWN:
+		return room.unknown_resolved_type in [Room.Type.SHOP, Room.Type.EVENT]
+	return false
+
+
+func _resolve_unknown_room_if_needed(room: Room) -> void:
+	if room == null or room.type != Room.Type.UNKNOWN:
+		return
+	if room.unknown_resolved_type != Room.Type.NOT_ASSIGNED:
+		return
+	var total := (
+		UNKNOWN_ROOM_EVENT_WEIGHT
+		+ UNKNOWN_ROOM_BATTLE_WEIGHT
+		+ UNKNOWN_ROOM_SHOP_WEIGHT
+	)
+	var roll := RNG.instance.randf_range(0.0, total)
+	if roll < UNKNOWN_ROOM_EVENT_WEIGHT:
+		room.unknown_resolved_type = Room.Type.EVENT
+		var pool := map.map_generator.event_room_pool
+		if pool != null:
+			room.event_scene = pool.get_random_for_act(current_act)
+	elif roll < UNKNOWN_ROOM_EVENT_WEIGHT + UNKNOWN_ROOM_BATTLE_WEIGHT:
+		room.unknown_resolved_type = Room.Type.MONSTER
+	else:
+		room.unknown_resolved_type = Room.Type.SHOP
+
+
 func _on_map_exited(room: Room, is_reload: bool = false) -> void:
+	if not is_reload:
+		_resolve_unknown_room_if_needed(room)
 	_save_run(false)
 	
 	# 如果不是重载（即新进入场景），保存场景进入快照
@@ -1357,6 +1592,17 @@ func _on_map_exited(room: Room, is_reload: bool = false) -> void:
 			_on_battle_room_entered(room, is_reload)
 		Room.Type.EVENT:
 			_on_event_room_entered(room, is_reload)
+		Room.Type.UNKNOWN:
+			match room.unknown_resolved_type:
+				Room.Type.EVENT:
+					_on_event_room_entered(room, is_reload)
+				Room.Type.SHOP:
+					_on_shop_entered(is_reload)
+				Room.Type.MONSTER:
+					_on_battle_room_entered(room, is_reload)
+				_:
+					push_error("Run: UNKNOWN 房间未能解析，回退地图")
+					_show_map()
 
 
 func _save_scene_entry_snapshot(room: Room) -> void:

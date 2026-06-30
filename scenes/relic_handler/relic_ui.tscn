@@ -1,11 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=7 format=3]
 
-[ext_resource type="Script" path="res://scenes/relic_handler/relic_ui.gd" id="1_12s3y"]
-[ext_resource type="Texture2D" path="res://art/tile_0074.png" id="1_3654h"]
-[ext_resource type="Resource" path="res://relics/lycoris.tres" id="2_ed5mv"]
-[ext_resource type="Material" path="res://art/white_sprite_material.tres" id="2_t20sa"]
+[ext_resource type="Script" path="res://scenes/relic_handler/relic_ui.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://art/relics/lycoris.png" id="2_placeholder"]
+[ext_resource type="Material" path="res://art/white_sprite_material.tres" id="3_flash_mat"]
 
-[sub_resource type="Animation" id="Animation_ymr5g"]
+[sub_resource type="Animation" id="Animation_reset"]
 length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
@@ -32,7 +31,7 @@ tracks/1/keys = {
 "values": [null]
 }
 
-[sub_resource type="Animation" id="Animation_ed1dg"]
+[sub_resource type="Animation" id="Animation_flash"]
 resource_name = "flash"
 length = 0.3
 step = 0.05
@@ -58,29 +57,28 @@ tracks/1/keys = {
 "times": PackedFloat32Array(0, 0.15, 0.3),
 "transitions": PackedFloat32Array(1, 1, 1),
 "update": 1,
-"values": [null, ExtResource("2_t20sa"), null]
+"values": [null, ExtResource("3_flash_mat"), null]
 }
 
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_mnii6"]
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_main"]
 _data = {
-"RESET": SubResource("Animation_ymr5g"),
-"flash": SubResource("Animation_ed1dg")
+"RESET": SubResource("Animation_reset"),
+"flash": SubResource("Animation_flash")
 }
 
 [node name="RelicUI" type="Control"]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 3
 anchors_preset = 0
-script = ExtResource("1_12s3y")
-relic = ExtResource("2_ed5mv")
+script = ExtResource("1_script")
 
 [node name="Icon" type="TextureRect" parent="."]
 custom_minimum_size = Vector2(64, 64)
 layout_mode = 0
-offset_right = 64
-offset_bottom = 64
+offset_right = 64.0
+offset_bottom = 64.0
 pivot_offset = Vector2(32, 32)
-texture = ExtResource("1_3654h")
+texture = ExtResource("2_placeholder")
 expand_mode = 1
 stretch_mode = 5
 
@@ -98,7 +96,7 @@ vertical_alignment = 1
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 libraries = {
-"": SubResource("AnimationLibrary_mnii6")
+"": SubResource("AnimationLibrary_main")
 }
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

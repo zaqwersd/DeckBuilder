@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://bb38bcdfpvqh1"]
+
+[ext_resource type="Texture2D" uid="uid://t0exhqrkhy02" path="res://art/igneous_burster.png" id="1_art"]
+[ext_resource type="Script" uid="uid://bhxia3khujhpy" path="res://scenes/enemy/enemy.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://bb3rcs5nqntir" path="res://art/arrow.png" id="3_arrow"]
+[ext_resource type="PackedScene" path="res://scenes/ui/status_bar.tscn" id="4_status_bar"]
+[ext_resource type="PackedScene" uid="uid://bfyjrydb1nntk" path="res://scenes/ui/intent_ui.tscn" id="5_intent_ui"]
+[ext_resource type="PackedScene" uid="uid://ctvxie3ni1ik4" path="res://scenes/modifier_handler/modifier_handler.tscn" id="6_modifier"]
+[ext_resource type="PackedScene" uid="uid://bqefj5q31b84i" path="res://scenes/modifier_handler/modifier.tscn" id="7_modifier_item"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy_target_highlight.tscn" id="8_highlight"]
+[ext_resource type="Script" path="res://scenes/ui/combatant_hover_name.gd" id="9_hover_name"]
+[ext_resource type="Resource" uid="uid://cwgcfu8c2nx27" path="res://enemies/igneous_burster/igneous_burster_enemy.tres" id="10_stats"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_k8ptm"]
+size = Vector2(95, 92)
+
+[node name="IgneousBursterEnemy" type="Area2D" unique_id=884115498 groups=["enemies"]]
+collision_layer = 4
+script = ExtResource("2_script")
+stats = ExtResource("10_stats")
+editor_preview_action = &"Strike7"
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1466397818]
+scale = Vector2(3, 3)
+texture = ExtResource("1_art")
+
+[node name="Arrow" type="Sprite2D" parent="." unique_id=1719713189]
+visible = false
+position = Vector2(72, 0)
+rotation = -1.5708
+texture = ExtResource("3_arrow")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2089926773]
+position = Vector2(1.5, 0)
+shape = SubResource("RectangleShape2D_k8ptm")
+
+[node name="StatusBar" parent="." unique_id=1940510238 instance=ExtResource("4_status_bar")]
+offset_left = -67.0
+offset_top = 64.0
+offset_right = 77.0
+offset_bottom = 78.0
+status_tooltips_open_to_right = false
+container_width = 144
+
+[node name="HoverNameOverlay" type="Label" parent="." unique_id=1106870044]
+modulate = Color(1, 1, 1, 0)
+z_index = 8
+custom_minimum_size = Vector2(200, 0)
+offset_top = 14.0
+offset_right = 200.0
+offset_bottom = 46.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+script = ExtResource("9_hover_name")
+
+[node name="IntentUI" parent="." unique_id=1756828622 instance=ExtResource("5_intent_ui")]
+visible = false
+offset_top = -108.0
+offset_bottom = -45.0
+
+[node name="ModifierHandler" parent="." unique_id=1832306608 instance=ExtResource("6_modifier")]
+
+[node name="DamageDealtModifier" parent="ModifierHandler" unique_id=298019979 instance=ExtResource("7_modifier_item")]
+
+[node name="DamageTakenModifier" parent="ModifierHandler" unique_id=154445914 instance=ExtResource("7_modifier_item")]
+type = 1
+
+[node name="TargetHighlight" parent="." unique_id=124242952 instance=ExtResource("8_highlight")]
+visible = false
+modulate = Color(1, 1, 1, 0)

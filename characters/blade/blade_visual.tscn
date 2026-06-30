@@ -1,0 +1,93 @@
+[gd_scene format=3 uid="uid://biocxhooxhcf6"]
+
+[ext_resource type="Script" uid="uid://dgljjun1fdgbj" path="res://characters/blade/blade_visual.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://c1ee3q65lxcbm" path="res://art/blade/blade_right_leg.png" id="2_right_leg"]
+[ext_resource type="Texture2D" uid="uid://bftgwvax12gyd" path="res://art/blade/blade_left_leg.png" id="3_left_leg"]
+[ext_resource type="Texture2D" uid="uid://brvfgxd0e8fvx" path="res://art/blade/blade_body.png" id="4_body"]
+[ext_resource type="Texture2D" uid="uid://dgj0epv2so2mw" path="res://art/blade/blade_right_arm.png" id="5_right_arm"]
+[ext_resource type="Texture2D" uid="uid://k4left6tnew" path="res://art/blade/blade_left_arm.png" id="6_left_arm"]
+[ext_resource type="Texture2D" uid="uid://cskk8qp34dtym" path="res://art/blade/blade_head1.png" id="7_head1"]
+
+[node name="BladeVisual" type="Node2D" unique_id=148666185]
+scale = Vector2(2, 2)
+script = ExtResource("1_script")
+display_offset = Vector2(0, -30)
+
+[node name="DisplayOffset" type="Node2D" parent="." unique_id=918273645]
+position = Vector2(0, -30)
+
+[node name="Anchor" type="Node2D" parent="DisplayOffset" unique_id=442804593]
+position = Vector2(-64, -96)
+
+[node name="RightLeg" type="Node2D" parent="DisplayOffset/Anchor" unique_id=952876962]
+z_index = 1
+
+[node name="Sprite2D" type="Sprite2D" parent="DisplayOffset/Anchor/RightLeg" unique_id=1627543077]
+texture = ExtResource("2_right_leg")
+centered = false
+
+[node name="LeftLeg" type="Node2D" parent="DisplayOffset/Anchor" unique_id=299671610]
+
+[node name="Sprite2D" type="Sprite2D" parent="DisplayOffset/Anchor/LeftLeg" unique_id=192490181]
+texture = ExtResource("3_left_leg")
+centered = false
+
+[node name="BodyBreath" type="Node2D" parent="DisplayOffset/Anchor" unique_id=887766554]
+z_index = 3
+position = Vector2(64.5, 122)
+
+[node name="Body" type="Node2D" parent="DisplayOffset/Anchor/BodyBreath" unique_id=1459938834]
+
+[node name="Sprite2D" type="Sprite2D" parent="DisplayOffset/Anchor/BodyBreath/Body" unique_id=1260946794]
+position = Vector2(-64.5, -122)
+texture = ExtResource("4_body")
+centered = false
+
+[node name="Head" type="Node2D" parent="DisplayOffset/Anchor" unique_id=1672913178]
+z_index = 5
+position = Vector2(62, 66)
+
+[node name="Sprite2D" type="Sprite2D" parent="DisplayOffset/Anchor/Head" unique_id=1359064422]
+position = Vector2(-60, -66)
+texture = ExtResource("7_head1")
+centered = false
+
+[node name="LeftArm" type="Node2D" parent="DisplayOffset/Anchor" unique_id=443211395]
+z_index = 2
+position = Vector2(71, 83.5)
+
+[node name="ArmPivot" type="Node2D" parent="DisplayOffset/Anchor/LeftArm" unique_id=443211396]
+
+[node name="挂点_左手投掷" type="Marker2D" parent="DisplayOffset/Anchor/LeftArm/ArmPivot" unique_id=887766555]
+position = Vector2(20, 42)
+
+[node name="Sprite2D" type="Sprite2D" parent="DisplayOffset/Anchor/LeftArm/ArmPivot" unique_id=704625385]
+position = Vector2(-71, -83.5)
+texture = ExtResource("6_left_arm")
+centered = false
+
+[node name="RightArm" type="Node2D" parent="DisplayOffset/Anchor" unique_id=254877818]
+z_index = 4
+position = Vector2(53, 83)
+
+[node name="ArmPivot" type="Node2D" parent="DisplayOffset/Anchor/RightArm" unique_id=254877819]
+
+[node name="Sprite2D" type="Sprite2D" parent="DisplayOffset/Anchor/RightArm/ArmPivot" unique_id=2092570000]
+position = Vector2(-53, -83)
+texture = ExtResource("5_right_arm")
+centered = false
+
+[node name="Markers" type="Node2D" parent="DisplayOffset" unique_id=1310177641]
+z_index = 10
+
+[node name="挂点_腰部" type="Marker2D" parent="DisplayOffset/Markers" unique_id=1987654321]
+position = Vector2(0.5, 26)
+
+[node name="挂点_头部" type="Marker2D" parent="DisplayOffset/Markers" unique_id=1122334455]
+position = Vector2(-2, -30)
+
+[node name="挂点_左臂" type="Marker2D" parent="DisplayOffset/Markers" unique_id=-2061521730]
+position = Vector2(7, -12.5)
+
+[node name="挂点_右臂" type="Marker2D" parent="DisplayOffset/Markers" unique_id=-950410619]
+position = Vector2(-11, -13)

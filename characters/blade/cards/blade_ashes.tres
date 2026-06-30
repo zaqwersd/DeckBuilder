@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://bkg5ogpvyfvxh"]
 
-[ext_resource type="Texture2D" uid="uid://byatbpbnjimjc" path="res://art/ashes.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://byatbpbnjimjc" path="res://art/cards/ashes.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://dx6bk081mjt1c" path="res://characters/blade/cards/blade_ashes.gd" id="2_script"]
 [ext_resource type="AudioStream" uid="uid://dixklg6g4jnsq" path="res://art/slash.ogg" id="3_snd"]
 
@@ -10,8 +10,7 @@ id = "blade_ashes"
 rarity = 3
 target = 2
 cost = 2
-exhausts = true
 card_name = "灰烬"
 icon = ExtResource("1_icon")
-tooltip_text = "[center]你的消耗堆每有一张牌，对所有敌人造成%s点伤害1次。消耗。[/center]"
+tooltip_text = "[center]你的消耗堆每有一张牌，对所有敌人造成%s点伤害1次。[/center]"
 sound = ExtResource("3_snd")

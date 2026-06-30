@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://cp0mad6uqyxv6"]
 
-[ext_resource type="Texture2D" uid="uid://dgngdt65qau5" path="res://art/greatshield.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://dgngdt65qau5" path="res://art/relics/greatshield.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://b6rcwpebxb6m6" path="res://relics/greatshield.gd" id="2_script"]
 
 [resource]

@@ -1,18 +1,14 @@
 class_name PotionBarUI
 extends PanelContainer
 
-const EMPTY_ICON := preload("res://art/empty_potion.png")
+const EMPTY_ICON := preload("res://art/potions/empty_potion.png")
 const SLOT_SIZE := Vector2(64, 64)
 const BAR_HEIGHT := 64.0
 const POPUP_SCENE := preload("res://scenes/ui/potion_action_popup.tscn")
 
 @onready var _slots_row: HBoxContainer = %SlotsRow
-@onready var _slot_buttons: Array[TextureButton] = [
-	%Slot0,
-	%Slot1,
-	%Slot2,
-]
 
+var _slot_buttons: Array[TextureButton] = []
 var _handler: PotionHandler
 var _popup: PotionActionPopup
 var _open_slot_index := -1
@@ -20,14 +16,46 @@ var _open_slot_index := -1
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_PASS
-	for i in range(_slot_buttons.size()):
-		var btn := _slot_buttons[i]
-		btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
-		btn.mouse_filter = Control.MOUSE_FILTER_STOP
-		btn.pressed.connect(_on_slot_pressed.bind(i))
-		btn.mouse_entered.connect(_on_slot_hover.bind(i))
-		btn.mouse_exited.connect(_on_slot_hover_end)
+	_collect_existing_slot_buttons()
+	_ensure_button_count(PotionHandler.DEFAULT_SLOTS)
 	_update_bar_layout()
+
+
+func _collect_existing_slot_buttons() -> void:
+	_slot_buttons.clear()
+	if _slots_row == null:
+		return
+	for child in _slots_row.get_children():
+		if child is TextureButton:
+			_register_slot_button(child as TextureButton, _slot_buttons.size())
+
+
+func _register_slot_button(btn: TextureButton, index: int) -> void:
+	btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.custom_minimum_size = SLOT_SIZE
+	if not btn.pressed.is_connected(_on_slot_pressed.bind(index)):
+		btn.pressed.connect(_on_slot_pressed.bind(index))
+	if not btn.mouse_entered.is_connected(_on_slot_hover.bind(index)):
+		btn.mouse_entered.connect(_on_slot_hover.bind(index))
+	if not btn.mouse_exited.is_connected(_on_slot_hover_end):
+		btn.mouse_exited.connect(_on_slot_hover_end)
+	if not _slot_buttons.has(btn):
+		_slot_buttons.append(btn)
+
+
+func _ensure_button_count(count: int) -> void:
+	if _slots_row == null:
+		return
+	while _slot_buttons.size() < count:
+		var btn := TextureButton.new()
+		btn.name = "Slot%d" % _slot_buttons.size()
+		_slots_row.add_child(btn)
+		_register_slot_button(btn, _slot_buttons.size())
+	while _slot_buttons.size() > count:
+		var btn: TextureButton = _slot_buttons.pop_back()
+		if is_instance_valid(btn):
+			btn.queue_free()
 
 
 func bind_handler(handler: PotionHandler) -> void:
@@ -59,17 +87,12 @@ func _on_handler_slots_changed() -> void:
 
 
 func _refresh_slots() -> void:
+	var slot_count := PotionHandler.DEFAULT_SLOTS if _handler == null else _handler.slots.size()
+	_ensure_button_count(slot_count)
 	_update_bar_layout()
-	if _handler == null:
-		for btn in _slot_buttons:
-			btn.texture_normal = EMPTY_ICON
-			btn.texture_pressed = EMPTY_ICON
-			btn.texture_hover = EMPTY_ICON
-			btn.disabled = false
-		return
 	for i in range(_slot_buttons.size()):
 		var btn := _slot_buttons[i]
-		var potion: Potion = _handler.slots[i] if i < _handler.slots.size() else null
+		var potion: Potion = _handler.slots[i] if _handler != null and i < _handler.slots.size() else null
 		if potion != null and potion.icon:
 			btn.texture_normal = potion.icon
 			btn.texture_pressed = potion.icon
@@ -84,7 +107,7 @@ func _refresh_slots() -> void:
 
 func _on_slot_pressed(index: int) -> void:
 	_cleanup_stale_popups()
-	if _handler == null:
+	if _handler == null or index < 0 or index >= _handler.slots.size():
 		return
 	var potion: Potion = _handler.slots[index]
 	if potion == null:
@@ -135,7 +158,7 @@ func _get_popup_host() -> Node:
 func _on_slot_hover(index: int) -> void:
 	if is_instance_valid(_popup):
 		return
-	if _handler == null:
+	if _handler == null or index < 0 or index >= _handler.slots.size():
 		return
 	var potion: Potion = _handler.slots[index]
 	if potion != null:

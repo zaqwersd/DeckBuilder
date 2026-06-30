@@ -1,9 +1,15 @@
 class_name BlockEffect
 extends Effect
 
+const BLOCK_GAIN_SFX := preload("res://art/block.ogg")
+
 var amount := 0
 ## 由玩家打出的卡牌触发的格挡（叠加敏捷）；遗物/敌人意图等为 false。
 var from_card_play: bool = false
+
+
+static func play_block_gain_sfx(_target: Node) -> void:
+	SFXPlayer.play(BLOCK_GAIN_SFX)
 
 
 static func compute_card_block_amount(base: int, combat_player: Node = null) -> int:
@@ -21,5 +27,7 @@ func execute(targets: Array[Node]) -> void:
 			var total := amount
 			if from_card_play and target is Player:
 				total = compute_card_block_amount(amount, target)
+			if total <= 0:
+				continue
 			target.stats.block += total
-			SFXPlayer.play(sound)
+			play_block_gain_sfx(target)

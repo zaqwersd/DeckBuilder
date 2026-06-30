@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://dvbsomqisyg1t"]
 
-[ext_resource type="Texture2D" uid="uid://dqqaa4b818sm6" path="res://art/press_blade.png" id="1_s6pmg"]
+[ext_resource type="Texture2D" uid="uid://dqqaa4b818sm6" path="res://art/cards/press_blade.png" id="1_s6pmg"]
 [ext_resource type="Script" uid="uid://b7g6ooi03co2y" path="res://characters/blade/cards/blade_press_blade.gd" id="2_press"]
 [ext_resource type="AudioStream" uid="uid://dixklg6g4jnsq" path="res://art/slash.ogg" id="3_0l7j0"]
 

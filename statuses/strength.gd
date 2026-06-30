@@ -47,7 +47,7 @@ func deactivate_status(target: Node) -> void:
 
 
 static func _notify_combat_context_changed(target: Node) -> void:
-	if Events.is_player_turn_start_resolving():
+	if Events.is_player_turn_start_resolving() or Events.is_player_turn_end_resolving():
 		return
 	if target is Player:
 		Events.player_combat_stat_context_changed.emit()

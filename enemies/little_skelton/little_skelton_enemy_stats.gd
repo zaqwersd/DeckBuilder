@@ -3,9 +3,9 @@ extends EnemyStats
 
 const MIN_HEALTH_DEFAULT := 11
 const MAX_HEALTH_DEFAULT := 16
-const MIN_SPAWNED_HEALTH := 9
-const SPAWN_HEALTH_DELTA_MIN := 3
-const SPAWN_HEALTH_DELTA_MAX := 5
+const MIN_SPAWNED_HEALTH := 1
+const SPAWN_HEALTH_DELTA_MIN := 5
+const SPAWN_HEALTH_DELTA_MAX := 7
 
 const SLOT_2_MIN_HEALTH := 11
 const SLOT_2_MAX_HEALTH := 16
@@ -68,7 +68,7 @@ static func apply_initial_health_for_slot(stats: EnemyStats, slot: int) -> void:
 		(stats as Stats).initialize_health(hp)
 
 
-## 骨生召唤：比召唤者 max_health 少 3~5，下限 9。
+## 骨生召唤：比召唤者 max_health 少 5~7，下限 1。
 static func apply_spawned_health_from_summoner(stats: EnemyStats, summoner: Enemy) -> void:
 	if stats == null or summoner == null or not is_instance_valid(summoner.stats):
 		return

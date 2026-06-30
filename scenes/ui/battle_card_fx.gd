@@ -23,11 +23,14 @@ const DISCARD_HAND_DURATION := 0.24
 const INSERT_TO_DRAW := 0.22
 ## 塞牌/复制：先在屏中央从 scale 0 渐显至 1，再停留、飞入堆
 const INSERT_REVEAL_DURATION := 0.34
+## 罪孽触发的单张塞牌：弹出更快
+const SINS_INSERT_REVEAL_DURATION := 0.1
+const SINS_INSERT_CENTER_HOLD := 0.2
 const INSERT_CENTER_HOLD := 1.0
 const GHOST_FADE_DURATION := 0.48
-## 多卡并列时：卡宽 + 间隙，至少不小于此值（像素）
-const MULTI_INSERT_MIN_STEP_PX := 120.0
-const MULTI_INSERT_CARD_GAP_PX := 36.0
+## 多卡并列：相邻两牌边界间距（像素）；中心步进 = 卡宽 + 该间距，整排以屏心居中。
+const MULTI_INSERT_EDGE_GAP_PX := 32.0
+const CARD_PHANTOM_SIZE := Vector2(268.0, 348.0)
 ## 生死流转：消耗堆牌错开飞出、屏心变化、再入抽牌堆
 const SAMSARA_STAGGER := 0.1
 const SAMSARA_TO_CENTER := 0.14
@@ -548,19 +551,21 @@ func _queue_free_if_valid(node: Node) -> void:
 		node.queue_free()
 
 
-## 故障机器遗物：复制品在屏中结算效果后以「故障消散」消失（不进消耗堆）。
+## 故障机器遗物：复制品在屏中结算效果后以「故障消散」消失（不进任何牌堆）。
+## 不 emit card_played，避免消耗牌再次入消耗堆或重复触发「打出」类遗物。
+## 定向攻击目标已死亡时仍完整播放动画，效果层空打（见 Card.replay_effects_without_payment）。
 func animate_defect_machine_echo(
 	card: Card,
 	played_targets: Array[Node],
 	char_stats: CharacterStats,
 	player_modifiers: ModifierHandler
 ) -> void:
-	if Events.is_combat_ended() or card == null:
+	if card == null:
 		return
 	var ghost := _make_ghost(card)
 	ghost.modulate = Color(0.38, 0.96, 1.0, 1.0)
 	await _prepare_ghost_for_motion(ghost)
-	if Events.is_combat_ended():
+	if not _is_fx_in_tree():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
 		return
@@ -573,19 +578,18 @@ func animate_defect_machine_echo(
 	tw_in.set_ease(Tween.EASE_OUT)
 	tw_in.tween_property(ghost, "scale", Vector2.ONE, 0.2)
 	await tw_in.finished
-	if Events.is_combat_ended():
+	if not _is_fx_in_tree():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
 		return
 	await get_tree().create_timer(0.07).timeout
-	if Events.is_combat_ended():
+	if not _is_fx_in_tree():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
 		return
 	var eff_targets: Array[Node] = card.get_effect_targets(played_targets)
-	Events.card_played.emit(card)
 	await card.replay_effects_without_payment(eff_targets, player_modifiers)
-	if Events.is_combat_ended():
+	if not _is_fx_in_tree():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
 		return
@@ -653,6 +657,30 @@ func animate_insert_into_draw_pile(
 		char_stats.draw_pile.insert_card_at(insert_at, card)
 	else:
 		char_stats.draw_pile.add_card(card)
+	await _animate_insert_ghost_to_draw_pile(card)
+
+
+func animate_insert_at_random_into_draw_pile(card: Card, char_stats: CharacterStats) -> void:
+	if not char_stats or card == null:
+		return
+	char_stats.draw_pile.insert_card_at_random(card)
+	await animate_inserted_card_flying_to_draw_pile(card)
+
+
+## 牌已在抽牌堆中：仅播放屏中弹出并飞入抽牌堆（罪孽等先改堆后播动画）。
+func animate_inserted_card_flying_to_draw_pile(
+	card: Card,
+	reveal_duration: float = SINS_INSERT_REVEAL_DURATION,
+	center_hold: float = SINS_INSERT_CENTER_HOLD
+) -> void:
+	await _animate_insert_ghost_to_draw_pile(card, reveal_duration, center_hold)
+
+
+func _animate_insert_ghost_to_draw_pile(
+	card: Card,
+	reveal_duration: float = INSERT_REVEAL_DURATION,
+	center_hold: float = INSERT_CENTER_HOLD
+) -> void:
 	if Events.is_combat_ended():
 		return
 	if not draw_pile_button:
@@ -671,13 +699,13 @@ func animate_insert_into_draw_pile(
 	tw_pop.set_trans(Tween.TRANS_CUBIC)
 	tw_pop.set_ease(Tween.EASE_OUT)
 	# 与 _bezier_ghost_step 相同：Tween 对 .bind(Object) 的 MethodTweener 会把 float 错喂给首参
-	tw_pop.tween_method(func(t: float) -> void: _insert_pop_scale(ghost, t), 0.0, 1.0, INSERT_REVEAL_DURATION)
+	tw_pop.tween_method(func(t: float) -> void: _insert_pop_scale(ghost, t), 0.0, 1.0, reveal_duration)
 	await tw_pop.finished
 	if Events.is_combat_ended():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
 		return
-	await get_tree().create_timer(INSERT_CENTER_HOLD).timeout
+	await get_tree().create_timer(center_hold).timeout
 	if Events.is_combat_ended():
 		if is_instance_valid(ghost):
 			ghost.queue_free()
@@ -698,8 +726,7 @@ func animate_insert_into_draw_pile(
 func animate_multi_insert_into_draw_pile(
 	cards: Array[Card],
 	_from_global: Vector2,
-	char_stats: CharacterStats,
-	horizontal_spacing: float = 72.0
+	char_stats: CharacterStats
 ) -> void:
 	if cards.is_empty():
 		return
@@ -714,7 +741,7 @@ func animate_multi_insert_into_draw_pile(
 	if Events.is_combat_ended():
 		return
 	var vp_center := get_viewport().get_visible_rect().get_center()
-	var ghosts: Array[Control] = await _build_multi_insert_ghosts(cards, vp_center, horizontal_spacing)
+	var ghosts: Array[Control] = await _build_multi_insert_ghosts(cards, vp_center)
 	if Events.is_combat_ended():
 		for g in ghosts:
 			if is_instance_valid(g):
@@ -755,8 +782,7 @@ func animate_multi_insert_into_draw_pile(
 func animate_multi_insert_into_discard_pile(
 	cards: Array[Card],
 	_from_global: Vector2,
-	char_stats: CharacterStats,
-	horizontal_spacing: float = 72.0
+	char_stats: CharacterStats
 ) -> void:
 	if cards.is_empty():
 		return
@@ -771,7 +797,7 @@ func animate_multi_insert_into_discard_pile(
 	if Events.is_combat_ended():
 		return
 	var vp_center := get_viewport().get_visible_rect().get_center()
-	var ghosts: Array[Control] = await _build_multi_insert_ghosts(cards, vp_center, horizontal_spacing)
+	var ghosts: Array[Control] = await _build_multi_insert_ghosts(cards, vp_center)
 	if Events.is_combat_ended():
 		for g in ghosts:
 			if is_instance_valid(g):
@@ -808,22 +834,109 @@ func animate_multi_insert_into_discard_pile(
 			ghosts[i].queue_free()
 
 
+## 多张牌分堆塞入：中央排开 → 弹出 → 左侧飞抽牌堆、右侧飞弃牌堆。
+func animate_multi_insert_split_draw_discard(
+	draw_cards: Array[Card],
+	discard_cards: Array[Card],
+	char_stats: CharacterStats
+) -> void:
+	if draw_cards.is_empty() and discard_cards.is_empty():
+		return
+	if not char_stats:
+		return
+	var all_cards: Array[Card] = []
+	all_cards.append_array(draw_cards)
+	all_cards.append_array(discard_cards)
+	if all_cards.is_empty():
+		return
+
+	for c in draw_cards:
+		char_stats.draw_pile.insert_card_at_random(c)
+
+	for c in discard_cards:
+		char_stats.discard.insert_card_at_random(c)
+
+	if Events.is_combat_ended():
+		return
+
+	var vp_center := get_viewport().get_visible_rect().get_center()
+	var ghosts: Array[Control] = await _build_multi_insert_ghosts(all_cards, vp_center)
+	if Events.is_combat_ended():
+		for g in ghosts:
+			if is_instance_valid(g):
+				g.queue_free()
+		return
+
+	var tw_pop := create_tween()
+	tw_pop.set_trans(Tween.TRANS_CUBIC)
+	tw_pop.set_ease(Tween.EASE_OUT)
+	tw_pop.set_parallel(true)
+	for g in ghosts:
+		var gh: Control = g
+		tw_pop.tween_method(func(t: float) -> void: _insert_pop_scale(gh, t), 0.0, 1.0, INSERT_REVEAL_DURATION)
+	await tw_pop.finished
+	if Events.is_combat_ended():
+		for g in ghosts:
+			if is_instance_valid(g):
+				g.queue_free()
+		return
+	await get_tree().create_timer(INSERT_CENTER_HOLD).timeout
+	if Events.is_combat_ended():
+		for g in ghosts:
+			if is_instance_valid(g):
+				g.queue_free()
+		return
+
+	var draw_n := draw_cards.size()
+	var draw_ghosts: Array[Control] = []
+	var discard_ghosts: Array[Control] = []
+	for i in ghosts.size():
+		if i < draw_n:
+			draw_ghosts.append(ghosts[i])
+		else:
+			discard_ghosts.append(ghosts[i])
+
+	if draw_pile_button and not draw_ghosts.is_empty():
+		var draw_dest := _control_global_center(draw_pile_button)
+		await _tween_multi_ghosts_fly_to_parallel(draw_ghosts, draw_dest, INSERT_TO_DRAW)
+	if Events.is_combat_ended():
+		for g in ghosts:
+			if is_instance_valid(g):
+				g.queue_free()
+		return
+	if discard_pile_button and not discard_ghosts.is_empty():
+		var discard_dest := _control_global_center(discard_pile_button)
+		await _tween_multi_ghosts_fly_to_parallel(discard_ghosts, discard_dest, INSERT_TO_DRAW)
+
+	for g in ghosts:
+		if is_instance_valid(g):
+			g.queue_free()
+
+
 func _ghost_visual_width_px(ghost: Control) -> float:
 	if not is_instance_valid(ghost):
-		return 268.0
-	var w := ghost.get_rect().size.x
+		return CARD_PHANTOM_SIZE.x
+	if ghost is CardMenuUI:
+		var cmu := ghost as CardMenuUI
+		if is_instance_valid(cmu.visuals):
+			var vis_w := cmu.visuals.size.x
+			if vis_w < 4.0:
+				vis_w = cmu.visuals.get_combined_minimum_size().x
+			if vis_w >= 4.0:
+				return vis_w
+	var w := ghost.size.x
 	if w < 4.0:
 		w = ghost.get_combined_minimum_size().x
 	if w < 4.0:
-		w = 268.0
+		w = CARD_PHANTOM_SIZE.x
 	return w
 
 
-func _multi_insert_row_step_px(ghosts: Array[Control], min_step: float) -> float:
+func _multi_insert_row_step_px(ghosts: Array[Control]) -> float:
 	var max_w := 0.0
 	for g in ghosts:
 		max_w = maxf(max_w, _ghost_visual_width_px(g))
-	return maxf(maxf(min_step, MULTI_INSERT_MIN_STEP_PX), max_w + MULTI_INSERT_CARD_GAP_PX)
+	return max_w + MULTI_INSERT_EDGE_GAP_PX
 
 
 func _layout_multi_insert_ghosts_row(ghosts: Array[Control], vp_center: Vector2, step_px: float) -> void:
@@ -839,8 +952,7 @@ func _layout_multi_insert_ghosts_row(ghosts: Array[Control], vp_center: Vector2,
 
 func _build_multi_insert_ghosts(
 	cards: Array[Card],
-	vp_center: Vector2,
-	min_step: float
+	vp_center: Vector2
 ) -> Array[Control]:
 	var ghosts: Array[Control] = []
 	for c in cards:
@@ -849,7 +961,7 @@ func _build_multi_insert_ghosts(
 		g.scale = Vector2.ZERO
 		g.visible = true
 		ghosts.append(g)
-	var step := _multi_insert_row_step_px(ghosts, min_step)
+	var step := _multi_insert_row_step_px(ghosts)
 	_layout_multi_insert_ghosts_row(ghosts, vp_center, step)
 	return ghosts
 
@@ -1035,7 +1147,7 @@ func _prepare_ghost_for_motion(ghost: Control) -> void:
 	if sz.x < 4.0 or sz.y < 4.0:
 		sz = ghost.get_combined_minimum_size()
 	if sz.x < 4.0 or sz.y < 4.0:
-		sz = Vector2(268.0, 348.0)
+		sz = CARD_PHANTOM_SIZE
 	ghost.pivot_offset = sz * 0.5
 	_place_visual_center_at(ghost, preserved_center)
 	if ghost is CardMenuUI:
@@ -1094,12 +1206,15 @@ func _make_ghost(card: Card) -> CardMenuUI:
 	ghost.z_index = 400
 	ghost.z_as_relative = false
 	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ghost.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	ghost.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	ghost.card = card
 	var mh := _live_player_modifier_handler()
 	if mh != null:
 		ghost.set_modifier_preview(mh, null)
 	ghost.visible = false
-	ghost.custom_minimum_size = Vector2(268.0, 348.0)
+	ghost.custom_minimum_size = CARD_PHANTOM_SIZE
+	ghost.size = CARD_PHANTOM_SIZE
 	return ghost
 
 

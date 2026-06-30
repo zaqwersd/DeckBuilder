@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://g5fr1qga57ik"]
 
-[ext_resource type="Texture2D" uid="uid://bv4gm07ob6yyp" path="res://art/jade_axe.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://bv4gm07ob6yyp" path="res://art/relics/jade_axe.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://cnxascm5dkdtm" path="res://relics/emerald_axe.gd" id="2_script"]
 
 [resource]

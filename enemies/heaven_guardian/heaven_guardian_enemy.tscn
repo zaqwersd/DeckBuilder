@@ -1,0 +1,80 @@
+[gd_scene format=3 uid="uid://bwuu0fhyb2lle"]
+
+[ext_resource type="Texture2D" uid="uid://bfemy5jxyt2aw" path="res://art/heaven_guardian.png" id="1_art"]
+[ext_resource type="Script" uid="uid://bhxia3khujhpy" path="res://scenes/enemy/enemy.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://bb3rcs5nqntir" path="res://art/arrow.png" id="3_arrow"]
+[ext_resource type="PackedScene" path="res://scenes/ui/status_bar.tscn" id="4_status_bar"]
+[ext_resource type="PackedScene" uid="uid://bfyjrydb1nntk" path="res://scenes/ui/intent_ui.tscn" id="5_intent_ui"]
+[ext_resource type="PackedScene" uid="uid://ctvxie3ni1ik4" path="res://scenes/modifier_handler/modifier_handler.tscn" id="6_modifier"]
+[ext_resource type="PackedScene" uid="uid://bqefj5q31b84i" path="res://scenes/modifier_handler/modifier.tscn" id="7_modifier_item"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy_target_highlight.tscn" id="8_highlight"]
+[ext_resource type="Script" path="res://scenes/ui/combatant_hover_name.gd" id="9_hover_name"]
+[ext_resource type="Resource" uid="uid://4icjo0phtafk" path="res://enemies/heaven_guardian/heaven_guardian.tres" id="10_stats"]
+[ext_resource type="PackedScene" path="res://scenes/ui/intent_slot.tscn" id="11_intent_slot"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mndau"]
+size = Vector2(332, 278)
+
+[node name="HeavenGuardianEnemy" type="Area2D" unique_id=536857284 groups=["enemies"]]
+collision_layer = 4
+script = ExtResource("2_script")
+stats = ExtResource("10_stats")
+editor_preview_action = &"Strike36Strength10"
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1784411327]
+scale = Vector2(3, 3)
+texture = ExtResource("1_art")
+
+[node name="Arrow" type="Sprite2D" parent="." unique_id=1564236425]
+visible = false
+position = Vector2(72, 0)
+rotation = -1.5708
+texture = ExtResource("3_arrow")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1952253959]
+position = Vector2(-6, -6)
+shape = SubResource("RectangleShape2D_mndau")
+
+[node name="StatusBar" parent="." unique_id=1104200498 instance=ExtResource("4_status_bar")]
+z_index = 10
+offset_left = -172.0
+offset_top = 150.0
+offset_right = 160.0
+offset_bottom = 164.0
+status_tooltips_open_to_right = false
+container_width = 332
+
+[node name="IntentUI" parent="." unique_id=557406845 instance=ExtResource("5_intent_ui")]
+offset_left = -122.0
+offset_top = -218.0
+offset_right = 118.0
+offset_bottom = -155.0
+
+[node name="EditorPreviewIntentSlot" parent="IntentUI" unique_id=1220458377 instance=ExtResource("11_intent_slot")]
+layout_mode = 2
+
+[node name="ModifierHandler" parent="." unique_id=2015953967 instance=ExtResource("6_modifier")]
+
+[node name="DamageDealtModifier" parent="ModifierHandler" unique_id=1801548441 instance=ExtResource("7_modifier_item")]
+
+[node name="DamageTakenModifier" parent="ModifierHandler" unique_id=1927307286 instance=ExtResource("7_modifier_item")]
+type = 1
+
+[node name="TargetHighlight" parent="." unique_id=111335600 instance=ExtResource("8_highlight")]
+visible = false
+modulate = Color(1, 1, 1, 0)
+
+[node name="HoverNameOverlay" type="Label" parent="." unique_id=1693184651]
+modulate = Color(1, 1, 1, 0)
+z_index = 12
+offset_left = -172.0
+offset_top = 164.0
+offset_right = 160.0
+offset_bottom = 196.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+script = ExtResource("9_hover_name")
+metadata/auto_layout_from_status_bar = true

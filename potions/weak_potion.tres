@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://b8o3gor61330p"]
+
+[ext_resource type="Texture2D" uid="uid://cwm7lu8qdkau1" path="res://art/potions/weak_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://dxbuvo647kueb" path="res://potions/weak_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "虚弱药水"
+id = "weak_potion"
+icon = ExtResource("1_icon")
+tooltip = "对一名敌人施加3层虚弱。"
+target_kind = 1

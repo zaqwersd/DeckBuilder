@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardFreeStatus" format=3 uid="uid://oay1auy8p8qy"]
+
+[ext_resource type="Texture2D" path="res://art/status_icons/card_free.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/card_free.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "card_free"
+type = 2
+stack_type = 1
+stacks = 1
+icon = ExtResource("1_icon")
+name = "连携"
+tooltip = "本回合接下来的%s张牌可以免费打出。"

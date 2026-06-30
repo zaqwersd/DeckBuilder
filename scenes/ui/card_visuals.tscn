@@ -3,8 +3,8 @@
 [ext_resource type="Theme" uid="uid://dq4qrshfstoha" path="res://main_theme.tres" id="1_hiimn"]
 [ext_resource type="Script" uid="uid://ob012okcmmku" path="res://scenes/ui/card_visuals_base.gd" id="2_uk7ay"]
 [ext_resource type="Resource" uid="uid://byi0cfoedmlm0" path="res://characters/blade/cards/blade_slash.tres" id="3_t04tx"]
-[ext_resource type="Texture2D" uid="uid://dqhofl8e3dul3" path="res://art/all_out.png" id="4_x0ouv"]
-[ext_resource type="Texture2D" path="res://art/upgraded.png" id="5_upgrade_icon"]
+[ext_resource type="Texture2D" uid="uid://dqhofl8e3dul3" path="res://art/cards/all_out.png" id="4_x0ouv"]
+[ext_resource type="Texture2D" uid="uid://cp6ovjy5ihdj5" path="res://art/upgraded.png" id="5_upgrade_icon"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_x0ouv"]
 size = Vector2(194, 285)
@@ -110,9 +110,8 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 0
 offset_left = 1.0
-offset_top = -4.0
 offset_right = 39.0
-offset_bottom = 40.0
+offset_bottom = 44.0
 text = "2"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -154,7 +153,7 @@ text = "1↑"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="UpgradeIcon" type="TextureRect" parent="UpgradeLevelPanel"]
+[node name="UpgradeIcon" type="TextureRect" parent="UpgradeLevelPanel" unique_id=1561031068]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0

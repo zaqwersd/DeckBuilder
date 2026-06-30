@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://nrk01aq640n2"]
+
+[ext_resource type="Texture2D" uid="uid://bfcg3psksow2o" path="res://art/potions/vulnerable_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://2bkvtslrjdxm" path="res://potions/vulnerable_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "易伤药水"
+id = "vulnerable_potion"
+icon = ExtResource("1_icon")
+tooltip = "对一名敌人施加3层易伤。"
+target_kind = 1

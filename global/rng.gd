@@ -12,6 +12,12 @@ func initialize() -> void:
 	instance.randomize()
 
 
+## 指定种子开新局（后续种子输入 UI 调用）；与 `set_from_save_data` 一样走同一套 RNG 流。
+func initialize_from_seed(which_seed: int) -> void:
+	instance = RandomNumberGenerator.new()
+	instance.seed = which_seed
+
+
 func set_from_save_data(which_seed: int, state: int) -> void:
 	instance = RandomNumberGenerator.new()
 	instance.seed = which_seed
@@ -62,7 +68,7 @@ func pick_weighted_distinct_cards(
 				Card.Rarity.COMMON:
 					commons.append(c)
 				_:
-					# STARTER (0) 和 SPECIAL (4) 等不参与权重抽选
+					# STARTER、SPECIAL、STATUSES 等不参与权重抽选
 					pass
 		var wc := weight_common if not commons.is_empty() else 0.0
 		var wu := weight_uncommon if not uncommons.is_empty() else 0.0

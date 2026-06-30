@@ -25,7 +25,6 @@ func perform_action() -> void:
 		targets.append(spook)
 	var block_effect := BlockEffect.new()
 	block_effect.amount = block_amount
-	block_effect.sound = sound
 	block_effect.execute(targets)
 	await get_tree().create_timer(0.35).timeout
 	if is_instance_valid(enemy):

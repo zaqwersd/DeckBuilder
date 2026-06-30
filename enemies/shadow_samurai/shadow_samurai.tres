@@ -6,11 +6,10 @@
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "影武士"
 ai = ExtResource("1_ai")
+enemy_scene_path = "res://enemies/shadow_samurai/shadow_samurai_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "影武士"
 art_scale = Vector2(4, 4)
-health_bar_width = 210
-status_bar_offset = Vector2(0, 80)
-intent_ui_offset = Vector2(0, 40)
 max_health = 320
 art = ExtResource("2_art")

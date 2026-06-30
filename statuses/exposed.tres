@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="ExposedStatus" format=3 uid="uid://cxqq0117oxehu"]
+[gd_resource type="Resource" script_class="ExposedStatus" format=3 uid="uid://b0ybkhvsuyo61"]
 
-[ext_resource type="Texture2D" uid="uid://2egbj0w2asc2" path="res://art/expose.png" id="1_242in"]
-[ext_resource type="Script" uid="uid://dpkhuh11lic8f" path="res://statuses/exposed.gd" id="2_d2jjc"]
+[ext_resource type="Texture2D" uid="uid://2egbj0w2asc2" path="res://art/status_icons/expose.png" id="1_242in"]
+[ext_resource type="Script" path="res://statuses/exposed.gd" id="2_d2jjc"]
 
 [resource]
 script = ExtResource("2_d2jjc")

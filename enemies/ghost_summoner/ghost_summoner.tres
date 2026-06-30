@@ -2,16 +2,14 @@
 
 [ext_resource type="Script" uid="uid://kaww7iwdk8ro" path="res://enemies/ghost_summoner/ghost_summoner_enemy_stats.gd" id="1_stats"]
 [ext_resource type="PackedScene" path="res://enemies/ghost_summoner/ghost_summoner_enemy_ai.tscn" id="2_ai"]
-[ext_resource type="Script" uid="uid://dxgwh7ui04omh" path="res://custom_resources/intent.gd" id="3_5ka01"]
 [ext_resource type="Texture2D" uid="uid://cperc8prryvsq" path="res://art/ghost_summoner1.png" id="3_art"]
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "幽灵召唤师"
 ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/ghost_summoner/ghost_summoner_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "幽灵召唤师"
 art_scale = Vector2(2.5, 2.5)
-health_bar_width = 260
-status_bar_offset = Vector2(0, 80)
-intent_ui_offset = Vector2(-10, 120)
 max_health = 325
 art = ExtResource("3_art")

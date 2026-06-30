@@ -28,6 +28,9 @@ var _pending_keyword_restore: Dictionary = {}
 var _hover_anchor_id: int = INVALID_ANCHOR_ID
 var _hover_placement: Placement = Placement.ICON_RIGHT
 var _hover_poll_active: bool = false
+var _follow_screen_rect_active: bool = false
+var _follow_screen_rect: Rect2 = Rect2()
+var _follow_placement: Placement = Placement.ICON_RIGHT
 var _active_potion: Potion = null
 var _hide_request_serial: int = 0
 
@@ -43,6 +46,12 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _follow_screen_rect_active:
+		if is_instance_valid(panel_root) and panel_root.visible:
+			_position_panel_at_rect(_follow_screen_rect, _follow_placement)
+		else:
+			_follow_screen_rect_active = false
+			_sync_tooltip_process()
 	if not _hover_poll_active:
 		return
 	if not is_instance_valid(panel_root) or not panel_root.visible:
@@ -57,10 +66,10 @@ func _process(_delta: float) -> void:
 		hide_tooltip_immediate()
 		return
 	var screen_pos := CombatPointer.screen_mouse(viewport)
-	if not CombatPointer.control_has_screen_point(anchor, screen_pos):
+	if not _control_has_screen_point_for_tooltip(anchor, screen_pos):
 		hide_tooltip_immediate()
 		return
-	if _hover_poll_respects_obscured() and Events.is_pointer_ui_obscured_for(anchor):
+	if _hover_anchor_obscured_for_poll(anchor):
 		hide_tooltip_immediate()
 		return
 
@@ -68,7 +77,67 @@ func _process(_delta: float) -> void:
 func _stop_hover_poll() -> void:
 	_hover_poll_active = false
 	_hover_anchor_id = INVALID_ANCHOR_ID
-	set_process(false)
+	_sync_tooltip_process()
+
+
+func _sync_tooltip_process() -> void:
+	set_process(_follow_screen_rect_active or _hover_poll_active)
+
+
+func _cancel_screen_rect_follow() -> void:
+	_follow_screen_rect_active = false
+	_sync_tooltip_process()
+
+
+## TopBar（遗物/药水等）与牌库同处 layer 3，打开牌库时不应被 pointer_exclusive 误判为遮挡。
+func _is_run_top_bar_hover_anchor(anchor: Control) -> bool:
+	if anchor == null or not is_instance_valid(anchor) or not anchor.is_inside_tree():
+		return false
+	var run := anchor.get_tree().get_first_node_in_group("run")
+	if run == null:
+		return false
+	var top_bar := run.get_node_or_null("TopBar")
+	return top_bar != null and top_bar.is_ancestor_of(anchor)
+
+
+func _control_has_screen_point_for_tooltip(anchor: Control, screen_pos: Vector2, padding: float = 0.0) -> bool:
+	if not is_instance_valid(anchor) or not anchor.is_inside_tree():
+		return false
+	if _is_run_top_bar_hover_anchor(anchor):
+		var rect := anchor.get_global_rect()
+		if padding > 0.0:
+			rect = rect.grow(padding)
+		return rect.has_point(screen_pos)
+	return CombatPointer.control_has_screen_point(anchor, screen_pos, padding)
+
+
+func _pointer_over_run_top_bar_relic() -> bool:
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	var run := get_tree().get_first_node_in_group("run")
+	if run == null:
+		return false
+	var handler := run.get_node_or_null("%RelicHandler") as RelicHandler
+	if handler == null:
+		return false
+	var relics := handler.get_node_or_null("%Relics") as HBoxContainer
+	if relics == null:
+		return false
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	for child in relics.get_children():
+		if child is RelicUI:
+			if _control_has_screen_point_for_tooltip(child as Control, screen_pos, 4.0):
+				return true
+	return false
+
+
+func _hover_anchor_obscured_for_poll(anchor: Control) -> bool:
+	if not _hover_poll_respects_obscured():
+		return false
+	if _is_run_top_bar_hover_anchor(anchor):
+		return false
+	return Events.is_pointer_ui_obscured_for(anchor)
 
 
 func _ensure_full_opacity() -> void:
@@ -92,7 +161,49 @@ func _deferred_hide_tooltip(serial: int) -> void:
 		return
 	if _pointer_still_over_hover_anchor():
 		return
+	if _pointer_over_visible_shop_item():
+		return
+	if _pointer_over_run_top_bar_relic():
+		return
 	_apply_hide_tooltip()
+
+
+func _pointer_over_visible_shop_item() -> bool:
+	var viewport := get_viewport()
+	if viewport == null:
+		return false
+	var shop := _find_visible_shop(viewport)
+	if shop == null:
+		return false
+	var screen_pos := CombatPointer.screen_mouse(viewport)
+	var relic := shop._shop_relic_under_pointer()
+	if relic != null:
+		return true
+	var potion := shop._shop_potion_under_pointer()
+	return potion != null
+
+
+func _find_visible_shop(viewport: Viewport) -> Shop:
+	return _find_shop_recursive(viewport.get_tree().root)
+
+
+func _find_shop_recursive(node: Node) -> Shop:
+	if node is Shop and (node as Shop).visible:
+		return node as Shop
+	for child in node.get_children():
+		var found := _find_shop_recursive(child)
+		if found != null:
+			return found
+	return null
+
+
+func _is_shop_item_tooltip_anchor(near_to: Control) -> bool:
+	var node: Node = near_to
+	while node != null:
+		if node is ShopRelic or node is ShopPotion:
+			return true
+		node = node.get_parent()
+	return false
 
 
 func _pointer_still_over_hover_anchor() -> bool:
@@ -103,9 +214,9 @@ func _pointer_still_over_hover_anchor() -> bool:
 	if viewport == null:
 		return false
 	var screen_pos := CombatPointer.screen_mouse(viewport)
-	if not CombatPointer.control_has_screen_point(anchor, screen_pos):
+	if not _control_has_screen_point_for_tooltip(anchor, screen_pos):
 		return false
-	if _hover_poll_respects_obscured() and Events.is_pointer_ui_obscured_for(anchor):
+	if _hover_anchor_obscured_for_poll(anchor):
 		return false
 	return true
 
@@ -116,6 +227,7 @@ func _hover_poll_respects_obscured() -> bool:
 
 func _apply_hide_tooltip() -> void:
 	_layout_generation += 1
+	_cancel_screen_rect_follow()
 	_stop_hover_poll()
 	_clear_titled_meta()
 	_active_relic = null
@@ -159,7 +271,8 @@ func show_potion_tooltip(potion: Potion, near_to: Control = null) -> void:
 	_active_potion = potion
 	_active_source = near_to
 	var body := CardKeywordBbcode.inject_keywords(potion.tooltip.strip_edges())
-	await show_titled(potion.potion_name, body, near_to, Placement.ICON_RIGHT, true)
+	var hover_poll := near_to == null or not _is_shop_item_tooltip_anchor(near_to)
+	await show_titled(potion.potion_name, body, near_to, Placement.ICON_RIGHT, true, hover_poll)
 
 
 ## 遗物 Events 兼容
@@ -177,7 +290,8 @@ func show_tooltip(relic: Relic, near_to: Control = null) -> void:
 	_active_relic = relic
 	_active_source = near_to
 	var body := CardKeywordBbcode.inject_keywords(relic.get_tooltip().strip_edges())
-	await show_titled(relic.relic_name, body, near_to, Placement.RELIC_FLIP, true)
+	var hover_poll := near_to == null or not _is_shop_item_tooltip_anchor(near_to)
+	await show_titled(relic.relic_name, body, near_to, Placement.RELIC_FLIP, true, hover_poll)
 
 
 ## 状态 Events 兼容
@@ -221,10 +335,12 @@ func show_titled_bbcode(
 	var trimmed := full_bbcode.strip_edges()
 	if trimmed.is_empty():
 		return
+	_hide_request_serial += 1
 	_layout_generation += 1
 	var gen := _layout_generation
 	var anchor_id := _capture_anchor_id(near_to)
 	_hover_anchor_id = anchor_id
+	_cancel_screen_rect_follow()
 	_stop_hover_poll()
 	_conceal_panel()
 	_clear_vbox()
@@ -249,7 +365,53 @@ func show_titled_bbcode(
 		_hover_anchor_id = anchor_id
 		_hover_placement = placement
 		_hover_poll_active = true
-		set_process(true)
+		_sync_tooltip_process()
+
+
+## 地图房间等 Node2D 锚点：用屏幕矩形定位，并随相机滚动每帧更新。
+func show_titled_bbcode_at_screen_rect(
+	full_bbcode: String,
+	screen_anchor: Rect2,
+	placement: Placement = Placement.ICON_RIGHT,
+	enable_keyword_meta: bool = false
+) -> void:
+	var trimmed := full_bbcode.strip_edges()
+	if trimmed.is_empty():
+		return
+	_hide_request_serial += 1
+	_layout_generation += 1
+	var gen := _layout_generation
+	_follow_screen_rect = screen_anchor
+	_follow_placement = placement
+	_cancel_screen_rect_follow()
+	_hover_anchor_id = INVALID_ANCHOR_ID
+	_stop_hover_poll()
+	_conceal_panel()
+	_clear_vbox()
+	_clear_titled_meta()
+
+	var rtl := _make_rich_label(trimmed, enable_keyword_meta)
+	vbox.add_child(rtl)
+	if enable_keyword_meta:
+		_titled_meta_rtl = rtl
+		_connect_titled_meta(rtl)
+
+	await _layout_vbox_richtext_sizes(gen)
+	if gen != _layout_generation:
+		return
+	_position_panel_at_rect(screen_anchor, placement)
+	await get_tree().process_frame
+	if gen != _layout_generation:
+		return
+	_reveal_panel()
+	_follow_screen_rect_active = true
+	_sync_tooltip_process()
+
+
+func update_follow_screen_rect(screen_anchor: Rect2) -> void:
+	_follow_screen_rect = screen_anchor
+	if _follow_screen_rect_active and is_instance_valid(panel_root) and panel_root.visible:
+		_position_panel_at_rect(_follow_screen_rect, _follow_placement)
 
 
 func _capture_anchor_id(near_to: Variant) -> int:
@@ -386,6 +548,7 @@ func _dfs_append_tooltip_id(id: String, seen: Dictionary, out: Array[String]) ->
 
 func _render_keyword_blocks(seed_ids: PackedStringArray, anchor_id: int, placement: Placement) -> void:
 	_layout_generation += 1
+	_cancel_screen_rect_follow()
 	_conceal_panel()
 	Events.card_keyword_tooltip_visible = false
 	var gen := _layout_generation
@@ -546,6 +709,22 @@ func _layout_vbox_richtext_sizes(gen: int) -> void:
 
 
 func _position_panel(near_to: Variant, placement: Placement) -> void:
+	if _can_position_near_anchor(near_to):
+		var anchor := near_to as Control
+		var icon_gap := GAP_FROM_ICON
+		if placement == Placement.ICON_RIGHT and anchor.has_meta(&"tooltip_icon_gap"):
+			icon_gap = float(anchor.get_meta(&"tooltip_icon_gap"))
+		_position_panel_at_rect(anchor.get_global_rect(), placement, false, icon_gap)
+	else:
+		_position_panel_at_rect(Rect2(), placement, true)
+
+
+func _position_panel_at_rect(
+	gr: Rect2,
+	placement: Placement,
+	center_fallback: bool = false,
+	icon_gap: float = GAP_FROM_ICON
+) -> void:
 	panel_root.reset_size()
 	var viewport := get_viewport()
 	if viewport == null:
@@ -555,18 +734,15 @@ func _position_panel(near_to: Variant, placement: Placement) -> void:
 	if sz.x < 2.0 or sz.y < 2.0:
 		sz = panel_root.get_combined_minimum_size()
 	var pos: Vector2
-	if _can_position_near_anchor(near_to):
-		var anchor := near_to as Control
-		var gr := anchor.get_global_rect()
+	if center_fallback or gr.size.x < 1.0 or gr.size.y < 1.0:
+		pos = vp.get_center() - sz * 0.5
+	else:
 		match placement:
 			Placement.RELIC_FLIP:
 				pos = Vector2(gr.end.x + GAP_FROM_SOURCE, gr.get_center().y - sz.y * 0.5)
 				if pos.x + sz.x > vp.position.x + vp.size.x - VIEWPORT_MARGIN:
 					pos.x = gr.position.x - GAP_FROM_SOURCE - sz.x
 			Placement.ICON_RIGHT:
-				var icon_gap := GAP_FROM_ICON
-				if anchor.has_meta(&"tooltip_icon_gap"):
-					icon_gap = float(anchor.get_meta(&"tooltip_icon_gap"))
 				pos = Vector2(gr.end.x + icon_gap, gr.get_center().y - sz.y * 0.5)
 			Placement.ICON_LEFT:
 				pos = Vector2(gr.position.x - GAP_FROM_ICON - sz.x, gr.get_center().y - sz.y * 0.5)
@@ -582,8 +758,6 @@ func _position_panel(near_to: Variant, placement: Placement) -> void:
 					pos = Vector2(right_x, gr.position.y)
 				else:
 					pos = Vector2(gr.position.x - GAP_FROM_SOURCE - sz.x, gr.position.y)
-	else:
-		pos = vp.get_center() - sz * 0.5
 	pos = _clamp_to_viewport(pos, sz, vp)
 	panel_root.global_position = pos
 

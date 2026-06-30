@@ -7,11 +7,10 @@
 
 [resource]
 script = ExtResource("1_1akn0")
-display_name = "蝙蝠"
 ai = ExtResource("1_oeu8d")
+enemy_scene_path = "res://enemies/bat/bat_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "蝙蝠"
 art_frames = Array[Texture]([ExtResource("2_bat1"), ExtResource("3_bat2")])
-health_bar_width = 108
-status_bar_offset = Vector2(50, 20)
-intent_ui_offset = Vector2(0, -20)
 max_health = 21
 art = ExtResource("2_bat1")

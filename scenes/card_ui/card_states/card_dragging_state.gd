@@ -52,7 +52,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(card_ui) or not _hand_drag_active:
 		return
 	if Input.is_action_just_pressed("right_mouse"):
-		transition_requested.emit(self, CardState.State.BASE)
+		_cancel_drag_to_hand()
 		return
 	if card_ui.card.is_single_targeted():
 		if not _play_area_locked:
@@ -145,18 +145,24 @@ func _is_global_point_in_hand_zone(global_point: Vector2) -> bool:
 
 
 ## 鼠标或牌心离开手牌区即视为拖出（pivot 会导致牌已上移但鼠标仍在带内）。
+## 判定「是否拖出手牌区」：鼠标仍在该牌命中四边形内则视为未拖出，避免描述区/右侧溢出段误判。
 func _is_outside_hand_for_drag_play() -> bool:
-	if not card_ui.is_mouse_in_hand_zone():
-		return true
-	var card_rect := card_ui.get_global_rect()
-	if card_rect.size.x > 0.001 and card_rect.size.y > 0.001:
-		if not _is_global_point_in_hand_zone(card_rect.get_center()):
-			return true
-	return false
+	if card_ui.is_global_point_in_hand_pick(card_ui.get_global_mouse_position()):
+		return false
+	return not card_ui.is_mouse_in_hand_zone()
 
 
 func _should_play_on_pickup_release() -> bool:
+	var card := card_ui.card
+	if card != null and card.requires_drag_outside_hand_before_play():
+		return _dragged_outside_during_pickup
 	return _dragged_outside_during_pickup or _is_outside_hand_for_drag_play()
+
+
+func _cancel_drag_to_hand() -> void:
+	card_ui.targets.clear()
+	card_ui.refresh_combat_description()
+	transition_requested.emit(self, CardState.State.BASE)
 
 
 func _sync_target_from_mouse() -> void:
@@ -184,11 +190,11 @@ func _try_cancel_with_right_mouse(event: InputEvent) -> bool:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_RIGHT and (mb.pressed or not mb.pressed):
 			get_viewport().set_input_as_handled()
-			transition_requested.emit(self, CardState.State.BASE)
+			_cancel_drag_to_hand()
 			return true
 	if event.is_action_pressed("right_mouse") or event.is_action_released("right_mouse"):
 		get_viewport().set_input_as_handled()
-		transition_requested.emit(self, CardState.State.BASE)
+		_cancel_drag_to_hand()
 		return true
 	return false
 

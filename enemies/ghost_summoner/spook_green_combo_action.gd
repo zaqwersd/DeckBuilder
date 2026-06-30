@@ -1,7 +1,7 @@
 extends EnemyAction
 
 @export var damage := 6
-@export var heal_amount := 12
+@export var heal_amount := 20
 @export var secondary_intent: Intent
 
 
@@ -19,7 +19,7 @@ func perform_action() -> void:
 		return
 	var per_hit := compute_damage_against_player(damage)
 	var tween := create_tween().set_trans(Tween.TRANS_QUINT)
-	var start := enemy.global_position
+	var start := EnemyAction.attack_lunge_home(enemy)
 	var end := EnemyAction.attack_lunge_position(start)
 	var damage_effect := make_final_player_damage_effect(per_hit)
 	var target_array: Array[Node] = [target]

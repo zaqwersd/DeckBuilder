@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://caglyx8wlt4xj"]
 
-[ext_resource type="Texture2D" uid="uid://3tt75f5m7msw" path="res://art/mobius_strip.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://3tt75f5m7msw" path="res://art/relics/mobius_strip.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://c0pjeff5qyiyo" path="res://relics/mobius_strip.gd" id="2_script"]
 
 [resource]

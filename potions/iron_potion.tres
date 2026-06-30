@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://bq4hqcur8sgnr"]
+
+[ext_resource type="Texture2D" uid="uid://3wm3tc3toqwn" path="res://art/potions/iron_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://ctu7y3nrqa12m" path="res://potions/iron_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "钢铁药水"
+id = "iron_potion"
+icon = ExtResource("1_icon")
+tooltip = "获得12点格挡。"
+use_only_in_battle = false

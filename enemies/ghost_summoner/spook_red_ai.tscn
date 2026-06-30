@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://enemies/ghost_summoner/spook_enemy_ai.gd" id="1_ai"]
-[ext_resource type="Script" path="res://enemies/ghost_summoner/spook_strike12_exposed_action.gd" id="2_intent1"]
+[ext_resource type="Script" path="res://enemies/ghost_summoner/spook_strike12_vulnerable_action.gd" id="2_intent1"]
 [ext_resource type="Script" path="res://enemies/ghost_summoner/spook_red_combo_action.gd" id="3_intent2"]
 [ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_intent"]
 [ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_sfx"]

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scenes/status_handler/status_handler.gd" id="1_7l2o8"]
 
-[node name="StatusHandler" type="HBoxContainer"]
+[node name="StatusHandler" type="VBoxContainer"]
 mouse_filter = 0
-theme_override_constants/separation = 8
+theme_override_constants/separation = 2
 script = ExtResource("1_7l2o8")

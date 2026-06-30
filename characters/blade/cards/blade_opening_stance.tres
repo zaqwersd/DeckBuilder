@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://wgxrnoc1mcdu"]
 
-[ext_resource type="Texture2D" uid="uid://ddf31pw0ahc8h" path="res://art/opening_stance.png" id="1_kt0tw"]
+[ext_resource type="Texture2D" uid="uid://ddf31pw0ahc8h" path="res://art/cards/opening_stance.png" id="1_kt0tw"]
 [ext_resource type="Script" uid="uid://c1yrhexlq2fho" path="res://characters/blade/cards/blade_opening_stance.gd" id="2_script"]
 [ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_snd"]
 

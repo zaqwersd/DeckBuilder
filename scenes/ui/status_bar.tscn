@@ -6,14 +6,19 @@
 [ext_resource type="PackedScene" path="res://scenes/status_handler/status_handler.tscn" id="4_status_handler"]
 
 [node name="StatusBar" type="VBoxContainer"]
-offset_right = 8.0
-offset_bottom = 8.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+size = Vector2(100, 0)
 theme = ExtResource("1_theme")
 theme_override_constants/separation = 4
 script = ExtResource("2_status_bar")
+container_width = 100
 
 [node name="HealthRow" parent="." instance=ExtResource("3_health_bar")]
 layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="StatusHandler" parent="." instance=ExtResource("4_status_handler")]
 layout_mode = 2

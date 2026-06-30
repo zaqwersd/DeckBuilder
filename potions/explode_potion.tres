@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3 uid="uid://rs6pd0buf12i"]
+
+[ext_resource type="Texture2D" uid="uid://sc3ydel5bfc6" path="res://art/potions/explode_potion.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://boqgtpxu55bl8" path="res://potions/explode_potion.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+potion_name = "爆炸药水"
+id = "explode_potion"
+rarity = 1
+icon = ExtResource("1_icon")
+tooltip = "对一名敌人造成20点伤害。"
+target_kind = 1

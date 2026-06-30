@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="OffenseAndDefenseInOneStatus" format=3]
+
+[ext_resource type="Texture2D" path="res://art/status_icons/offense_and_defense_in_one.png" id="1_icon"]
+[ext_resource type="Script" path="res://statuses/offense_and_defense_in_one.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "offense_and_defense_in_one"
+type = 1
+stack_type = 0
+can_expire = true
+duration = 1
+allow_multiple_instances = true
+icon = ExtResource("1_icon")
+name = "攻防合一"
+tooltip = "本回合每当你造成攻击伤害，获得等于造成伤害值的格挡。"

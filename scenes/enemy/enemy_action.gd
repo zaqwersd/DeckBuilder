@@ -21,6 +21,15 @@ static func attack_lunge_position(start: Vector2) -> Vector2:
 	return start + Vector2.LEFT * ATTACK_HORIZONTAL_LUNGE_PX
 
 
+## 普攻前冲起点：先回到战斗站位，避免受击抖动/前冲残留导致易位。
+static func attack_lunge_home(enemy: Enemy) -> Vector2:
+	if enemy == null:
+		return Vector2.ZERO
+	if enemy.has_method("restore_battle_position"):
+		enemy.restore_battle_position()
+	return enemy.global_position
+
+
 func is_performable() -> bool:
 	return false
 

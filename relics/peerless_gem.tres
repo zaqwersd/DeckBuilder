@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://dyjwuq2mh8gtr"]
 
-[ext_resource type="Texture2D" uid="uid://7nqqu2oqdlyj" path="res://art/pearless_gem.png" id="1_c85e2"]
+[ext_resource type="Texture2D" uid="uid://7nqqu2oqdlyj" path="res://art/relics/pearless_gem.png" id="1_c85e2"]
 [ext_resource type="Script" uid="uid://by6amt81g6540" path="res://relics/peerless_gem.gd" id="2_script"]
 
 [resource]

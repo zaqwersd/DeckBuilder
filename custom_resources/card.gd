@@ -2,7 +2,7 @@ class_name Card
 extends Resource
 
 enum Type {ATTACK, SKILL, POWER, STATUS}
-enum Rarity {STARTER, COMMON, UNCOMMON, RARE, SPECIAL}
+enum Rarity {STARTER, COMMON, UNCOMMON, RARE, SPECIAL, STATUSES}
 enum Target {SELF, SINGLE_ENEMY, ALL_ENEMIES, EVERYONE}
 
 ## 卡面数值 BBCode：战斗为白底+红/绿对比；局外列表为默认字色（无黄/灰/红升级提示色）。
@@ -44,6 +44,16 @@ const RARITY_COLORS := {
 	Card.Rarity.UNCOMMON: Color(129.0 / 255.0, 212.0 / 255.0, 250.0 / 255.0),
 	Card.Rarity.RARE: Color.GOLD,
 	Card.Rarity.SPECIAL: Color(175.0 / 255.0, 191.0 / 255.0, 255.0 / 255.0),
+	Card.Rarity.STATUSES: Color(96.0 / 255.0, 125.0 / 255.0, 139.0 / 255.0),
+}
+
+const RARITY_DISPLAY_NAMES := {
+	Card.Rarity.STARTER: "初始",
+	Card.Rarity.COMMON: "普通",
+	Card.Rarity.UNCOMMON: "罕见",
+	Card.Rarity.RARE: "稀有",
+	Card.Rarity.SPECIAL: "特殊",
+	Card.Rarity.STATUSES: "状态",
 }
 
 ## 不可打出（如恶灵）
@@ -138,6 +148,7 @@ func should_show_intrinsic_keyword_in_combat_description() -> bool:
 var _play_visual_start_center: Vector2 = Vector2.INF
 ## 本次出牌快照：mana_spent、x（X 费等于 mana_spent）。再执行效果不扣费时沿用。
 var _play_snapshot: Dictionary = {}
+var _replaying_effects_without_payment := false
 
 
 func set_play_visual_start_center(center: Vector2) -> void:
@@ -290,6 +301,20 @@ func allows_hand_drag_when_play_requirements_unmet() -> bool:
 	return false
 
 
+## 为 true 时须先拖出手牌区再松手才能打出（如心流、抽离）；默认 false。
+func requires_drag_outside_hand_before_play() -> bool:
+	return false
+
+
+## 为 true 时 play() 前先打开手牌选牌 UI（如抽离）；默认 false。
+func opens_hand_card_pick_on_play() -> bool:
+	return false
+
+
+func prepare_hand_card_pick_before_effects() -> void:
+	pass
+
+
 func is_x_cost() -> bool:
 	return cost == COST_X
 
@@ -315,6 +340,10 @@ func get_play_mana_spent() -> int:
 
 func has_play_snapshot() -> bool:
 	return not _play_snapshot.is_empty()
+
+
+func is_replaying_effects_without_payment() -> bool:
+	return _replaying_effects_without_payment
 
 
 func is_single_targeted() -> bool:
@@ -397,17 +426,25 @@ func _execute_card_effects(targets: Array[Node], modifiers: ModifierHandler) -> 
 func replay_effects_without_payment(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	if not has_play_snapshot():
 		return
+	_replaying_effects_without_payment = true
+	if opens_hand_card_pick_on_play():
+		prepare_hand_card_pick_before_effects()
+	Events.card_played.emit(self)
 	if plays_card_sound_on_play():
 		_play_card_sound()
 	if is_single_targeted():
 		await _execute_card_effects(targets, modifiers)
 	else:
 		await _execute_card_effects(_get_targets(targets), modifiers)
-	## 故障机器等无费重放：效果结算完毕，与正常 play() 一样计入迅捷等「打牌完成」逻辑。
+	_replaying_effects_without_payment = false
 	Events.card_play_finished.emit(self)
 
 
 func apply_effects(_targets: Array[Node], _modifiers: ModifierHandler) -> void:
+	pass
+
+
+func on_end_turn_in_hand(_player: Player, _handler: PlayerHandler, _card_ui: CardUI) -> void:
 	pass
 
 

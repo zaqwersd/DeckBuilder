@@ -1,8 +1,7 @@
 [gd_resource type="Resource" format=3 uid="uid://b2g7ulwfbtipc"]
 
-[ext_resource type="Texture2D" uid="uid://do7daajsduilg" path="res://art/imperturbable.png" id="1_icon"]
+[ext_resource type="Texture2D" uid="uid://do7daajsduilg" path="res://art/cards/imperturbable.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://b6slhtp1dn5du" path="res://characters/blade/cards/blade_imperturbable.gd" id="2_script"]
-[ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_snd"]
 
 [resource]
 script = ExtResource("2_script")
@@ -13,4 +12,3 @@ cost = 2
 card_name = "不动声色"
 icon = ExtResource("1_icon")
 tooltip_text = "[center]获得%s点格挡。[br]下回合获得当前能量值的能量。[/center]"
-sound = ExtResource("3_snd")

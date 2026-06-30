@@ -1,0 +1,34 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://enemies/elementals/elemental_fire_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_simple_attack_action.gd" id="2_attack"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_attack_burn_action.gd" id="3_burn"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="5_atk"]
+
+[sub_resource type="Resource" id="I_attack"]
+script = ExtResource("4_intent")
+
+[sub_resource type="Resource" id="I_burn_attack"]
+script = ExtResource("4_intent")
+
+[sub_resource type="Resource" id="I_burn"]
+script = ExtResource("4_intent")
+kind = 3
+base_text = "塞入灼伤"
+
+[node name="FireElementalAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="Attack" type="Node" parent="."]
+script = ExtResource("2_attack")
+intent = SubResource("I_attack")
+sound = ExtResource("5_atk")
+damage = 13
+
+[node name="Burn" type="Node" parent="."]
+script = ExtResource("3_burn")
+intent = SubResource("I_burn_attack")
+sound = ExtResource("5_atk")
+damage = 4
+burn_intent = SubResource("I_burn")

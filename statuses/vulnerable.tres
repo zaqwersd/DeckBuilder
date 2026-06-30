@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VulnerableStatus" format=3 uid="uid://cxqq0117oxehu"]
+
+[ext_resource type="Texture2D" uid="uid://2egbj0w2asc2" path="res://art/status_icons/expose.png" id="1_242in"]
+[ext_resource type="Script" uid="uid://cwlly8mkmbtbx" path="res://statuses/vulnerable.gd" id="2_d2jjc"]
+
+[resource]
+script = ExtResource("2_d2jjc")
+id = "vulnerable"
+stack_type = 2
+polarity = 1
+can_expire = true
+duration = 1
+icon = ExtResource("1_242in")
+name = "易伤"
+tooltip = "%s回合内，受到的伤害提高50%%。"

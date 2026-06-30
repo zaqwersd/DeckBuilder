@@ -152,6 +152,7 @@ func _display_card_for_compendium(template: Card) -> Card:
 	var display := template.duplicate(true) as Card
 	if _is_show_upgraded_enabled():
 		display.apply_upgrade()
+	CardGridListing.apply_compendium_display_overrides(display)
 	return display
 
 
@@ -245,7 +246,7 @@ func _cards_for_category(cat: Category) -> Array[Card]:
 	var out: Array[Card] = []
 	for k: Variant in by_id.keys():
 		out.append(by_id[k] as Card)
-	out.sort_custom(CardGridListing.sort_rarity_then_id)
+	out.sort_custom(CardGridListing.sort_compendium_listing)
 	return out
 
 

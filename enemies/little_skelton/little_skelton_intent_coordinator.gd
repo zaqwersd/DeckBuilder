@@ -51,17 +51,12 @@ static func assign_for_handler(handler: EnemyHandler) -> void:
 
 static func _collect_ais(handler: EnemyHandler) -> Array[LittleSkeltonAI]:
 	var ais: Array[LittleSkeltonAI] = []
-	for child in handler.get_children():
-		if not child is Enemy:
+	for enemy in EnemyHandler.collect_sorted_live_enemies(handler):
+		if not enemy.stats is LittleSkeltonEnemyStats:
 			continue
-		var e := child as Enemy
-		if not e.stats is LittleSkeltonEnemyStats:
+		if not is_instance_valid(enemy.enemy_action_picker):
 			continue
-		if not is_instance_valid(e.stats) or e.stats.health <= 0:
-			continue
-		if not is_instance_valid(e.enemy_action_picker):
-			continue
-		var ai := e.enemy_action_picker as LittleSkeltonAI
+		var ai := enemy.enemy_action_picker as LittleSkeltonAI
 		if ai:
 			ais.append(ai)
 	return ais

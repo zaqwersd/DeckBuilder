@@ -1,0 +1,16 @@
+[gd_resource type="Resource" format=3 uid="uid://dwanupm14wkvv"]
+
+[ext_resource type="Texture2D" uid="uid://bwiaaatqlyng5" path="res://art/cards/infinite.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://bej0ohxkp7a5c" path="res://characters/blade/cards/blade_infinite.gd" id="2_script"]
+[ext_resource type="AudioStream" uid="uid://dy7xtftjias6u" path="res://art/overwhelming.ogg" id="3_sound"]
+
+[resource]
+script = ExtResource("2_script")
+id = "blade_infinite"
+type = 2
+rarity = 3
+cost = 3
+card_name = "无尽"
+icon = ExtResource("1_icon")
+tooltip_text = "[center]每当有一张牌被消耗，获得1点能量。回合结束阶段触发时改为下回合获得。[/center]"
+sound = ExtResource("3_sound")

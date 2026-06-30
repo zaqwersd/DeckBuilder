@@ -2,16 +2,13 @@
 
 [ext_resource type="Script" uid="uid://ngj5qyxyhc5t" path="res://enemies/ghost_summoner/spook_enemy_stats.gd" id="1_stats"]
 [ext_resource type="PackedScene" path="res://enemies/ghost_summoner/spook_red_ai.tscn" id="2_ai"]
-[ext_resource type="Script" uid="uid://dxgwh7ui04omh" path="res://custom_resources/intent.gd" id="3_7icd5"]
 [ext_resource type="Texture2D" uid="uid://p3r0t051jxam" path="res://art/spook_red.png" id="3_art"]
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "小幽灵"
 ai = ExtResource("2_ai")
-editor_preview_action = &"Intent1"
-health_bar_width = 200
-status_bar_offset = Vector2(0, 80)
-intent_ui_offset = Vector2(0, 65)
+enemy_scene_path = "res://enemies/ghost_summoner/spook_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "小幽灵"
 max_health = 100
 art = ExtResource("3_art")

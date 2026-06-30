@@ -1,0 +1,25 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://enemies/elementals/elemental_fixed_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_attack_block_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="3_intent"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="4_atk"]
+
+[sub_resource type="Resource" id="I_attack"]
+script = ExtResource("3_intent")
+
+[sub_resource type="Resource" id="I_block"]
+script = ExtResource("3_intent")
+kind = 1
+
+[node name="IronElementalAI" type="Node"]
+script = ExtResource("1_ai")
+action_name = "Action"
+
+[node name="Action" type="Node" parent="."]
+script = ExtResource("2_action")
+intent = SubResource("I_attack")
+sound = ExtResource("4_atk")
+damage = 7
+block = 7
+block_intent = SubResource("I_block")

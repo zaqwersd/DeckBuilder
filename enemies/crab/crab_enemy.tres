@@ -8,12 +8,11 @@
 
 [resource]
 script = ExtResource("1_stats")
-display_name = "螃蟹"
 ai = ExtResource("2_ai")
+enemy_scene_path = "res://enemies/crab/crab_enemy.tscn"
+uses_scene_ui_layout = true
+display_name = "螃蟹"
 art_scale = Vector2(4, 4)
 art_frames = Array[Texture]([ExtResource("3_art1"), ExtResource("4_art2"), ExtResource("5_art3")])
-health_bar_width = 125
-status_bar_offset = Vector2(40, 30)
-intent_ui_offset = Vector2(0, 20)
 max_health = 40
 art = ExtResource("3_art1")

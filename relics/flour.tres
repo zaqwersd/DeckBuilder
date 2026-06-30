@@ -1,0 +1,12 @@
+[gd_resource type="Resource" format=3 uid="uid://b75nsjdt6c51c"]
+
+[ext_resource type="Texture2D" uid="uid://csoe1ui6xmgux" path="res://art/relics/flour.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://b67m53w4rlm4e" path="res://relics/flour.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "面粉"
+id = "flour"
+rarity = 2
+icon = ExtResource("1_icon")
+tooltip = "每个回合开始时，给予所有敌人1层虚弱和1层易伤。"

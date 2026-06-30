@@ -46,24 +46,13 @@ func _try_restore_cycle_from_snapshot() -> bool:
 	var run := get_tree().get_first_node_in_group("run") as Run
 	if run == null or run.save_data == null or run.save_data.combat_snapshot == null:
 		return false
-	var snap: CombatSnapshot = run.save_data.combat_snapshot
-	var slots := snap.shadow_samurai_cycle_slots
-	if slots.size() == 5:
-		_cycle_slots.clear()
-		for i in range(4):
-			var slot: int = slots[i]
-			if slot != _LEGACY_SLOT_STRIKE_6:
-				_cycle_slots.append(slot)
-		_cycle_slots.append(SLOT_STRENGTH_BUFF)
-		_cycle_index = 0
-		return _cycle_slots.size() == 4
+	var snap := run.save_data.combat_snapshot
 	if not snap.has_shadow_samurai_cycle():
 		return false
 	_cycle_slots.clear()
-	for slot: int in slots:
+	for slot: int in snap.shadow_samurai_cycle_slots:
 		_cycle_slots.append(slot)
-	_cycle_index = 0
-	return true
+	return _cycle_slots.size() == 4
 
 
 func write_cycle_to_snapshot(snapshot: CombatSnapshot) -> void:

@@ -4,6 +4,11 @@ extends HBoxContainer
 const INTENT_SLOT := preload("res://scenes/ui/intent_slot.tscn")
 const ACTION_START_POP_DURATION := 0.2
 const ACTION_START_POP_SCALE_END := 1.2
+const IDLE_FLOAT_RANGE_PX := 5.0
+const IDLE_FLOAT_HALF_CYCLE_SEC := 1.15
+
+var _idle_float_tween: Tween
+var _idle_float_rest_y: float = 0.0
 
 
 ## 将意图悬停 tooltip 接到 Run 顶栏（战斗内调用一次即可）。
@@ -25,6 +30,31 @@ static func ensure_intent_tooltip_handlers_connected(tree: SceneTree) -> void:
 func _ready() -> void:
 	## 整条意图条对鼠标透明，由 Enemy 统一用全局指针检测（避免被 BattleUI 挡住）。
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if Engine.is_editor_hint():
+		return
+	_idle_float_rest_y = position.y
+	if is_inside_tree():
+		_start_idle_float()
+	else:
+		tree_entered.connect(_start_idle_float, CONNECT_ONE_SHOT)
+
+
+func _start_idle_float() -> void:
+	if Engine.is_editor_hint():
+		return
+	if is_instance_valid(_idle_float_tween):
+		_idle_float_tween.kill()
+	position.y = _idle_float_rest_y
+	_idle_float_tween = create_tween()
+	_idle_float_tween.set_loops()
+	_idle_float_tween.set_trans(Tween.TRANS_SINE)
+	_idle_float_tween.set_ease(Tween.EASE_IN_OUT)
+	_idle_float_tween.tween_property(
+		self, "position:y", _idle_float_rest_y - IDLE_FLOAT_RANGE_PX, IDLE_FLOAT_HALF_CYCLE_SEC
+	)
+	_idle_float_tween.tween_property(
+		self, "position:y", _idle_float_rest_y + IDLE_FLOAT_RANGE_PX, IDLE_FLOAT_HALF_CYCLE_SEC
+	)
 
 
 func update_intents(intents: Array[Intent]) -> void:

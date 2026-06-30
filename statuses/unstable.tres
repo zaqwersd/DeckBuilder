@@ -1,6 +1,6 @@
 [gd_resource type="Resource" script_class="IgneousVolatileStatus" format=3 uid="uid://dskosbmd1k0s5"]
 
-[ext_resource type="Texture2D" uid="uid://tfb8eu8xggue" path="res://art/unstable.png" id="1_654nq"]
+[ext_resource type="Texture2D" uid="uid://tfb8eu8xggue" path="res://art/status_icons/unstable.png" id="1_654nq"]
 [ext_resource type="Script" uid="uid://42lmy1v7jm3h" path="res://statuses/unstable.gd" id="2_qbevf"]
 
 [resource]

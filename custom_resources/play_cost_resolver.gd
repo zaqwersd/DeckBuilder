@@ -16,6 +16,8 @@ static func compute_mana_to_spend(
 		return char_stats.mana
 	if card.is_unplayable():
 		return card.cost
+	if _has_card_free(combat_player):
+		return 0
 	var base := card.get_base_mana_cost()
 	if player_modifiers:
 		base = player_modifiers.get_modified_value(base, Modifier.Type.CARD_COST)
@@ -76,3 +78,9 @@ static func _status_mana_cost_add(card: Card, combat_player: Node) -> int:
 	if combat_player == null or not (combat_player is Player):
 		return 0
 	return OverwhelmingStatus.stacks_on_player(combat_player as Player)
+
+
+static func _has_card_free(combat_player: Node) -> bool:
+	if combat_player == null or not (combat_player is Player):
+		return false
+	return CardFreeStatus.makes_next_card_free(combat_player as Player)

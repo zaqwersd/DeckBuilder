@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3 uid="uid://dvhadqqwew3cn"]
+
+[ext_resource type="Texture2D" uid="uid://bwum1hgamiopq" path="res://art/relics/headphone.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://c50y2s3jhe6gl" path="res://relics/headphone.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+relic_name = "耳机"
+id = "headphone"
+type = 4
+rarity = 3
+icon = ExtResource("1_icon")
+tooltip = "每当你连续打出两张同类型的牌时，抽1张牌。跨回合计算。"

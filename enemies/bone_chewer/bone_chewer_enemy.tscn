@@ -1,0 +1,78 @@
+[gd_scene format=3 uid="uid://dfjwad6nq0yq7"]
+
+[ext_resource type="Texture2D" uid="uid://b6j06gvkfonkd" path="res://art/bone_chewer1.png" id="1_art"]
+[ext_resource type="Script" uid="uid://bhxia3khujhpy" path="res://scenes/enemy/enemy.gd" id="2_script"]
+[ext_resource type="Texture2D" uid="uid://bb3rcs5nqntir" path="res://art/arrow.png" id="3_arrow"]
+[ext_resource type="PackedScene" path="res://scenes/ui/status_bar.tscn" id="4_status_bar"]
+[ext_resource type="PackedScene" uid="uid://bfyjrydb1nntk" path="res://scenes/ui/intent_ui.tscn" id="5_intent_ui"]
+[ext_resource type="PackedScene" uid="uid://ctvxie3ni1ik4" path="res://scenes/modifier_handler/modifier_handler.tscn" id="6_modifier"]
+[ext_resource type="PackedScene" uid="uid://bqefj5q31b84i" path="res://scenes/modifier_handler/modifier.tscn" id="7_modifier_item"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/enemy_target_highlight.tscn" id="8_highlight"]
+[ext_resource type="Script" path="res://scenes/ui/combatant_hover_name.gd" id="9_hover_name"]
+[ext_resource type="Resource" uid="uid://glx7wofr8nuo" path="res://enemies/bone_chewer/bone_chewer_enemy.tres" id="10_stats"]
+[ext_resource type="PackedScene" path="res://scenes/ui/intent_slot.tscn" id="11_intent_slot"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lduqu"]
+size = Vector2(228, 160)
+
+[node name="BoneChewerEnemy" type="Area2D" unique_id=925609376 groups=["enemies"]]
+collision_layer = 4
+script = ExtResource("2_script")
+stats = ExtResource("10_stats")
+editor_preview_action = &"BoneChewerStrike11"
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1166361729]
+scale = Vector2(4, 4)
+texture = ExtResource("1_art")
+
+[node name="Arrow" type="Sprite2D" parent="." unique_id=1623217141]
+visible = false
+position = Vector2(72, 0)
+rotation = -1.5708
+texture = ExtResource("3_arrow")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=112632646]
+position = Vector2(-2, 4)
+shape = SubResource("RectangleShape2D_lduqu")
+
+[node name="StatusBar" parent="." unique_id=2141479140 instance=ExtResource("4_status_bar")]
+z_index = 10
+offset_left = -123.0
+offset_top = 94.0
+offset_right = 127.0
+offset_bottom = 108.0
+status_tooltips_open_to_right = false
+container_width = 250
+
+[node name="IntentUI" parent="." unique_id=413117264 instance=ExtResource("5_intent_ui")]
+offset_top = -143.0
+offset_bottom = -80.0
+
+[node name="EditorPreviewIntentSlot" parent="IntentUI" unique_id=1668031112 instance=ExtResource("11_intent_slot")]
+layout_mode = 2
+
+[node name="ModifierHandler" parent="." unique_id=1581513814 instance=ExtResource("6_modifier")]
+
+[node name="DamageDealtModifier" parent="ModifierHandler" unique_id=794815011 instance=ExtResource("7_modifier_item")]
+
+[node name="DamageTakenModifier" parent="ModifierHandler" unique_id=641253456 instance=ExtResource("7_modifier_item")]
+type = 1
+
+[node name="TargetHighlight" parent="." unique_id=743813032 instance=ExtResource("8_highlight")]
+visible = false
+modulate = Color(1, 1, 1, 0)
+
+[node name="HoverNameOverlay" type="Label" parent="." unique_id=1124987596]
+modulate = Color(1, 1, 1, 0)
+z_index = 12
+offset_left = -123.0
+offset_top = 116.0
+offset_right = 127.0
+offset_bottom = 148.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+script = ExtResource("9_hover_name")
+metadata/auto_layout_from_status_bar = true

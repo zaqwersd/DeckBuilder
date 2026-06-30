@@ -1,0 +1,31 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://enemies/elementals/elemental_dark_ai.gd" id="1_ai"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_status_self_action.gd" id="2_status"]
+[ext_resource type="Script" path="res://enemies/elementals/elemental_simple_attack_action.gd" id="3_attack"]
+[ext_resource type="Script" path="res://custom_resources/intent.gd" id="4_intent"]
+[ext_resource type="Resource" path="res://statuses/darkness.tres" id="5_darkness"]
+[ext_resource type="AudioStream" path="res://art/enemy_attack.ogg" id="6_atk"]
+
+[sub_resource type="Resource" id="I_darkness"]
+script = ExtResource("4_intent")
+kind = 2
+base_text = "+4 黑暗"
+
+[sub_resource type="Resource" id="I_attack"]
+script = ExtResource("4_intent")
+
+[node name="DarkElementalAI" type="Node"]
+script = ExtResource("1_ai")
+
+[node name="Darkness" type="Node" parent="."]
+script = ExtResource("2_status")
+intent = SubResource("I_darkness")
+status = ExtResource("5_darkness")
+amount = 4
+
+[node name="Attack" type="Node" parent="."]
+script = ExtResource("3_attack")
+intent = SubResource("I_attack")
+sound = ExtResource("6_atk")
+damage = 4

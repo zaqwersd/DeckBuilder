@@ -2,7 +2,7 @@ extends Card
 
 const DRAFTABLE_POOL_PATH := "res://characters/blade/blade_draftable_cards.tres"
 
-const _EFFECT_BODY := "变化你消耗堆的所有牌，将它们升级并放入你的抽牌堆。"
+const _EFFECT_BODY := "变化你消耗堆的所有牌，将它们升级并放入抽牌堆。"
 const _EXHAUST_LINE := "消耗。"
 
 
@@ -26,7 +26,7 @@ func _append_exhaust_line_bbcode(body: String) -> String:
 	var line := _exhaust_line_bbcode()
 	if line.is_empty():
 		return body
-	return "%s%s" % [body, line]
+	return "%s[br]%s" % [body, line]
 
 
 func _effect_body_bbcode() -> String:

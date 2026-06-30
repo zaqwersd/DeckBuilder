@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="InfiniteStatus" format=3 uid="uid://dmhv23pon4af8"]
+
+[ext_resource type="Texture2D" uid="uid://b170ubj10mnvb" path="res://art/status_icons/infinite_state.png" id="1_icon"]
+[ext_resource type="Script" uid="uid://itlwjehdio7g" path="res://statuses/infinite_state.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "infinite_state"
+type = 2
+stack_type = 1
+stacks = 1
+icon = ExtResource("1_icon")
+name = "无尽"
+tooltip = "每当有一张牌被消耗，获得%s点能量。回合结束阶段触发时改为下回合获得。"

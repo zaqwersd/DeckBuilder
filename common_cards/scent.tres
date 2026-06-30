@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://dtyhpgt3lv2kf"]
 
-[ext_resource type="Texture2D" uid="uid://bancigr4gbfvu" path="res://art/scent.png" id="1_68i80"]
+[ext_resource type="Texture2D" uid="uid://bancigr4gbfvu" path="res://art/cards/scent.png" id="1_68i80"]
 [ext_resource type="Script" uid="uid://di1k66nrhgjtc" path="res://common_cards/scent.gd" id="2_script"]
 [ext_resource type="AudioStream" uid="uid://df64e7qat73gs" path="res://art/block.ogg" id="3_snd"]
 

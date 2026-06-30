@@ -1,17 +1,17 @@
 extends Card
 
-const EXPOSED_STATUS = preload("res://statuses/exposed.tres")
+const VULNERABLE_STATUS = preload("res://statuses/vulnerable.tres")
 
 
 func get_upgrade_track_ids() -> PackedStringArray:
-	return PackedStringArray(["damage", "exposed_duration"])
+	return PackedStringArray(["damage", "vulnerable_duration"])
 
 
 func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 	match track_id:
 		"damage":
 			return PackedInt32Array([8, 12])
-		"exposed_duration":
+		"vulnerable_duration":
 			return PackedInt32Array([2, 3])
 		_:
 			return PackedInt32Array()
@@ -19,10 +19,10 @@ func get_upgrade_chain(track_id: String) -> PackedInt32Array:
 
 func get_upgrade_pick_description_bbcode() -> String:
 	var d2 := get_upgrade_value_at("damage")
-	var ex := get_upgrade_value_at("exposed_duration")
+	var ex := get_upgrade_value_at("vulnerable_duration")
 	return "[center]造成%s点伤害。[br]给予%s层易伤。[/center]" % [
 		bbcode_upgrade_pick_digit("damage", d2),
-		bbcode_upgrade_pick_digit("exposed_duration", ex),
+		bbcode_upgrade_pick_digit("vulnerable_duration", ex),
 	]
 
 
@@ -30,8 +30,8 @@ func _intrinsic_damage() -> int:
 	return get_upgrade_value_at("damage")
 
 
-func _intrinsic_exposed_duration() -> int:
-	return get_upgrade_value_at("exposed_duration")
+func _intrinsic_vulnerable_duration() -> int:
+	return get_upgrade_value_at("vulnerable_duration")
 
 
 func _body_bbcode(
@@ -50,9 +50,9 @@ func _body_bbcode(
 		modified, intrinsic, is_upgrade_track_maxed("damage")
 	)
 
-	var ed := _intrinsic_exposed_duration()
+	var ed := _intrinsic_vulnerable_duration()
 	var ebb := bbcode_for_modified_number_with_upgrade_hint(
-		ed, ed, is_upgrade_track_maxed("exposed_duration")
+		ed, ed, is_upgrade_track_maxed("vulnerable_duration")
 	)
 
 	return "[center]造成%s点伤害。[br]给予%s层易伤。[/center]" % [dbb, ebb]
@@ -77,7 +77,7 @@ func apply_effects(targets: Array[Node], modifiers: ModifierHandler) -> void:
 	damage_effect.execute(targets)
 
 	var status_effect := StatusEffect.new()
-	var exposed := EXPOSED_STATUS.duplicate()
-	exposed.duration = _intrinsic_exposed_duration()
-	status_effect.status = exposed
+	var vulnerable := VULNERABLE_STATUS.duplicate()
+	vulnerable.duration = _intrinsic_vulnerable_duration()
+	status_effect.status = vulnerable
 	status_effect.execute(targets)

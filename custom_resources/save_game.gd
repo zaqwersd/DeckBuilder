@@ -23,6 +23,10 @@ const SAVE_PATH := "user://savegame.tres"
 @export var floors_climbed: int
 @export var was_on_map: bool
 @export var act_number: int = 1  ## 当前层数（1-3），用于三层游戏结构
+## Act1：第 8 层宝箱奖励界面出现后永久叠加 valley(tense)。
+@export var act1_tense_unlocked: bool = false
+## Act3：第 8 层宝箱奖励界面出现后永久叠加 sanctuary(tense)。
+@export var act3_tense_unlocked: bool = false
 
 ## 卡牌奖励稀有度追踪（用于连锁惩罚机制）
 @export var last_card_reward_rarity: int = -1  ## 上次卡牌奖励抽到的稀有度
@@ -88,6 +92,7 @@ const BATTLE_REWARD_PENDING_RELIC := 1
 @export var battle_reward_pending_pre_deck_cards: Array[Card] = []
 @export var battle_reward_pending_pre_relic_ids: PackedStringArray = PackedStringArray()
 @export var battle_reward_pending_pre_spent_relic_ids: PackedStringArray = PackedStringArray()
+@export var battle_reward_pending_pre_potion_ids: PackedStringArray = PackedStringArray()
 @export var battle_reward_pending_pre_rng_seed: int = 0
 @export var battle_reward_pending_pre_rng_state: int = 0
 
@@ -272,12 +277,13 @@ func sync_potion_ids_for_save(from_ids: PackedStringArray) -> void:
 
 func get_effective_potion_ids() -> PackedStringArray:
 	var out := PackedStringArray()
-	out.resize(PotionHandler.MAX_SLOTS)
-	for i in range(PotionHandler.MAX_SLOTS):
+	var slot_count := maxi(PotionHandler.DEFAULT_SLOTS, saved_potion_ids.size())
+	out.resize(slot_count)
+	for i in range(slot_count):
 		out[i] = ""
 	if saved_potion_ids.is_empty():
 		return out
-	for i in range(mini(PotionHandler.MAX_SLOTS, saved_potion_ids.size())):
+	for i in range(mini(slot_count, saved_potion_ids.size())):
 		out[i] = String(saved_potion_ids[i])
 	return out
 
@@ -303,6 +309,7 @@ func clear_battle_reward_pending_staging() -> void:
 	battle_reward_pending_pre_deck_cards.clear()
 	battle_reward_pending_pre_relic_ids.clear()
 	battle_reward_pending_pre_spent_relic_ids.clear()
+	battle_reward_pending_pre_potion_ids.clear()
 	battle_reward_pending_pre_rng_seed = 0
 	battle_reward_pending_pre_rng_state = 0
 
@@ -415,13 +422,13 @@ func apply_battle_reward_entry_rollback_to(
 		)
 	if potion_handler != null:
 		potion_handler.restore_from_ids(battle_reward_entry_pre_potion_ids)
-	ch.stats_changed.emit()
+
 	_sync_character_stats_to_save(self, ch)
 	RNG.set_from_save_data(battle_reward_entry_pre_rng_seed, battle_reward_entry_pre_rng_state)
 
 
 ## 战斗奖励：读档时回退到领取遗物前的状态（未完成领取时）
-func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: RelicHandler) -> void:
+func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: RelicHandler, potion_handler: PotionHandler = null) -> void:
 	if battle_reward_pending_kind == BATTLE_REWARD_PENDING_NONE:
 		return
 	
@@ -468,8 +475,10 @@ func apply_battle_reward_pending_rollback_to(ch: CharacterStats, relic_handler: 
 			true,
 			battle_reward_pending_pre_spent_relic_ids
 		)
-	
+	if potion_handler != null:
+		potion_handler.restore_from_ids(battle_reward_pending_pre_potion_ids)
 	ch.stats_changed.emit()
+
 	_sync_character_stats_to_save(self, ch)
 	## 恢复RNG状态
 	RNG.set_from_save_data(battle_reward_pending_pre_rng_seed, battle_reward_pending_pre_rng_state)

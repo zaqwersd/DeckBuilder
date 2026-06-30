@@ -11,10 +11,11 @@
 [ext_resource type="Resource" uid="uid://dpdv17iba0cor" path="res://battles/mimic.tres" id="9_mimic"]
 [ext_resource type="Resource" uid="uid://bq4ddwf7bjokl" path="res://battles/evil_spirit.tres" id="10_boss"]
 [ext_resource type="Resource" uid="uid://krypcsvuive7" path="res://battles/spider.tres" id="11_spider"]
+[ext_resource type="Resource" uid="uid://wquxn7utigu8" path="res://battles/water_monster.tres" id="12_water_monster"]
 
 [resource]
 script = ExtResource("1_pool")
 tier_0_pool = Array[ExtResource("2_bs")]([ExtResource("3_bats2"), ExtResource("4_crab"), ExtResource("5_rat"), ExtResource("11_spider")])
 tier_1_pool = Array[ExtResource("2_bs")]([ExtResource("6_bats3"), ExtResource("7_igneous"), ExtResource("8_skel4")])
 tier_2_pool = Array[ExtResource("2_bs")]([ExtResource("9_mimic")])
-tier_3_pool = Array[ExtResource("2_bs")]([ExtResource("10_boss")])
+tier_3_pool = Array[ExtResource("2_bs")]([ExtResource("10_boss"), ExtResource("12_water_monster")])

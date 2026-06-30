@@ -20,4 +20,5 @@ func _on_main_menu_button_pressed() -> void:
 		run.abandon_finished_run_to_main_menu()
 	else:
 		SaveGame.delete_data()
+		MusicPlayer.stop_for_menu_transition()
 		get_tree().change_scene_to_file(MAIN_MENU_PATH)

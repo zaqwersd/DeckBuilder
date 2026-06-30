@@ -49,4 +49,5 @@ func _on_main_menu_pressed() -> void:
 	else:
 		SaveGame.delete_data()
 		get_tree().paused = false
+		MusicPlayer.stop_for_menu_transition()
 		get_tree().change_scene_to_file(MAIN_MENU)

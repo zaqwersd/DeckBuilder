@@ -29,7 +29,7 @@ func _ready() -> void:
 	end_turn_button.pressed.connect(_on_end_turn_button_pressed)
 	draw_pile_button.pressed.connect(draw_pile_view.show_current_view.bind("抽牌堆", true))
 	discard_pile_button.pressed.connect(discard_pile_view.show_current_view.bind("弃牌堆"))
-	exhaust_pile_button.pressed.connect(exhaust_pile_view.show_current_view.bind("消耗牌堆"))
+	exhaust_pile_button.pressed.connect(exhaust_pile_view.show_current_view.bind("消耗堆"))
 	draw_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
 	discard_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
 	exhaust_pile_view.visibility_changed.connect(_sync_hand_input_for_open_pile_views)
@@ -139,6 +139,9 @@ func _reset_pile_counter_labels() -> void:
 
 
 func initialize_card_pile_ui() -> void:
+	draw_pile_button.keyword_tooltip_id = "draw_pile"
+	discard_pile_button.keyword_tooltip_id = "discard_pile"
+	exhaust_pile_button.keyword_tooltip_id = "exhaust_pile"
 	if char_stats == null:
 		_reset_pile_counter_labels()
 		return

@@ -2,7 +2,7 @@ extends Control
 
 const RUN_SCENE = preload("res://scenes/run/run.tscn")
 const MAIN_MENU_PATH := "res://scenes/ui/main_menu.tscn"
-const BLADE_STATS := preload("res://characters/blade/blade.tres")
+const BLADE_STATS_PATH := "res://characters/blade/blade.tres"
 
 @export var run_startup: RunStartup
 
@@ -19,7 +19,11 @@ var current_character: CharacterStats : set = set_current_character
 
 func _ready() -> void:
 	character_portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_current_character(BLADE_STATS)
+	var blade := load(BLADE_STATS_PATH) as CharacterStats
+	if blade == null:
+		push_error("character_selector: 无法加载角色数据 %s" % BLADE_STATS_PATH)
+		return
+	set_current_character(blade)
 
 
 func set_current_character(new_character: CharacterStats) -> void:

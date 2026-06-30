@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3 uid="uid://b65hsovl1becp"]
 
-[ext_resource type="Texture2D" uid="uid://dummpmcyldu58" path="res://art/destiny.png" id="1_48hi1"]
+[ext_resource type="Texture2D" uid="uid://dummpmcyldu58" path="res://art/cards/destiny.png" id="1_48hi1"]
 [ext_resource type="Script" uid="uid://cfaaab1l73p6v" path="res://characters/blade/cards/blade_destiny.gd" id="2_script"]
 [ext_resource type="AudioStream" uid="uid://b7blpye7w7c3n" path="res://art/destiny.ogg" id="3_48hi1"]
 
@@ -9,10 +9,9 @@ script = ExtResource("2_script")
 id = "blade_destiny"
 type = 1
 rarity = 3
-cost = 3
+cost = 2
 exhausts = true
-intrinsic = true
 card_name = "宿命"
 icon = ExtResource("1_48hi1")
-tooltip_text = "[center]从本角色全卡池中选择一张牌，并加入你的抽牌堆底部。消耗。[/center]"
+tooltip_text = "[center]从本角色所有卡牌中任选一张，放到抽牌堆顶。[br]消耗。[/center]"
 sound = ExtResource("3_48hi1")

@@ -1,10 +1,8 @@
 [gd_scene format=3 uid="uid://dwulnsseocbad"]
 
-[ext_resource type="PackedScene" path="res://scenes/enemy/enemy.tscn" id="1_en"]
-[ext_resource type="Resource" path="res://enemies/shell_mech/shell_mech_enemy.tres" id="2_st"]
+[ext_resource type="PackedScene" path="res://enemies/shell_mech/shell_mech_enemy.tscn" id="2_st"]
 
 [node name="ShellMech" type="Node2D" unique_id=1965455258]
 
-[node name="Enemy" parent="." unique_id=1015028539 instance=ExtResource("1_en")]
+[node name="Enemy" parent="." unique_id=1015028539 instance=ExtResource("2_st")]
 position = Vector2(890, 341)
-stats = ExtResource("2_st")

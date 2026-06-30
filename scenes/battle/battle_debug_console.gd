@@ -893,7 +893,7 @@ func _cmd_potion(arg: String) -> String:
 	if template == null:
 		return "找不到药水 id：%s" % potion_id
 	if not ph.add_potion(template):
-		return "药水栏已满（最多 %d 格）。" % PotionHandler.MAX_SLOTS
+		return "药水栏已满（最多 %d 格）。" % ph.slots.size()
 	return "已添加药水：%s（%s）" % [template.potion_name, template.id]
 
 

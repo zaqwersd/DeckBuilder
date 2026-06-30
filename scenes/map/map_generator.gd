@@ -10,6 +10,7 @@ const MAP_WIDTH := 7
 const PATHS := 6
 const MONSTER_ROOM_WEIGHT := 12.0
 const EVENT_ROOM_WEIGHT := 5.0
+const UNKNOWN_ROOM_WEIGHT := EVENT_ROOM_WEIGHT
 const ELITE_ROOM_WEIGHT := 5.0
 const SHOP_ROOM_WEIGHT := 2.5
 const CAMPFIRE_ROOM_WEIGHT := 4.0
@@ -30,7 +31,7 @@ var random_room_type_weights = {
 	Room.Type.CAMPFIRE: 0.0,
 	Room.Type.SHOP: 0.0,
 	Room.Type.ELITE: 0.0,
-	Room.Type.EVENT: 0.0
+	Room.Type.UNKNOWN: 0.0
 }
 var random_room_type_total_weight := 0
 var map_data: Array[Array]
@@ -86,10 +87,14 @@ func _generate_initial_grid() -> Array[Array]:
 		
 		for j in MAP_WIDTH:
 			var current_room := Room.new()
-			var offset := Vector2(randf(), randf()) * PLACEMENT_RANDOMNESS
+			var offset := Vector2(
+				RNG.instance.randf(),
+				RNG.instance.randf()
+			) * PLACEMENT_RANDOMNESS
 			current_room.position = Vector2(j * X_DIST, i * -Y_DIST) + offset
 			current_room.row = i
 			current_room.column = j
+			current_room.icon_line_rotation = RNG.instance.randi_range(0, 359)
 			current_room.next_rooms = []
 			
 			# Boss room has a non-random Y
@@ -112,7 +117,7 @@ func _get_random_starting_points() -> Array[int]:
 		y_coordinates = []
 
 		for i in PATHS:
-			var starting_point := randi_range(0, MAP_WIDTH - 1)
+			var starting_point := RNG.instance.randi_range(0, MAP_WIDTH - 1)
 			if not y_coordinates.has(starting_point):
 				unique_points += 1
 			
@@ -127,7 +132,7 @@ func _setup_connection(i: int, j: int) -> int:
 	var attempts := 0
 	while attempts < MAX_CONNECTION_ATTEMPTS and (not next_room or _would_cross_existing_path(i, j, next_room)):
 		attempts += 1
-		var random_j := clampi(randi_range(j - 1, j + 1), 0, MAP_WIDTH - 1)
+		var random_j := clampi(RNG.instance.randi_range(j - 1, j + 1), 0, MAP_WIDTH - 1)
 		next_room = map_data[i + 1][random_j]
 	if attempts >= MAX_CONNECTION_ATTEMPTS:
 		push_warning("MapGenerator: 连接 (%d,%d) 重试过多，使用直连接" % [i, j])
@@ -181,9 +186,9 @@ func _setup_random_room_weights() -> void:
 	random_room_type_weights[Room.Type.CAMPFIRE] = MONSTER_ROOM_WEIGHT + CAMPFIRE_ROOM_WEIGHT
 	random_room_type_weights[Room.Type.SHOP] = MONSTER_ROOM_WEIGHT + CAMPFIRE_ROOM_WEIGHT + SHOP_ROOM_WEIGHT
 	random_room_type_weights[Room.Type.ELITE] = random_room_type_weights[Room.Type.SHOP] + ELITE_ROOM_WEIGHT
-	random_room_type_weights[Room.Type.EVENT] = random_room_type_weights[Room.Type.ELITE] + EVENT_ROOM_WEIGHT
+	random_room_type_weights[Room.Type.UNKNOWN] = random_room_type_weights[Room.Type.ELITE] + UNKNOWN_ROOM_WEIGHT
 	
-	random_room_type_total_weight = random_room_type_weights[Room.Type.EVENT]
+	random_room_type_total_weight = random_room_type_weights[Room.Type.UNKNOWN]
 
 
 func _setup_room_types() -> void:
@@ -247,9 +252,6 @@ func _set_room_randomly(room_to_set: Room) -> void:
 		
 	room_to_set.type = type_candidate
 
-	if type_candidate == Room.Type.EVENT:
-		room_to_set.event_scene = event_room_pool.get_random_for_act(current_act)
-
 
 func _room_has_parent_of_type(room: Room, type: Room.Type) -> bool:
 	var parents: Array[Room] = []
@@ -278,7 +280,10 @@ func _room_has_parent_of_type(room: Room, type: Room.Type) -> bool:
 
 ## 第 1–5 层（row 0–4）弱怪 tier 0；第 6 层起小怪 tier 1
 static func battle_tier_for_room(room: Room) -> int:
-	match room.type:
+	var effective_type := room.type
+	if room.type == Room.Type.UNKNOWN and room.unknown_resolved_type != Room.Type.NOT_ASSIGNED:
+		effective_type = room.unknown_resolved_type
+	match effective_type:
 		Room.Type.BOSS:
 			return 3
 		Room.Type.ELITE:
@@ -292,7 +297,7 @@ static func battle_tier_for_room(room: Room) -> int:
 
 
 func _get_random_room_type_by_weight() -> Room.Type:
-	var roll := randf_range(0.0, random_room_type_total_weight)
+	var roll := RNG.instance.randf_range(0.0, random_room_type_total_weight)
 	
 	for type: Room.Type in random_room_type_weights:
 		if random_room_type_weights[type] > roll:

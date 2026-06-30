@@ -52,6 +52,9 @@ var _reflow_dirty: bool = false
 var _hand_layout_resync_pending: bool = false
 ## 与 `enable_hand` / `disable_hand` 同步：玩家回合可操作时，中途 `add_card` 的新卡也应可点。
 var _hand_input_enabled: bool = false
+## 快速连打时按顺序结算；同一时刻只跑一张牌的完整打出流程。
+var _card_play_queue: Array[Dictionary] = []
+var _card_play_queue_running: bool = false
 
 ## 手牌词条 tooltip：仅当鼠标与「当前这张牌」重合时显示，由本节点统一发 Events，避免每帧重复 emit
 var _kw_tip_card: CardUI = null
@@ -128,6 +131,46 @@ func get_mouse_foremost_hand_card() -> CardUI:
 	return _mouse_foremost_hand_card
 
 
+func is_card_play_queue_running() -> bool:
+	return _card_play_queue_running
+
+
+## 提交打出请求：可立即交互；若上一张仍在结算则进入队列。
+func request_card_play(card_ui: CardUI, targets: Array) -> void:
+	if not is_instance_valid(card_ui):
+		return
+	_card_play_queue.append({
+		"card_ui": card_ui,
+		"targets": targets.duplicate(),
+	})
+	if not _card_play_queue_running:
+		_run_card_play_queue()
+
+
+func clear_pending_card_plays() -> void:
+	_card_play_queue.clear()
+
+
+func _run_card_play_queue() -> void:
+	_card_play_queue_running = true
+	while not _card_play_queue.is_empty():
+		if Events.is_combat_ended() or not _hand_input_enabled:
+			_card_play_queue.clear()
+			break
+		var item: Dictionary = _card_play_queue.pop_front()
+		var card_ui: CardUI = item.get("card_ui") as CardUI
+		if not is_instance_valid(card_ui):
+			continue
+		card_ui.targets.clear()
+		for t in item.get("targets", []):
+			if is_instance_valid(t):
+				card_ui.targets.append(t)
+		if not card_ui.validate_and_fill_play_targets():
+			continue
+		await card_ui.play()
+	_card_play_queue_running = false
+
+
 func get_hand_hover_unified_global_top() -> float:
 	var slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
 	return get_global_rect().end.y - slot_h - CardUI.HAND_HOVER_LIFT_PX
@@ -175,23 +218,65 @@ func _is_card_eligible_for_hand_pick(c: CardUI, slot: Node) -> bool:
 	)
 
 
-func _is_mouse_in_hand_row_band(mouse_pos: Vector2) -> bool:
+func _hand_layout_horizontal_outset_px() -> float:
+	var slot_w := roundf(CARD_UI_BASE_SIZE.x * display_scale)
+	## CardVisuals 全宽绘制，槽仅 display_scale 宽，每牌右侧多出一段；最右牌再叠加倾角。
+	var width_spill := maxf(0.0, CARD_UI_BASE_SIZE.x - slot_w)
+	var tilt_right := CARD_UI_BASE_SIZE.y * sin(deg_to_rad(FAN_MAX_TILT_DEG))
+	return width_spill + tilt_right + HAND_ROW_PICK_PADDING_PX
+
+
+func _hand_row_side_pick_extra_px() -> float:
+	return _hand_layout_horizontal_outset_px() - HAND_ROW_PICK_PADDING_PX
+
+
+## CardVisuals 本地描述区可延伸到 y≈290，但槽高仅 display_scale×220，底边会溢出 Hand 行框。
+func _hand_visual_bottom_overflow_px() -> float:
+	var slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
+	const VISUAL_BOTTOM_LOCAL_Y := 290.0
+	return maxf(CARD_UI_BASE_SIZE.y, VISUAL_BOTTOM_LOCAL_Y) - slot_h + 8.0
+
+
+## CardVisuals 顶边可高出槽位（扇形拱起 + 倾角），Hand 控件 global_rect 不包含这部分绘制。
+func _hand_visual_top_overflow_px() -> float:
+	var slot_h := roundf(CARD_UI_BASE_SIZE.y * display_scale)
+	var tilt_rise := CARD_UI_BASE_SIZE.y * sin(deg_to_rad(FAN_MAX_TILT_DEG))
+	return FAN_ARC_HEIGHT_PX + tilt_rise + 16.0
+
+
+func _hand_interaction_zone_padding(include_hover_lift: bool) -> Vector4:
+	var side := HAND_ROW_PICK_PADDING_PX + _hand_row_side_pick_extra_px()
+	var top := HAND_ROW_PICK_PADDING_PX + _hand_visual_top_overflow_px()
+	if include_hover_lift:
+		top += 12.0
+	var bottom := HAND_ROW_PICK_PADDING_PX + _hand_visual_bottom_overflow_px()
+	return Vector4(side, top, side, bottom)
+
+
+func _is_point_in_hand_interaction_zone(mouse_pos: Vector2, include_hover_lift: bool) -> bool:
 	var row := get_global_rect()
-	var pick_top := row.position.y - HAND_ROW_PICK_PADDING_PX
-	var pick_bottom := row.end.y + HAND_ROW_PICK_PADDING_PX
-	return mouse_pos.y >= pick_top and mouse_pos.y <= pick_bottom
+	var pad := _hand_interaction_zone_padding(include_hover_lift)
+	var pick_top := row.position.y - pad.y
+	var pick_bottom := row.end.y + pad.w
+	if mouse_pos.y < pick_top or mouse_pos.y > pick_bottom:
+		return false
+	var pick_left := row.position.x - pad.x
+	var pick_right := row.end.x + pad.z
+	return mouse_pos.x >= pick_left and mouse_pos.x <= pick_right
+
+
+func _is_mouse_in_hand_row_band(mouse_pos: Vector2) -> bool:
+	return _is_point_in_hand_interaction_zone(mouse_pos, false)
+
+
+## 悬停判定用：比常规手牌带更高，覆盖抬起后的卡面（HAND_HOVER_LIFT_PX）。
+func _is_mouse_in_hand_hover_band(mouse_pos: Vector2) -> bool:
+	return _is_point_in_hand_interaction_zone(mouse_pos, true)
 
 
 ## 单体牌拖动手牌区：鼠标在此范围内时卡牌跟随，离开则锁定出牌位。
 func is_mouse_in_play_drag_hand_zone(mouse_global: Vector2) -> bool:
-	var row := get_global_rect()
-	var pick_top := row.position.y - HAND_ROW_PICK_PADDING_PX
-	var pick_bottom := row.end.y + HAND_ROW_PICK_PADDING_PX
-	if mouse_global.y < pick_top or mouse_global.y > pick_bottom:
-		return false
-	var pick_left := row.position.x - HAND_ROW_PICK_PADDING_PX
-	var pick_right := row.end.x + HAND_ROW_PICK_PADDING_PX
-	return mouse_global.x >= pick_left and mouse_global.x <= pick_right
+	return _is_point_in_hand_interaction_zone(mouse_global, false)
 
 
 func _collect_eligible_hand_cards() -> Array[CardUI]:
@@ -203,42 +288,50 @@ func _collect_eligible_hand_cards() -> Array[CardUI]:
 	return result
 
 
-func _pick_foremost_by_horizontal_voronoi(mouse_pos: Vector2, cards: Array[CardUI]) -> CardUI:
-	if cards.is_empty():
-		return null
-	if cards.size() == 1:
-		return cards[0]
-	var entries: Array[Dictionary] = []
-	for c in cards:
-		var gr := c.get_hand_base_pick_global_rect()
-		entries.append({"card": c, "cx": gr.get_center().x})
-	entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return (a["cx"] as float) < (b["cx"] as float)
-	)
-	for i in range(entries.size()):
-		var cx_i: float = entries[i]["cx"] as float
-		var left_bound: float = -INF if i == 0 else (entries[i - 1]["cx"] as float + cx_i) * 0.5
-		var right_bound: float = (
-			INF if i == entries.size() - 1 else (cx_i + entries[i + 1]["cx"] as float) * 0.5
-		)
-		if mouse_pos.x >= left_bound and mouse_pos.x < right_bound:
-			return entries[i]["card"] as CardUI
-	return entries[entries.size() - 1]["card"] as CardUI
+func _collect_overlapping_hand_cards_at(mouse_pos: Vector2) -> Array[CardUI]:
+	var overlapping: Array[CardUI] = []
+	for c in _collect_eligible_hand_cards():
+		if c.is_global_point_in_hand_pick_at_rest(mouse_pos):
+			overlapping.append(c)
+	return overlapping
+
+
+func _is_global_point_on_any_hand_card_pick_at_rest(mouse_pos: Vector2) -> bool:
+	return not _collect_overlapping_hand_cards_at(mouse_pos).is_empty()
+
+
+func _collect_protrusion_suppressed_cards_at(mouse_pos: Vector2) -> Array[CardUI]:
+	var blocked: Array[CardUI] = []
+	for c in _collect_eligible_hand_cards():
+		if c.is_hand_hover_visual_active() and c.is_global_point_in_hand_protrusion(mouse_pos):
+			blocked.append(c)
+	return blocked
+
+
+## 重叠时按距卡面中心最近判定主目标；纯 z 序会把最左牌左缘误分给右侧邻牌导致点不动。
+func _pick_foremost_from_overlapping(mouse_pos: Vector2, cards: Array[CardUI]) -> CardUI:
+	return _pick_instant_foremost_hand_card(cards, mouse_pos)
 
 
 func _update_mouse_foremost_hand_card() -> void:
 	var mp := get_global_mouse_position()
-	if not _is_mouse_in_hand_row_band(mp):
-		_mouse_foremost_hand_card = null
-		return
-	var overlapping: Array[CardUI] = []
-	for c in _collect_eligible_hand_cards():
-		if c.get_hand_base_pick_global_rect().has_point(mp):
-			overlapping.append(c)
+	var overlapping := _collect_overlapping_hand_cards_at(mp)
 	if overlapping.is_empty():
 		_mouse_foremost_hand_card = null
 		return
-	_mouse_foremost_hand_card = _pick_foremost_by_horizontal_voronoi(mp, overlapping)
+	var blocked := _collect_protrusion_suppressed_cards_at(mp)
+	if not blocked.is_empty():
+		for c in blocked:
+			if c == _mouse_foremost_hand_card:
+				c.force_hand_hover_visuals_off()
+		overlapping = overlapping.filter(func(c: CardUI) -> bool: return not blocked.has(c))
+		if overlapping.is_empty():
+			_mouse_foremost_hand_card = null
+			return
+	var pick := _pick_foremost_from_overlapping(mp, overlapping)
+	if pick == _mouse_foremost_hand_card:
+		return
+	_mouse_foremost_hand_card = pick
 
 
 func _apply_hand_hover_z_order() -> void:
@@ -354,17 +447,21 @@ func _pick_tooltip_anchor_card(cards: Array[CardUI]) -> CardUI:
 	return _pick_instant_foremost_hand_card(cards)
 
 
-func _pick_instant_foremost_hand_card(cards: Array[CardUI]) -> CardUI:
+func _pick_instant_foremost_hand_card(
+	cards: Array[CardUI], mouse_pos: Vector2 = Vector2(NAN, NAN)
+) -> CardUI:
 	if cards.is_empty():
 		return null
-	var mouse_pos := get_global_mouse_position()
+	var mp := mouse_pos
+	if is_nan(mp.x):
+		mp = get_global_mouse_position()
 	var best: CardUI = null
 	var best_d2 := INF
 	var best_slot := 999999
 	for c in cards:
 		if not is_instance_valid(c):
 			continue
-		var d2 := c.get_hand_hover_hit_global_rect().get_center().distance_squared_to(mouse_pos)
+		var d2 := c.get_hand_hover_hit_global_rect().get_center().distance_squared_to(mp)
 		var slot_idx := 999999
 		if is_instance_valid(c.hand_slot):
 			slot_idx = c.hand_slot.get_index()
@@ -731,7 +828,8 @@ func _apply_fan_row_layout(
 	slot_w: float,
 	slot_h: float,
 	step: float,
-	fan_scale: float
+	fan_scale: float,
+	horizontal_outset: float = 0.0
 ) -> void:
 	var n := active_slots.size()
 	var max_arc := FAN_ARC_HEIGHT_PX
@@ -744,7 +842,7 @@ func _apply_fan_row_layout(
 		if slot == null:
 			continue
 		var norm := 0.0 if n == 1 else (float(i) / float(n - 1) - 0.5) * 2.0
-		var x := float(i) * step
+		var x := float(i) * step + horizontal_outset
 		var norm_sq := 1.0 - norm * norm
 		var y := side_baseline_y - arc_lift * norm_sq
 		slot.custom_minimum_size = Vector2(slot_w, slot_h)
@@ -787,14 +885,15 @@ func _reflow_hand_bar() -> void:
 		offset_top = _hand_bar_offset_bottom - slot_h
 		update_minimum_size()
 		return
-	_apply_fan_row_layout(active_slots, slot_w, slot_h, card_separation, fan_scale)
-	custom_minimum_size = Vector2(total_w, row_h)
+	var h_out := _hand_layout_horizontal_outset_px()
+	_apply_fan_row_layout(active_slots, slot_w, slot_h, card_separation, fan_scale, h_out)
+	custom_minimum_size = Vector2(total_w + h_out * 2.0, row_h)
 	if uses_pick_overlay_external_positioning():
 		size = custom_minimum_size
 		update_minimum_size()
 		_schedule_pick_overlay_hand_realign()
 		return
-	var half := total_w * 0.5
+	var half := total_w * 0.5 + h_out
 	offset_left = -half
 	offset_right = half
 	offset_top = _hand_bar_offset_bottom - row_h
@@ -853,18 +952,29 @@ func discard_card(card: CardUI) -> void:
 	_request_reflow_hand_bar()
 
 
-func _gui_input(event: InputEvent) -> void:
-	if Events.is_pointer_ui_obscured_for(self):
-		return
+func _input(event: InputEvent) -> void:
 	if not _hand_input_enabled or uses_pick_overlay_external_positioning():
 		return
-	var fo := _mouse_foremost_hand_card
+	if Events.is_pointer_ui_obscured_for(self):
+		return
+	if not (event is InputEventMouseButton):
+		return
+	var mp := get_global_mouse_position()
+	var overlapping := _collect_overlapping_hand_cards_at(mp)
+	if overlapping.is_empty():
+		return
+	var fo := _pick_instant_foremost_hand_card(overlapping, mp)
 	if fo == null or fo.disabled or fo.has_meta(CardUI.HAND_PICK_DELEGATE_META):
 		return
-	if not fo.get_hand_active_pick_global_rect().has_point(get_global_mouse_position()):
+	if not fo.is_global_point_in_hand_pick_at_rest(mp):
 		return
 	fo.forward_hand_gui_input(event)
-	accept_event()
+	get_viewport().set_input_as_handled()
+
+
+func _gui_input(_event: InputEvent) -> void:
+	## 点击由 `_input` 处理：全宽卡面会超出按槽位算的 Hand 矩形，仅靠 gui_input 会漏掉右缘（最右牌右半截点不动）。
+	pass
 
 
 func _sync_hand_pick_collisions_after_reflow() -> void:
@@ -876,6 +986,7 @@ func _sync_hand_pick_collisions_after_reflow() -> void:
 
 func enable_hand() -> void:
 	_hand_input_enabled = true
+	set_process_input(true)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	for slot in get_children():
 		var card := get_card_ui_in_slot(slot)
@@ -889,6 +1000,8 @@ func enable_hand() -> void:
 
 func disable_hand() -> void:
 	_hand_input_enabled = false
+	clear_pending_card_plays()
+	set_process_input(false)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for slot in get_children():
 		var card := get_card_ui_in_slot(slot)
@@ -991,6 +1104,7 @@ func _apply_hand_card_transform(card_ui: CardUI) -> void:
 		card_ui.pivot_offset = scaled_size * 0.5
 		card_ui.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
-	card_ui.sync_hand_interaction_collision_from_layout(
-		scaled_size if not is_equal_approx(s, 1.0) else CARD_UI_BASE_SIZE
-	)
+	if is_instance_valid(card_ui.card_visuals):
+		card_ui.card_visuals.scale = Vector2.ONE
+
+	card_ui.sync_hand_interaction_collision_from_layout()

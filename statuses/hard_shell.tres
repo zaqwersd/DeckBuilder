@@ -1,7 +1,7 @@
 [gd_resource type="Resource" script_class="HardShellStatus" format=3 uid="uid://uldinw3ejear"]
 
 [ext_resource type="Script" uid="uid://daoidup0rcp8j" path="res://statuses/hard_shell.gd" id="1_script"]
-[ext_resource type="Texture2D" uid="uid://bcfjl4kmomhwi" path="res://art/hard_shell.png" id="2_icon"]
+[ext_resource type="Texture2D" uid="uid://bcfjl4kmomhwi" path="res://art/status_icons/hard_shell.png" id="2_icon"]
 
 [resource]
 script = ExtResource("1_script")

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="SinsStatus" format=3 uid="uid://dmmd6hwlol0pa"]
+
+[ext_resource type="Texture2D" uid="uid://b62vrktu2p7nv" path="res://art/status_icons/sins.png" id="1_m2sc4"]
+[ext_resource type="Script" uid="uid://cvj53v2s2tj5m" path="res://statuses/sins.gd" id="2_script"]
+
+[resource]
+script = ExtResource("2_script")
+id = "sins"
+type = 2
+icon = ExtResource("1_m2sc4")
+name = "罪孽"
+tooltip = "每当你抽10张牌，将一张亵渎随机插入你的抽牌堆。"

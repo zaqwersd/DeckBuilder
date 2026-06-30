@@ -4,6 +4,9 @@ extends Node
 var combat_ended: bool = false
 ## 玩家回合开始管线进行中：抑制状态 tick 中途刷新敌人意图。
 var _player_turn_start_resolving: bool = false
+var _player_turn_end_resolving: bool = false
+var _deferred_end_turn_mana: int = 0
+var _deferred_end_turn_draw: int = 0
 
 
 func begin_player_turn_start_resolving() -> void:
@@ -22,6 +25,10 @@ func reset_combat_flow() -> void:
 	combat_ended = false
 	_attack_card_effect_depth = 0
 	_player_turn_start_resolving = false
+	_player_turn_end_resolving = false
+	_deferred_end_turn_mana = 0
+	_deferred_end_turn_draw = 0
+
 	## 全局信号若残留旧 Battle 的 Callable，会导致弃牌/回合切换串线（如二层敌人不行动）。
 	_clear_signal_handlers(player_hand_discarded)
 	_clear_signal_handlers(enemy_turn_ended)
@@ -51,6 +58,36 @@ func end_attack_card_effects() -> void:
 
 func is_inside_attack_card_effects() -> bool:
 	return _attack_card_effect_depth > 0
+func begin_player_turn_end_resolving() -> void:
+	_player_turn_end_resolving = true
+
+
+func end_player_turn_end_resolving() -> void:
+	_player_turn_end_resolving = false
+
+
+func is_player_turn_end_resolving() -> bool:
+	return _player_turn_end_resolving
+
+
+func defer_end_turn_mana(amount: int) -> void:
+	_deferred_end_turn_mana += maxi(0, amount)
+
+
+func defer_end_turn_draw(amount: int) -> void:
+	_deferred_end_turn_draw += maxi(0, amount)
+
+
+func consume_deferred_end_turn_mana() -> int:
+	var amount := _deferred_end_turn_mana
+	_deferred_end_turn_mana = 0
+	return amount
+
+
+func consume_deferred_end_turn_draw() -> int:
+	var amount := _deferred_end_turn_draw
+	_deferred_end_turn_draw = 0
+	return amount
 
 
 func mark_combat_ended() -> void:
@@ -146,6 +183,8 @@ signal card_played(card: Card)
 signal card_play_finished(card: Card)
 ## 牌进入消耗堆（打出消耗、虚无、被效果消耗等统一入口）。
 signal card_exhausted(card: Card)
+## 永久牌组获得一张牌（战斗奖励、商店、事件等），用于遗物监听。
+signal deck_card_added(card: Card)
 ## 玩家状态栏层数变化（如巨剑）：手牌需刷新攻击牌实际耗能显示。
 signal player_hand_cost_context_changed
 ## 玩家战斗属性上下文变化（虚弱、脆弱等）：手牌需刷新攻击/格挡数字。
@@ -156,6 +195,10 @@ signal player_turn_intent_context_ready
 
 # Player-related events
 signal player_hand_drawn
+## 从抽牌堆抽出手牌后（含溢出转弃牌）；监听方可做罪孽计数等副作用。defer_side_animations 为 true 时，飞入抽牌堆动画应延迟到出牌协程结束后。
+signal player_drew_cards(player: Player, count: int, defer_side_animations: bool)
+## 牌已写入抽牌堆，请求播放「屏中弹出并飞入抽牌堆」动画。
+signal draw_pile_insert_animation_requested(card: Card, defer_animation: bool)
 signal deck_shuffled
 signal player_hand_discarded
 signal player_turn_ended
@@ -168,6 +211,10 @@ signal enemy_turn_ended
 signal enemy_died(enemy: Enemy)
 ## 攻击牌结算期间，玩家对敌人造成实际生命伤害（格挡后仍扣血）
 signal player_dealt_attack_damage_to_enemy(enemy: Enemy, amount: int)
+## 攻击牌对敌人执行伤害行为（DamageEffect + 攻击牌窗口；不含遗物/药水 create_fixed）。
+signal player_attack_hit_enemy(enemy: Enemy, amount: int)
+## 攻击牌对敌人结算时的攻击牌伤害数值（未扣格挡前，已含攻击牌伤害修饰）。
+signal player_attack_card_damage_value_to_enemy(enemy: Enemy, amount: int)
 ## 敌人对玩家造成未被格挡的生命伤害（格挡后仍扣血）
 signal enemy_dealt_unblocked_damage_to_player(enemy: Enemy, amount: int)
 
@@ -193,6 +240,10 @@ var card_keyword_tooltip_render_pending := false
 
 # Map-related events
 signal map_exited(room: Room)
+## 地图：悬停在房间节点上显示说明；由 Run 统一交给 GameTooltip 渲染。
+signal map_room_tooltip_hover_show(room: Room, map_room: MapRoom)
+signal map_room_tooltip_hover_reposition(map_room: MapRoom)
+signal map_room_tooltip_hover_hide
 
 # Shop-related events
 signal shop_entered(shop: Shop)
